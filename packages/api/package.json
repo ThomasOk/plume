@@ -27,6 +27,7 @@
     "@repo/db": "workspace:*",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
+    "nanoid": "catalog:",
     "superjson": "catalog:",
     "url-join": "catalog:",
     "zod": "catalog:"
