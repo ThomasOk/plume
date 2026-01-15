@@ -28,6 +28,7 @@
     "@tanstack/router-devtools": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
+    "date-fns": "^4.1.0",
     "dotenv-cli": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",

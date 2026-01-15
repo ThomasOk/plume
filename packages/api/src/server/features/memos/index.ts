@@ -1,5 +1,5 @@
 import { router } from '../../trpc';
-import { list, create, update, deleteMemo } from './procedures';
+import { list, create, update, deleteMemo, listPublic } from './procedures';
 
 /**
  * Router pour la feature "memos"
@@ -11,6 +11,7 @@ import { list, create, update, deleteMemo } from './procedures';
  */
 export const memosRouter = router({
   list,
+  listPublic,
   create,
   update,
   delete: deleteMemo, // Renommé car "delete" est un mot réservé
