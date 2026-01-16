@@ -1,7 +1,7 @@
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
-import { createTRPCContext as createTRPCContextInternal, router } from './trpc';
 import { memosRouter } from './features/memos';
+import { createTRPCContext as createTRPCContextInternal, router } from './trpc';
 
 export const appRouter = router({
   memos: memosRouter,
