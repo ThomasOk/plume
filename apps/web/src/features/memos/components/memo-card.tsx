@@ -63,6 +63,9 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
       onSuccess: () => {
         setIsEditing(false);
       },
+      onError: (error) => {
+        toast.error(error.message);
+      },
     });
   };
 
@@ -73,6 +76,9 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
         onSuccess: () => {
           setIsDeleteDialogOpen(false);
           toast.success('Memo deleted successfully');
+        },
+        onError: (error) => {
+          toast.error(error.message);
         },
       },
     );
