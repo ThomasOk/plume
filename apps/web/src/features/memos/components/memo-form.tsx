@@ -37,7 +37,7 @@ export const MemoForm = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Textarea
-              className="resize-none border-0 focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
+              className="resize-none border-0 focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none p-0 shadow-none"
               placeholder="Write your memo here..."
               {...register('content')}
               disabled={createMemo.isPending}
@@ -49,14 +49,17 @@ export const MemoForm = () => {
             )}
           </div>
 
-          {createMemo.error && (
-            <p className="text-sm text-destructive">
-              {createMemo.error.message}
-            </p>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button type="submit" disabled={!isValid || createMemo.isPending}>
+          <div className="flex items-center gap-2">
+            {createMemo.error && (
+              <p className="text-sm text-destructive">
+                {createMemo.error.message}
+              </p>
+            )}
+            <Button
+              type="submit"
+              disabled={!isValid || createMemo.isPending}
+              className="ml-auto mr-1"
+            >
               {createMemo.isPending ? 'Saving...' : 'Save'}
             </Button>
           </div>
