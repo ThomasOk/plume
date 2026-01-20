@@ -9,12 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResourcesRouteImport } from './routes/resources'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as DebugRouteImport } from './routes/debug'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DebugRoute = DebugRouteImport.update({
   id: '/debug',
   path: '/debug',
@@ -43,12 +67,20 @@ const authSignInRoute = authSignInRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof authLayoutRouteWithChildren
   '/debug': typeof DebugRoute
+  '/explore': typeof ExploreRoute
+  '/notifications': typeof NotificationsRoute
+  '/resources': typeof ResourcesRoute
+  '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
 }
 export interface FileRoutesByTo {
   '/': typeof authLayoutRouteWithChildren
   '/debug': typeof DebugRoute
+  '/explore': typeof ExploreRoute
+  '/notifications': typeof NotificationsRoute
+  '/resources': typeof ResourcesRoute
+  '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
 }
@@ -57,19 +89,43 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authLayoutRouteWithChildren
   '/debug': typeof DebugRoute
+  '/explore': typeof ExploreRoute
+  '/notifications': typeof NotificationsRoute
+  '/resources': typeof ResourcesRoute
+  '/settings': typeof SettingsRoute
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/debug' | '/sign-in' | '/sign-up'
+  fullPaths:
+    | '/'
+    | '/debug'
+    | '/explore'
+    | '/notifications'
+    | '/resources'
+    | '/settings'
+    | '/sign-in'
+    | '/sign-up'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/debug' | '/sign-in' | '/sign-up'
+  to:
+    | '/'
+    | '/debug'
+    | '/explore'
+    | '/notifications'
+    | '/resources'
+    | '/settings'
+    | '/sign-in'
+    | '/sign-up'
   id:
     | '__root__'
     | '/'
     | '/(auth)'
     | '/debug'
+    | '/explore'
+    | '/notifications'
+    | '/resources'
+    | '/settings'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
   fileRoutesById: FileRoutesById
@@ -78,10 +134,42 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authLayoutRoute: typeof authLayoutRouteWithChildren
   DebugRoute: typeof DebugRoute
+  ExploreRoute: typeof ExploreRoute
+  NotificationsRoute: typeof NotificationsRoute
+  ResourcesRoute: typeof ResourcesRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/debug': {
       id: '/debug'
       path: '/debug'
@@ -138,6 +226,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authLayoutRoute: authLayoutRouteWithChildren,
   DebugRoute: DebugRoute,
+  ExploreRoute: ExploreRoute,
+  NotificationsRoute: NotificationsRoute,
+  ResourcesRoute: ResourcesRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

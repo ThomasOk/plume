@@ -1,10 +1,10 @@
 import { Toaster } from '@repo/ui/components/sonner';
 import { Outlet, createRootRoute } from '@tanstack/react-router';
 import React from 'react';
-import { authClient } from '@/lib/authClient';
-import Spinner from '@/components/ui/spinner';
 import NavContainer from '@/components/layout/nav-container';
-import { Navbar } from '@/components/layout/navbar';
+import { SidebarNav } from '@/components/layout/sidebar-nav';
+import Spinner from '@/components/ui/spinner';
+import { authClient } from '@/lib/authClient';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -32,10 +32,12 @@ function RootComponent() {
 
   return (
     <>
-      <Navbar session={session} />
       <Toaster />
-      <div className="p-2 md:p-4">
-        <Outlet />
+      <div className="flex h-screen">
+        <SidebarNav />
+        <main className="flex-1 overflow-auto p-4">
+          <Outlet />
+        </main>
       </div>
       <React.Suspense>
         <TanStackRouterDevtools position="bottom-right" />
