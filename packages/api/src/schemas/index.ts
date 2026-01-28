@@ -15,6 +15,7 @@ export {
   createMemoSchema,
   updateMemoSchema,
   deleteMemoSchema,
+  MAX_MEMO_CHARACTERS,
 } from '../server/features/memos/schemas';
 
 // As you add more features, export their schemas here:
