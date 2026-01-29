@@ -2,6 +2,7 @@ import type { Element } from 'hast';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
 import { TaskListItem } from './task-list-item';
@@ -33,7 +34,7 @@ export const MarkdownContent = ({ content }: MarkdownContentProps) => {
   return (
     <div className="prose prose-sm max-w-none break-words dark:prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:text-inherit prose-code:text-inherit">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[
           rehypeRaw, // Parse raw HTML
           [rehypeSanitize, sanitizeSchema], // Sanitize for security (blocks XSS)
