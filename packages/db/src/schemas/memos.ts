@@ -13,9 +13,18 @@ export const memo = pgTable('memo', {
   updatedAt: timestamp('updated_at').notNull(),
 });
 
+// Maximum character limit for memo content
+export const MAX_MEMO_CHARACTERS = 20000;
+
 // Schema Zod pour l'insertion (create)
 export const insertMemoSchema = createInsertSchema(memo, {
-  content: z.string().min(1, 'Content cannot be empty').max(10000, 'Content is too long'),
+  content: z
+    .string()
+    .min(1, 'Content cannot be empty')
+    .max(
+      MAX_MEMO_CHARACTERS,
+      `Content cannot exceed ${MAX_MEMO_CHARACTERS.toLocaleString()} characters`
+    ),
 }).omit({
   id: true,
   userId: true,

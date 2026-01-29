@@ -1,5 +1,8 @@
-import { insertMemoSchema } from '@repo/db/schema';
+import { insertMemoSchema, MAX_MEMO_CHARACTERS } from '@repo/db/schema';
 import { z } from 'zod';
+
+// Export the character limit constant for use in UI
+export { MAX_MEMO_CHARACTERS };
 
 export const createMemoSchema = insertMemoSchema;
 
