@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as DebugRouteImport } from './routes/debug'
+import { Route as CalendarDemoRouteImport } from './routes/calendar-demo'
+import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as memosIndexRouteImport } from './routes/(memos)/index'
+import { Route as memosExploreRouteImport } from './routes/(memos)/explore'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 
@@ -34,24 +36,33 @@ const NotificationsRoute = NotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExploreRoute = ExploreRouteImport.update({
-  id: '/explore',
-  path: '/explore',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DebugRoute = DebugRouteImport.update({
   id: '/debug',
   path: '/debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarDemoRoute = CalendarDemoRouteImport.update({
+  id: '/calendar-demo',
+  path: '/calendar-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const memosLayoutRoute = memosLayoutRouteImport.update({
+  id: '/(memos)',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authLayoutRoute = authLayoutRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const memosIndexRoute = memosIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => memosLayoutRoute,
+} as any)
+const memosExploreRoute = memosExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => memosLayoutRoute,
 } as any)
 const authSignUpRoute = authSignUpRouteImport.update({
   id: '/sign-up',
@@ -65,76 +76,84 @@ const authSignInRoute = authSignInRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof authLayoutRouteWithChildren
+  '/': typeof memosIndexRoute
+  '/calendar-demo': typeof CalendarDemoRoute
   '/debug': typeof DebugRoute
-  '/explore': typeof ExploreRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/explore': typeof memosExploreRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof authLayoutRouteWithChildren
+  '/': typeof memosIndexRoute
+  '/calendar-demo': typeof CalendarDemoRoute
   '/debug': typeof DebugRoute
-  '/explore': typeof ExploreRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/explore': typeof memosExploreRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/(auth)': typeof authLayoutRouteWithChildren
+  '/(memos)': typeof memosLayoutRouteWithChildren
+  '/calendar-demo': typeof CalendarDemoRoute
   '/debug': typeof DebugRoute
-  '/explore': typeof ExploreRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
+  '/(memos)/explore': typeof memosExploreRoute
+  '/(memos)/': typeof memosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/calendar-demo'
     | '/debug'
-    | '/explore'
     | '/notifications'
     | '/resources'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/explore'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/calendar-demo'
     | '/debug'
-    | '/explore'
     | '/notifications'
     | '/resources'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/explore'
   id:
     | '__root__'
-    | '/'
     | '/(auth)'
+    | '/(memos)'
+    | '/calendar-demo'
     | '/debug'
-    | '/explore'
     | '/notifications'
     | '/resources'
     | '/settings'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
+    | '/(memos)/explore'
+    | '/(memos)/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   authLayoutRoute: typeof authLayoutRouteWithChildren
+  memosLayoutRoute: typeof memosLayoutRouteWithChildren
+  CalendarDemoRoute: typeof CalendarDemoRoute
   DebugRoute: typeof DebugRoute
-  ExploreRoute: typeof ExploreRoute
   NotificationsRoute: typeof NotificationsRoute
   ResourcesRoute: typeof ResourcesRoute
   SettingsRoute: typeof SettingsRoute
@@ -163,18 +182,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/explore': {
-      id: '/explore'
-      path: '/explore'
-      fullPath: '/explore'
-      preLoaderRoute: typeof ExploreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/debug': {
       id: '/debug'
       path: '/debug'
       fullPath: '/debug'
       preLoaderRoute: typeof DebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar-demo': {
+      id: '/calendar-demo'
+      path: '/calendar-demo'
+      fullPath: '/calendar-demo'
+      preLoaderRoute: typeof CalendarDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(memos)': {
+      id: '/(memos)'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof memosLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)': {
@@ -184,12 +210,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/(memos)/': {
+      id: '/(memos)/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof memosIndexRouteImport
+      parentRoute: typeof memosLayoutRoute
+    }
+    '/(memos)/explore': {
+      id: '/(memos)/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof memosExploreRouteImport
+      parentRoute: typeof memosLayoutRoute
     }
     '/(auth)/sign-up': {
       id: '/(auth)/sign-up'
@@ -222,11 +255,25 @@ const authLayoutRouteWithChildren = authLayoutRoute._addFileChildren(
   authLayoutRouteChildren,
 )
 
+interface memosLayoutRouteChildren {
+  memosExploreRoute: typeof memosExploreRoute
+  memosIndexRoute: typeof memosIndexRoute
+}
+
+const memosLayoutRouteChildren: memosLayoutRouteChildren = {
+  memosExploreRoute: memosExploreRoute,
+  memosIndexRoute: memosIndexRoute,
+}
+
+const memosLayoutRouteWithChildren = memosLayoutRoute._addFileChildren(
+  memosLayoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   authLayoutRoute: authLayoutRouteWithChildren,
+  memosLayoutRoute: memosLayoutRouteWithChildren,
+  CalendarDemoRoute: CalendarDemoRoute,
   DebugRoute: DebugRoute,
-  ExploreRoute: ExploreRoute,
   NotificationsRoute: NotificationsRoute,
   ResourcesRoute: ResourcesRoute,
   SettingsRoute: SettingsRoute,

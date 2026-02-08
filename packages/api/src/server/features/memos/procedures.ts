@@ -1,5 +1,5 @@
 import { memo } from '@repo/db/schema';
-import { desc, eq, and } from '@repo/db';
+import { desc, eq, and, sql } from '@repo/db';
 import { protectedProcedure, publicProcedure } from '../../trpc';
 import {
   createMemoSchema,
@@ -103,3 +103,22 @@ export const deleteMemo = protectedProcedure
       throw new Error('Unable to delete memo');
     }
   });
+
+export const stats = protectedProcedure.query(async ({ ctx }) => {
+  const rows = await ctx.db
+    .select({
+      date: sql`DATE(${memo.createdAt})`.as('date'),
+      count: sql`COUNT(*)`.as('count'),
+    })
+    .from(memo)
+    .where(eq(memo.userId, ctx.session.user.id))
+    .groupBy(sql`DATE(${memo.createdAt})`);
+
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.date as string] = row.count as number;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+});
