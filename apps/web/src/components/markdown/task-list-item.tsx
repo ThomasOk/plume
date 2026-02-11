@@ -3,8 +3,9 @@ import { toast } from 'sonner';
 import type { Memo } from '@/lib/types';
 import type { InputHTMLAttributes } from 'react';
 import { useMemoContext } from '@/features/memos/contexts/memo-context';
-import { toggleTaskAtIndex } from '@/utils/markdown-manipulation';
 import { useTRPC } from '@/lib/api';
+import { toggleTaskAtIndex } from '@/utils/markdown-manipulation';
+import { authClient } from '@/lib/authClient';
 
 const getTaskIndex = (checkbox: HTMLInputElement): number | null => {
   const listItem = checkbox.closest('li');
@@ -45,11 +46,10 @@ const getTaskIndex = (checkbox: HTMLInputElement): number | null => {
 
 export const TaskListItem = (props: InputHTMLAttributes<HTMLInputElement>) => {
   const { memo } = useMemoContext();
+  const { data: session } = authClient.useSession();
+  const isAuthor = session?.user?.id === memo.userId;
   const queryClient = useQueryClient();
   const trpc = useTRPC();
-
-  // Get the correct queryKey from tRPC
-  const queryKey = trpc.memos.listPublic.queryKey();
 
   // Create a local mutation with optimistic update callbacks
   const updateMemo = useMutation({
@@ -57,48 +57,70 @@ export const TaskListItem = (props: InputHTMLAttributes<HTMLInputElement>) => {
 
     // Optimistic update: update UI immediately before API call
     onMutate: async (variables: { id: string; content: string }) => {
-      // Cancel any outgoing refetches to avoid overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey });
+      // Get specific queryKeys with undefined input to match cached queries
+      const listKey = trpc.memos.list.queryKey({ date: undefined });
+      const listPublicKey = trpc.memos.listPublic.queryKey({ date: undefined });
 
-      // Snapshot the previous value for rollback
-      const previousMemos = queryClient.getQueryData<Memo[]>(queryKey);
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: listKey });
+      await queryClient.cancelQueries({ queryKey: listPublicKey });
 
-      // Optimistically update the cache
-      if (previousMemos) {
+      // Snapshot the previous values for rollback
+      const previousList = queryClient.getQueryData<Memo[]>(listKey);
+      const previousListPublic = queryClient.getQueryData<Memo[]>(listPublicKey);
+
+      // Optimistically update list query
+      if (previousList) {
         queryClient.setQueryData<Memo[]>(
-          queryKey,
-          previousMemos.map((m) =>
+          listKey,
+          previousList.map((m) =>
             m.id === variables.id
               ? { ...m, content: variables.content }
-              : m,
-          ),
+              : m
+          )
         );
       }
 
-      // Return context with the snapshot for rollback
-      return { previousMemos };
+      // Optimistically update listPublic query
+      if (previousListPublic) {
+        queryClient.setQueryData<Memo[]>(
+          listPublicKey,
+          previousListPublic.map((m) =>
+            m.id === variables.id
+              ? { ...m, content: variables.content }
+              : m
+          )
+        );
+      }
+
+      // Return context with snapshots for rollback
+      return { previousList, previousListPublic };
     },
 
     // Rollback on error
-    onError: (_err: unknown, _variables: unknown, context: unknown) => {
-      // Type guard: check if context has previousMemos
-      if (
-        context &&
-        typeof context === 'object' &&
-        'previousMemos' in context &&
-        context.previousMemos
-      ) {
-        queryClient.setQueryData(
-          queryKey,
-          context.previousMemos as Memo[],
-        );
+    onError: (
+      err: Error,
+      _variables: { id: string; content: string },
+      context?: { previousList?: Memo[]; previousListPublic?: Memo[] }
+    ) => {
+      if (context) {
+        const listKey = trpc.memos.list.queryKey({ date: undefined });
+        const listPublicKey = trpc.memos.listPublic.queryKey({ date: undefined });
+
+        // Restore previous state
+        if (context.previousList) {
+          queryClient.setQueryData<Memo[]>(listKey, context.previousList);
+        }
+        if (context.previousListPublic) {
+          queryClient.setQueryData<Memo[]>(listPublicKey, context.previousListPublic);
+        }
       }
-      toast.error('Failed to update task. Please try again.');
+      toast.error(err.message || 'Failed to update task. Please try again.');
     },
 
     // Always refetch after error or success to ensure consistency
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: [['memos']] });
     },
   });
 
@@ -124,5 +146,12 @@ export const TaskListItem = (props: InputHTMLAttributes<HTMLInputElement>) => {
     });
   };
 
-  return <input {...props} onChange={handleChange} disabled={false} />;
+  return (
+    <input
+      {...props}
+      onChange={handleChange}
+      disabled={!isAuthor}
+      className={!isAuthor ? 'opacity-50 cursor-not-allowed' : ''}
+    />
+  );
 };
