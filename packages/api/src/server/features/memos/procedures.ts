@@ -129,7 +129,7 @@ export const stats = protectedProcedure.query(async ({ ctx }) => {
 
   return rows.reduce(
     (acc, row) => {
-      acc[row.date as string] = row.count as number;
+      acc[row.date as string] = Number(row.count);
       return acc;
     },
     {} as Record<string, number>,

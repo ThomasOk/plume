@@ -1,3 +1,4 @@
+import { TooltipProvider } from '@repo/ui/components/tooltip';
 import { Fragment } from 'react';
 import type { MonthCalendarProps } from './types';
 import { CalendarCell } from './calendar-cell';
@@ -12,7 +13,7 @@ export const MonthCalendar = ({
 }: MonthCalendarProps) => {
   const { weeks, weekDays, maxCount } = useCalendar(month, data, selectedDate);
   return (
-    <>
+    <TooltipProvider>
       <div className={className}>
         <div className="grid grid-cols-7 gap-1.5">
           {weekDays.map((day, index) => (
@@ -37,6 +38,6 @@ export const MonthCalendar = ({
           ))}
         </div>
       </div>
-    </>
+    </TooltipProvider>
   );
 };
