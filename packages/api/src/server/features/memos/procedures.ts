@@ -5,25 +5,38 @@ import {
   createMemoSchema,
   updateMemoSchema,
   deleteMemoSchema,
+  listMemosSchema,
 } from './schemas';
 import { nanoid } from 'nanoid';
 
-export const list = protectedProcedure.query(async ({ ctx }) => {
-  const memos = await ctx.db.query.memo.findMany({
-    where: eq(memo.userId, ctx.session.user.id),
-    orderBy: [desc(memo.createdAt)],
+export const list = protectedProcedure
+  .input(listMemosSchema)
+  .query(async ({ ctx, input }) => {
+    const memos = await ctx.db.query.memo.findMany({
+      where: input.date
+        ? and(
+            eq(memo.userId, ctx.session.user.id),
+            sql`DATE(${memo.createdAt}) = ${input.date}`,
+          )
+        : eq(memo.userId, ctx.session.user.id),
+      orderBy: [desc(memo.createdAt)],
+    });
+
+    return memos;
   });
 
-  return memos;
-});
+export const listPublic = publicProcedure
+  .input(listMemosSchema)
+  .query(async ({ ctx, input }) => {
+    const memos = await ctx.db.query.memo.findMany({
+      where: input.date
+        ? sql`DATE(${memo.createdAt}) = ${input.date}`
+        : undefined,
+      orderBy: [desc(memo.createdAt)],
+    });
 
-export const listPublic = publicProcedure.query(async ({ ctx }) => {
-  const memos = await ctx.db.query.memo.findMany({
-    orderBy: [desc(memo.createdAt)],
+    return memos;
   });
-
-  return memos;
-});
 
 export const create = protectedProcedure
   .input(createMemoSchema)

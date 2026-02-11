@@ -1,12 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MemoList, usePublicMemos } from '@/features/memos';
+import { MemoList, usePublicMemos, DateFilterBadge } from '@/features/memos';
+import { memosSearchSchema } from '@/lib/schemas/search-params';
 
 export const Route = createFileRoute('/(memos)/explore')({
+  validateSearch: (search) => memosSearchSchema.parse(search),
   component: ExplorePage,
 });
 
 function ExplorePage() {
-  const { data: memos, isLoading, error } = usePublicMemos();
+  const search = Route.useSearch();
+  const selectedDate = search.date;
+
+  const {
+    data: memos,
+    isLoading,
+    error,
+  } = usePublicMemos({ date: selectedDate });
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-8">
@@ -15,7 +24,7 @@ function ExplorePage() {
           Discover public memos from all users.
         </p>
       </div>
-
+      <DateFilterBadge />
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
         <p className="text-red-500">Error loading memos: {error.message}</p>

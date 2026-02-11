@@ -1,20 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MemoList, useMemos } from '@/features/memos';
+import { MemoList, useMemos, DateFilterBadge } from '@/features/memos';
 import { MemoForm } from '@/features/memos/components/memo-form';
 import { authClient } from '@/lib/authClient';
+import { memosSearchSchema } from '@/lib/schemas/search-params';
 
 export const Route = createFileRoute('/(memos)/')({
+  validateSearch: (search) => memosSearchSchema.parse(search),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { data: session } = authClient.useSession();
+  const search = Route.useSearch();
+  const selectedDate = search.date;
+
   const {
     data: memos,
     isLoading,
     error,
   } = useMemos({
     enabled: !!session?.user,
+    date: selectedDate,
   });
   //const { data: memos, isLoading, error } = usePublicMemos();
 
@@ -29,6 +35,7 @@ function RouteComponent() {
         </p>
       </div>
       <MemoForm />
+      <DateFilterBadge />
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
         <p className="text-red-500">
