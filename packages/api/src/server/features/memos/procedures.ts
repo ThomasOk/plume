@@ -1,29 +1,42 @@
 import { memo } from '@repo/db/schema';
-import { desc, eq, and } from '@repo/db';
+import { desc, eq, and, sql } from '@repo/db';
 import { protectedProcedure, publicProcedure } from '../../trpc';
 import {
   createMemoSchema,
   updateMemoSchema,
   deleteMemoSchema,
+  listMemosSchema,
 } from './schemas';
 import { nanoid } from 'nanoid';
 
-export const list = protectedProcedure.query(async ({ ctx }) => {
-  const memos = await ctx.db.query.memo.findMany({
-    where: eq(memo.userId, ctx.session.user.id),
-    orderBy: [desc(memo.createdAt)],
+export const list = protectedProcedure
+  .input(listMemosSchema)
+  .query(async ({ ctx, input }) => {
+    const memos = await ctx.db.query.memo.findMany({
+      where: input.date
+        ? and(
+            eq(memo.userId, ctx.session.user.id),
+            sql`DATE(${memo.createdAt}) = ${input.date}`,
+          )
+        : eq(memo.userId, ctx.session.user.id),
+      orderBy: [desc(memo.createdAt)],
+    });
+
+    return memos;
   });
 
-  return memos;
-});
+export const listPublic = publicProcedure
+  .input(listMemosSchema)
+  .query(async ({ ctx, input }) => {
+    const memos = await ctx.db.query.memo.findMany({
+      where: input.date
+        ? sql`DATE(${memo.createdAt}) = ${input.date}`
+        : undefined,
+      orderBy: [desc(memo.createdAt)],
+    });
 
-export const listPublic = publicProcedure.query(async ({ ctx }) => {
-  const memos = await ctx.db.query.memo.findMany({
-    orderBy: [desc(memo.createdAt)],
+    return memos;
   });
-
-  return memos;
-});
 
 export const create = protectedProcedure
   .input(createMemoSchema)
@@ -103,3 +116,22 @@ export const deleteMemo = protectedProcedure
       throw new Error('Unable to delete memo');
     }
   });
+
+export const stats = protectedProcedure.query(async ({ ctx }) => {
+  const rows = await ctx.db
+    .select({
+      date: sql`DATE(${memo.createdAt})`.as('date'),
+      count: sql`COUNT(*)`.as('count'),
+    })
+    .from(memo)
+    .where(eq(memo.userId, ctx.session.user.id))
+    .groupBy(sql`DATE(${memo.createdAt})`);
+
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.date as string] = Number(row.count);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+});
