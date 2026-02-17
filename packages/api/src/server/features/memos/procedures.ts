@@ -1,5 +1,6 @@
-import { memo } from '@repo/db/schema';
 import { desc, eq, and, sql } from '@repo/db';
+import { memo } from '@repo/db/schema';
+import { nanoid } from 'nanoid';
 import { protectedProcedure, publicProcedure } from '../../trpc';
 import {
   createMemoSchema,
@@ -7,18 +8,24 @@ import {
   deleteMemoSchema,
   listMemosSchema,
 } from './schemas';
-import { nanoid } from 'nanoid';
+import { extractTagsFromContent } from './utils';
 
 export const list = protectedProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
+    // conditions before findMany
+    const conditions = [eq(memo.userId, ctx.session.user.id)];
+
+    if (input.date) {
+      conditions.push(sql`DATE(${memo.createdAt}) = ${input.date}`);
+    }
+
+    if (input.tag) {
+      conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
+    }
+
     const memos = await ctx.db.query.memo.findMany({
-      where: input.date
-        ? and(
-            eq(memo.userId, ctx.session.user.id),
-            sql`DATE(${memo.createdAt}) = ${input.date}`,
-          )
-        : eq(memo.userId, ctx.session.user.id),
+      where: and(...conditions),
       orderBy: [desc(memo.createdAt)],
     });
 
@@ -43,13 +50,14 @@ export const create = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     try {
       const now = new Date();
-
+      const tags = extractTagsFromContent(input.content);
       const [newMemo] = await ctx.db
         .insert(memo)
         .values({
           id: nanoid(),
           userId: ctx.session.user.id,
           content: input.content,
+          tags: tags,
           createdAt: now,
           updatedAt: now,
         })
@@ -67,10 +75,12 @@ export const update = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     //throw new Error('test update error');
     try {
+      const tags = extractTagsFromContent(input.content);
       const [updatedMemo] = await ctx.db
         .update(memo)
         .set({
           content: input.content,
+          tags: tags,
           updatedAt: new Date(),
         })
         .where(and(eq(memo.id, input.id), eq(memo.userId, ctx.session.user.id)))
