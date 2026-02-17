@@ -1,5 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MemoList, useMemos, DateFilterBadge } from '@/features/memos';
+import {
+  MemoList,
+  useMemos,
+  DateFilterBadge,
+  TagFilterBadge,
+} from '@/features/memos';
 import { MemoForm } from '@/features/memos/components/memo-form';
 import { authClient } from '@/lib/authClient';
 import { memosSearchSchema } from '@/lib/schemas/search-params';
@@ -13,6 +18,7 @@ function RouteComponent() {
   const { data: session } = authClient.useSession();
   const search = Route.useSearch();
   const selectedDate = search.date;
+  const selectedTag = search.tag;
 
   const {
     data: memos,
@@ -21,6 +27,7 @@ function RouteComponent() {
   } = useMemos({
     enabled: !!session?.user,
     date: selectedDate,
+    tag: selectedTag,
   });
   //const { data: memos, isLoading, error } = usePublicMemos();
 
@@ -35,7 +42,10 @@ function RouteComponent() {
         </p>
       </div>
       <MemoForm />
-      <DateFilterBadge />
+      <div className="flex gap-2 flex-wrap">
+        <DateFilterBadge />
+        <TagFilterBadge />
+      </div>
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
         <p className="text-red-500">
