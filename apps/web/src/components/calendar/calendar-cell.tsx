@@ -17,6 +17,7 @@ export const CalendarCell = ({
   onClick,
 }: CalendarCellProps) => {
   const intensity = maxCount > 0 ? (cell.count / maxCount) * 100 : 0;
+  const isIntense = intensity > 50;
   const isClickable = cell.isCurrentMonth && cell.count > 0;
 
   return (
@@ -27,8 +28,7 @@ export const CalendarCell = ({
             'relative',
             'aspect-square',
             'text-sm',
-
-            'rounded-xl',
+            'rounded-lg',
             isClickable ? 'cursor-pointer' : 'cursor-default',
             'transition-colors',
             'flex items-center justify-center',
@@ -40,13 +40,19 @@ export const CalendarCell = ({
           <div
             className={cn(
               'absolute',
-              'bg-blue-500',
-              'rounded-xl',
+              'bg-sky-900',
+              'rounded-lg',
               !cell.isCurrentMonth && 'bg-transparent',
             )}
             style={{ inset: '1px', opacity: intensity / 100 }}
           />
-          <div className={cn('relative', !cell.isCurrentMonth && 'opacity-40')}>
+          <div
+            className={cn(
+              'relative',
+              !cell.isCurrentMonth && 'opacity-40',
+              isIntense && 'text-white',
+            )}
+          >
             {cell.label}
           </div>
         </div>
