@@ -5,6 +5,7 @@ import NavContainer from '@/components/layout/nav-container';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import Spinner from '@/components/ui/spinner';
 import { authClient } from '@/lib/authClient';
+import { useTheme } from '@/hooks/use-theme';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -20,6 +21,7 @@ const TanStackRouterDevtools = import.meta.env.PROD
     );
 
 function RootComponent() {
+  const { theme } = useTheme();
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
@@ -32,7 +34,7 @@ function RootComponent() {
 
   return (
     <>
-      <Toaster />
+      <Toaster theme={theme === 'dark' ? 'dark' : 'light'} />
       <div className="flex h-screen">
         <SidebarNav />
         <main className="flex-1 overflow-auto p-4">

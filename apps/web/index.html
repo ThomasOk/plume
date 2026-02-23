@@ -15,14 +15,17 @@
         const dark = window.matchMedia('(prefers-color-scheme: dark)');
 
         const update = () => {
-          if (
-            localStorage.theme === 'dark' ||
-            (!localStorage.theme && dark.matches)
-          ) {
+          classList.remove('dark', 'paper');
+          if (localStorage.theme === 'dark') {
+            classList.add('dark');
+            style.colorScheme = 'dark';
+          } else if (localStorage.theme === 'paper') {
+            classList.add('paper');
+            style.colorScheme = 'light';
+          } else if (!localStorage.theme && dark.matches) {
             classList.add('dark');
             style.colorScheme = 'dark';
           } else {
-            classList.remove('dark');
             style.colorScheme = 'light';
           }
         };
