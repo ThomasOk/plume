@@ -35,10 +35,17 @@ export const list = protectedProcedure
 export const listPublic = publicProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
+    const conditions = [];
+
+    if (input.date) {
+      conditions.push(sql`DATE(${memo.createdAt}) = ${input.date}`);
+    }
+
+    if (input.tag) {
+      conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
+    }
     const memos = await ctx.db.query.memo.findMany({
-      where: input.date
-        ? sql`DATE(${memo.createdAt}) = ${input.date}`
-        : undefined,
+      where: and(...conditions),
       orderBy: [desc(memo.createdAt)],
     });
 
