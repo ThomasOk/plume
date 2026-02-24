@@ -40,7 +40,7 @@ export const CalendarCell = ({
           <div
             className={cn(
               'absolute',
-              'bg-sky-900',
+              'bg-primary',
               'rounded-lg',
               !cell.isCurrentMonth && 'bg-transparent',
             )}
@@ -50,7 +50,7 @@ export const CalendarCell = ({
             className={cn(
               'relative',
               !cell.isCurrentMonth && 'opacity-40',
-              isIntense && 'text-white',
+              isIntense && 'text-primary-foreground',
             )}
           >
             {cell.label}

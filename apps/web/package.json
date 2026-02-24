@@ -17,6 +17,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/inter": "^5.2.6",
     "@hookform/resolvers": "catalog:",
     "@radix-ui/react-icons": "catalog:",
@@ -31,7 +32,6 @@
     "date-fns": "^4.1.0",
     "dotenv-cli": "catalog:",
     "highlight.js": "^11.11.1",
-    "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",

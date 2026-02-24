@@ -14,14 +14,14 @@ export const Route = createFileRoute('/(auth)')({
 function AuthLayout() {
   const { pathname } = useLocation();
   return (
-    <main className="bg-neutral-100 min-h-screen">
+    <main className="bg-background min-h-screen">
       <div className="mx-auyo max-w-screen-2xl p-4">
         {/* <img src={LogoSvg} alt="RT Stack" className="h-12 w-auto" /> */}
         <nav className="flex justify-between items-center">
           <img src={LogoSvg} alt="logo" width={100} height={50} />
           <Button asChild variant="secondary">
-            <Link to={pathname === '/login' ? '/register' : '/login'}>
-              {pathname === '/login' ? 'Sign Up' : 'Login'}
+            <Link to={pathname === '/sign-in' ? '/sign-up' : '/sign-in'}>
+              {pathname === '/sign-in' ? 'Sign Up' : 'Login'}
             </Link>
           </Button>
         </nav>

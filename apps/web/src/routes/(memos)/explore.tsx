@@ -27,7 +27,7 @@ function ExplorePage() {
       <DateFilterBadge />
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
-        <p className="text-red-500">Error loading memos: {error.message}</p>
+        <p className="text-destructive">Error loading memos: {error.message}</p>
       )}
       {memos && <MemoList memos={memos} />}
     </div>

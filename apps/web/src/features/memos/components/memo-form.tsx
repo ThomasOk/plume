@@ -63,28 +63,30 @@ export const MemoForm = () => {
                   className={cn(
                     'text-sm font-medium transition-colors',
                     isOverLimit
-                      ? 'text-red-600'
+                      ? 'text-destructive'
                       : remaining < 1000
-                        ? 'text-orange-600'
-                        : 'text-muted-foreground'
+                        ? 'text-destructive/70'
+                        : 'text-muted-foreground',
                   )}
                 >
-                  {charCount.toLocaleString()} / {MAX_MEMO_CHARACTERS.toLocaleString()}
+                  {charCount.toLocaleString()} /{' '}
+                  {MAX_MEMO_CHARACTERS.toLocaleString()}
                 </span>
                 {isOverLimit && (
-                  <span className="text-red-600 text-xs font-medium">
+                  <span className="text-destructive text-xs font-medium">
                     {Math.abs(remaining).toLocaleString()} characters over limit
                   </span>
                 )}
                 {!isOverLimit && remaining < 1000 && remaining > 0 && (
-                  <span className="text-orange-600 text-xs">
+                  <span className="text-destructive/70 text-xs">
                     {remaining.toLocaleString()} characters remaining
                   </span>
                 )}
               </div>
               {isOverLimit && (
-                <p className="text-xs text-red-600">
-                  Please remove {Math.abs(remaining).toLocaleString()} characters to save
+                <p className="text-xs text-destructive">
+                  Please remove {Math.abs(remaining).toLocaleString()}{' '}
+                  characters to save
                 </p>
               )}
             </div>

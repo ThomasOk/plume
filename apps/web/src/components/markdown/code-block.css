@@ -3,13 +3,8 @@
   position: relative;
   margin: 1rem 0;
   border-radius: 0.5rem;
-  background-color: #ffffff;
-  border: 1px solid #e1e4e8;
-}
-
-.dark .markdown-code-block {
-  background-color: #161b22;
-  border-color: #30363d;
+  background-color: var(--card);
+  border: 1px solid var(--border);
 }
 
 /* Language badge header */
@@ -18,14 +13,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #e1e4e8;
-  background-color: #f6f8fa;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--muted);
   border-radius: 0.5rem 0.5rem 0 0;
-}
-
-.dark .code-language-badge {
-  border-bottom-color: #30363d;
-  background-color: #0d1117;
 }
 
 /* Copy button */
@@ -35,9 +25,9 @@
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  border: 1px solid #d0d7de;
-  background-color: #ffffff;
-  color: #57606a;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -45,19 +35,7 @@
 }
 
 .copy-button:hover {
-  background-color: #f6f8fa;
-  border-color: #b1b5ba;
-}
-
-.dark .copy-button {
-  background-color: #21262d;
-  border-color: #3d444d;
-  color: #adbac7;
-}
-
-.dark .copy-button:hover {
-  background-color: #30363d;
-  border-color: #545d68;
+  background-color: var(--accent);
 }
 
 /* Code block pre element */
@@ -79,13 +57,9 @@
 
 /* Inline code styling (not in code blocks) */
 .prose code:not(.markdown-code-block code) {
-  background-color: rgba(175, 184, 193, 0.2);
+  background-color: var(--muted);
   padding: 0.2em 0.4em;
   border-radius: 0.25rem;
   font-size: 0.875em;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-}
-
-.dark .prose code:not(.markdown-code-block code) {
-  background-color: rgba(110, 118, 129, 0.4);
 }

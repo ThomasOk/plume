@@ -8,24 +8,39 @@ import {
   RiSettings4Line,
   RiLogoutBoxLine,
   RiUserLine,
+  RiCheckLine,
+  RiHome4Line,
 } from 'react-icons/ri';
+import { IoEarthOutline } from 'react-icons/io5';
+import { GrAttachment } from 'react-icons/gr';
+import { GoBell } from 'react-icons/go';
 import { Button } from '@repo/ui/components/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@repo/ui/components/dropdown-menu';
 import { authClient } from '@/lib/authClient';
+import { useTheme } from '@/hooks/use-theme';
+import { LuPalette } from 'react-icons/lu';
 
 const navItems = [
-  { to: '/', icon: RiQuillPenLine, label: 'Home' },
-  { to: '/explore', icon: RiCompass3Line, label: 'Explore' },
-  { to: '/resources', icon: RiAttachmentLine, label: 'Resources' },
-  { to: '/notifications', icon: RiBellLine, label: 'Notifications' },
+  { to: '/', icon: RiHome4Line, label: 'Home' },
+  { to: '/explore', icon: IoEarthOutline, label: 'Explore' },
+  { to: '/resources', icon: GrAttachment, label: 'Resources' },
+  {
+    to: '/notifications',
+    icon: GoBell,
+    label: 'Notifications',
+  },
 ];
 
 export const SidebarNav = () => {
+  const { theme, setTheme } = useTheme();
   const router = useRouterState();
 
   const handleLogout = async () => {
@@ -75,6 +90,32 @@ export const SidebarNav = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="right">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="flex items-center gap-2">
+                <LuPalette />
+                Theme
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => setTheme('light')}>
+                  <RiCheckLine
+                    className={theme === 'light' ? 'opacity-100' : 'opacity-0'}
+                  />
+                  Light
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  <RiCheckLine
+                    className={theme === 'dark' ? 'opacity-100' : 'opacity-0'}
+                  />
+                  Dark
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('paper')}>
+                  <RiCheckLine
+                    className={theme === 'paper' ? 'opacity-100' : 'opacity-0'}
+                  />
+                  Paper
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuItem asChild>
               <Link to="/settings" className="flex items-center gap-2">
                 <RiSettings4Line className="w-4 h-4" />

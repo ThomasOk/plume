@@ -49,7 +49,6 @@
     "class-variance-authority": "catalog:",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.541.0",
-    "next-themes": "catalog:",
     "radix-ui": "catalog:",
     "react-day-picker": "^9.9.0",
     "react-hook-form": "catalog:",
