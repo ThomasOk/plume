@@ -48,7 +48,7 @@ function RouteComponent() {
       </div>
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
-        <p className="text-red-500">
+        <p className="text-destructive">
           Error loading memos:
           {error.message}
         </p>

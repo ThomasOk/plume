@@ -21,13 +21,13 @@ export const TagFilterBadge = () => {
     <div className="mb-2">
       <Badge
         variant="secondary"
-        className="bg-gray-200 hover:bg-gray-300 text-sm rounded-2xl"
+        className="bg-secondary hover:bg-secondary/80 text-sm rounded-2xl"
       >
         <RiHashtag className="!size-4 -mr-1" />
         {selectedTag}
         <button
           onClick={handleRemoveFilter}
-          className="ml-1 cursor-pointer hover:bg-gray-400 rounded-full p-0.5 transition-colors"
+          className="ml-1 cursor-pointer hover:bg-accent rounded-full p-0.5 transition-colors"
         >
           <MdClose />
         </button>

@@ -69,7 +69,7 @@ export const CodeBlock = ({ children, className, inline }: CodeBlockProps) => {
   return (
     <div className="not-prose markdown-code-block">
       <div className="code-language-badge">
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+        <span className="text-xs font-medium text-muted-foreground">
           {languageDisplay || 'TEXT'}
         </span>
         <button
