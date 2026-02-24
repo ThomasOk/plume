@@ -1,5 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MemoList, usePublicMemos, DateFilterBadge } from '@/features/memos';
+import {
+  MemoList,
+  usePublicMemos,
+  DateFilterBadge,
+  TagFilterBadge,
+} from '@/features/memos';
 import { memosSearchSchema } from '@/lib/schemas/search-params';
 
 export const Route = createFileRoute('/(memos)/explore')({
@@ -10,12 +15,13 @@ export const Route = createFileRoute('/(memos)/explore')({
 function ExplorePage() {
   const search = Route.useSearch();
   const selectedDate = search.date;
+  const selectedTag = search.tag;
 
   const {
     data: memos,
     isLoading,
     error,
-  } = usePublicMemos({ date: selectedDate });
+  } = usePublicMemos({ date: selectedDate, tag: selectedTag });
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-8">
@@ -25,6 +31,7 @@ function ExplorePage() {
         </p>
       </div>
       <DateFilterBadge />
+      <TagFilterBadge />
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
         <p className="text-destructive">Error loading memos: {error.message}</p>
