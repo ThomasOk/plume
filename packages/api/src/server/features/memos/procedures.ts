@@ -1,4 +1,4 @@
-import { desc, eq, and, sql } from '@repo/db';
+import { desc, eq, and, sql, ilike } from '@repo/db';
 import { memo } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
 import { protectedProcedure, publicProcedure } from '../../trpc';
@@ -24,6 +24,10 @@ export const list = protectedProcedure
       conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
     }
 
+    if (input.query) {
+      conditions.push(ilike(memo.content, `%${input.query}%`));
+    }
+
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
       orderBy: [desc(memo.createdAt)],
@@ -44,6 +48,11 @@ export const listPublic = publicProcedure
     if (input.tag) {
       conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
     }
+
+    if (input.query) {
+      conditions.push(ilike(memo.content, `%${input.query}%`));
+    }
+
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
       orderBy: [desc(memo.createdAt)],

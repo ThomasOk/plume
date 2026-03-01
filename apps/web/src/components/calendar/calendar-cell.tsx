@@ -50,7 +50,7 @@ export const CalendarCell = ({
             className={cn(
               'relative',
               !cell.isCurrentMonth && 'opacity-40',
-              isIntense && 'text-primary-foreground',
+              isIntense && cell.isCurrentMonth && 'text-primary-foreground',
             )}
           >
             {cell.label}

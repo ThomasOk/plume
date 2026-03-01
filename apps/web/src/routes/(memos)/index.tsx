@@ -4,6 +4,7 @@ import {
   useMemos,
   DateFilterBadge,
   TagFilterBadge,
+  SearchFilterBadge,
 } from '@/features/memos';
 import { MemoForm } from '@/features/memos/components/memo-form';
 import { authClient } from '@/lib/authClient';
@@ -19,6 +20,7 @@ function RouteComponent() {
   const search = Route.useSearch();
   const selectedDate = search.date;
   const selectedTag = search.tag;
+  const query = search.query;
 
   const {
     data: memos,
@@ -28,8 +30,8 @@ function RouteComponent() {
     enabled: !!session?.user,
     date: selectedDate,
     tag: selectedTag,
+    query,
   });
-  //const { data: memos, isLoading, error } = usePublicMemos();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -45,6 +47,7 @@ function RouteComponent() {
       <div className="flex gap-2 flex-wrap">
         <DateFilterBadge />
         <TagFilterBadge />
+        <SearchFilterBadge />
       </div>
       {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
       {error && (
