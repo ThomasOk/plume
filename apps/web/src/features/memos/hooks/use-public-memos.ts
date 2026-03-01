@@ -4,6 +4,7 @@ import { useTRPC } from '@/lib/api';
 interface UsePublicMemosOptions {
   date?: string;
   tag?: string;
+  query?: string;
 }
 
 export const usePublicMemos = (options?: UsePublicMemosOptions) => {
@@ -13,6 +14,7 @@ export const usePublicMemos = (options?: UsePublicMemosOptions) => {
     ...trpc.memos.listPublic.queryOptions({
       date: options?.date,
       tag: options?.tag,
+      query: options?.query,
     }),
   });
 };

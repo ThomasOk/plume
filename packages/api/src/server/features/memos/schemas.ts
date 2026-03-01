@@ -18,4 +18,5 @@ export const deleteMemoSchema = z.object({
 export const listMemosSchema = z.object({
   date: z.string().optional(),
   tag: z.string().optional(),
+  query: z.string().optional(),
 });

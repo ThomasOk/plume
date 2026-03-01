@@ -7,4 +7,5 @@ import { z } from 'zod';
 export const memosSearchSchema = z.object({
   date: z.string().optional(),
   tag: z.string().optional(),
+  query: z.string().optional(),
 });
