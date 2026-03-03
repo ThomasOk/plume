@@ -1,5 +1,5 @@
 import { Toaster } from '@repo/ui/components/sonner';
-import { Outlet, createRootRoute } from '@tanstack/react-router';
+import { Outlet, createRootRoute, useLocation } from '@tanstack/react-router';
 import React from 'react';
 import NavContainer from '@/components/layout/nav-container';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
@@ -23,6 +23,8 @@ const TanStackRouterDevtools = import.meta.env.PROD
 function RootComponent() {
   const { theme } = useTheme();
   const { data: session, isPending } = authClient.useSession();
+  const { pathname } = useLocation();
+  const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
 
   if (isPending) {
     return (
@@ -36,7 +38,7 @@ function RootComponent() {
     <>
       <Toaster theme={theme === 'dark' ? 'dark' : 'light'} />
       <div className="flex h-screen">
-        <SidebarNav />
+        {!isAuthPage && <SidebarNav />}
         <main className="flex-1 overflow-auto p-4">
           <Outlet />
         </main>

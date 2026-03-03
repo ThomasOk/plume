@@ -10,7 +10,7 @@ import { MemoForm } from '@/features/memos/components/memo-form';
 import { authClient } from '@/lib/authClient';
 import { memosSearchSchema } from '@/lib/schemas/search-params';
 
-export const Route = createFileRoute('/(memos)/')({
+export const Route = createFileRoute('/(memos)/(private)/')({
   validateSearch: (search) => memosSearchSchema.parse(search),
   component: RouteComponent,
 });
