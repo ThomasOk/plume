@@ -16,10 +16,11 @@ import { Route as DebugRouteImport } from './routes/debug'
 import { Route as CalendarDemoRouteImport } from './routes/calendar-demo'
 import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
-import { Route as memosIndexRouteImport } from './routes/(memos)/index'
 import { Route as memosExploreRouteImport } from './routes/(memos)/explore'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as memosprivateLayoutRouteImport } from './routes/(memos)/(private)/layout'
+import { Route as memosprivateIndexRouteImport } from './routes/(memos)/(private)/index'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -54,11 +55,6 @@ const authLayoutRoute = authLayoutRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const memosIndexRoute = memosIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => memosLayoutRoute,
-} as any)
 const memosExploreRoute = memosExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
@@ -74,9 +70,18 @@ const authSignInRoute = authSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => authLayoutRoute,
 } as any)
+const memosprivateLayoutRoute = memosprivateLayoutRouteImport.update({
+  id: '/(private)',
+  getParentRoute: () => memosLayoutRoute,
+} as any)
+const memosprivateIndexRoute = memosprivateIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => memosprivateLayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof memosIndexRoute
+  '/': typeof memosprivateIndexRoute
   '/calendar-demo': typeof CalendarDemoRoute
   '/debug': typeof DebugRoute
   '/notifications': typeof NotificationsRoute
@@ -87,7 +92,7 @@ export interface FileRoutesByFullPath {
   '/explore': typeof memosExploreRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof memosIndexRoute
+  '/': typeof memosprivateIndexRoute
   '/calendar-demo': typeof CalendarDemoRoute
   '/debug': typeof DebugRoute
   '/notifications': typeof NotificationsRoute
@@ -106,10 +111,11 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
+  '/(memos)/(private)': typeof memosprivateLayoutRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(memos)/explore': typeof memosExploreRoute
-  '/(memos)/': typeof memosIndexRoute
+  '/(memos)/(private)/': typeof memosprivateIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -143,10 +149,11 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/resources'
     | '/settings'
+    | '/(memos)/(private)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(memos)/explore'
-    | '/(memos)/'
+    | '/(memos)/(private)/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,13 +217,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(memos)/': {
-      id: '/(memos)/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof memosIndexRouteImport
-      parentRoute: typeof memosLayoutRoute
-    }
     '/(memos)/explore': {
       id: '/(memos)/explore'
       path: '/explore'
@@ -238,6 +238,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignInRouteImport
       parentRoute: typeof authLayoutRoute
     }
+    '/(memos)/(private)': {
+      id: '/(memos)/(private)'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof memosprivateLayoutRouteImport
+      parentRoute: typeof memosLayoutRoute
+    }
+    '/(memos)/(private)/': {
+      id: '/(memos)/(private)/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof memosprivateIndexRouteImport
+      parentRoute: typeof memosprivateLayoutRoute
+    }
   }
 }
 
@@ -255,14 +269,25 @@ const authLayoutRouteWithChildren = authLayoutRoute._addFileChildren(
   authLayoutRouteChildren,
 )
 
+interface memosprivateLayoutRouteChildren {
+  memosprivateIndexRoute: typeof memosprivateIndexRoute
+}
+
+const memosprivateLayoutRouteChildren: memosprivateLayoutRouteChildren = {
+  memosprivateIndexRoute: memosprivateIndexRoute,
+}
+
+const memosprivateLayoutRouteWithChildren =
+  memosprivateLayoutRoute._addFileChildren(memosprivateLayoutRouteChildren)
+
 interface memosLayoutRouteChildren {
+  memosprivateLayoutRoute: typeof memosprivateLayoutRouteWithChildren
   memosExploreRoute: typeof memosExploreRoute
-  memosIndexRoute: typeof memosIndexRoute
 }
 
 const memosLayoutRouteChildren: memosLayoutRouteChildren = {
+  memosprivateLayoutRoute: memosprivateLayoutRouteWithChildren,
   memosExploreRoute: memosExploreRoute,
-  memosIndexRoute: memosIndexRoute,
 }
 
 const memosLayoutRouteWithChildren = memosLayoutRoute._addFileChildren(

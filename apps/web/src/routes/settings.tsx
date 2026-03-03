@@ -1,6 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { authClient } from '@/lib/authClient';
 
 export const Route = createFileRoute('/settings')({
+  beforeLoad: async () => {
+    const { data } = await authClient.getSession();
+
+    if (!data?.user) {
+      throw redirect({ to: '/sign-in' });
+    }
+  },
   component: SettingsPage,
 });
 
