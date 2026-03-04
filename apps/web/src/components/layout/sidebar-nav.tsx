@@ -8,6 +8,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu';
+import { cn } from '@repo/ui/lib/utils';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { GiFeather } from 'react-icons/gi';
 import { GoBell } from 'react-icons/go';
@@ -24,7 +25,15 @@ import {
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
 
-export const SidebarNav = () => {
+interface SidebarNavProps {
+  collapsed?: boolean;
+  className?: string;
+}
+
+export const SidebarNav = ({
+  collapsed = true,
+  className,
+}: SidebarNavProps) => {
   const { data: sessionData } = authClient.useSession();
   const { theme, setTheme } = useTheme();
   const { pathname } = useLocation();
@@ -55,33 +64,56 @@ export const SidebarNav = () => {
 
   return (
     <aside
-      className="w-16 bg-card border-r border-border flex flex-col
-  items-center py-4 gap-2"
+      className={cn(
+        'flex flex-col gap-1',
+        collapsed
+          ? 'w-16 items-center py-4 bg-card border-r border-border'
+          : 'w-full items-start pt-3 pb-2 h-full',
+        className,
+      )}
     >
-      <Link to={logoNav} className="mb-2">
-        <div className="w-10 h-10 flex items-center justify-center">
-          <GiFeather className="w-8 h-8 text-primary" />
-        </div>
+      <Link
+        to={logoNav}
+        className={cn(
+          'flex items-center mb-4',
+          collapsed ? 'justify-center w-10 h-10' : 'gap-3 px-4 py-2',
+        )}
+      >
+        <GiFeather className="w-6 h-6 text-primary shrink-0" />
+        {!collapsed && <span className="font-bold text-xl">Plume</span>}
       </Link>
 
-      <nav className="flex flex-col gap-2">
+      <nav
+        className={cn(
+          'flex flex-col gap-1 w-full',
+          collapsed && 'items-center',
+        )}
+      >
         {navItems.map((item) => {
           const isActive = pathname === item.to;
           const Icon = item.icon;
 
           return (
-            <Link key={item.to} to={item.to}>
+            <Link
+              key={item.to}
+              to={item.to}
+              className={collapsed ? '' : 'w-full'}
+            >
               <Button
                 variant="ghost"
-                size="icon"
-                className={`w-10 h-10 cursor-pointer ${
+                size={collapsed ? 'icon' : 'default'}
+                className={cn(
+                  'cursor-pointer',
+                  collapsed
+                    ? 'w-10 h-10'
+                    : 'w-full justify-start gap-4 px-4 h-11 text-base',
                   isActive
                     ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title={item.label}
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
               >
-                <Icon className="w-7 h-7" />
+                <Icon className="w-6 h-6 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
               </Button>
             </Link>
           );
@@ -91,11 +123,20 @@ export const SidebarNav = () => {
         <div className="mt-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-10 h-10">
-                <RiUserLine className="w-5 h-5" />
+              <Button
+                variant="ghost"
+                size={collapsed ? 'icon' : 'default'}
+                className={cn(
+                  collapsed
+                    ? 'w-10 h-10'
+                    : 'w-full justify-start gap-4 px-4 h-11 text-base text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <RiUserLine className="w-6 h-6 shrink-0" />
+                {!collapsed && <span>{sessionData.user.name}</span>}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right">
+            <DropdownMenuContent align="end" side={collapsed ? 'right' : 'top'}>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="flex items-center gap-2">
                   <LuPalette />
