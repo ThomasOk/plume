@@ -1,11 +1,15 @@
 import { Toaster } from '@repo/ui/components/sonner';
-import { Outlet, createRootRoute, useLocation } from '@tanstack/react-router';
+import {
+  Outlet,
+  createRootRoute,
+  useRouterState,
+} from '@tanstack/react-router';
 import React from 'react';
-import NavContainer from '@/components/layout/nav-container';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import Spinner from '@/components/ui/spinner';
-import { authClient } from '@/lib/authClient';
 import { useTheme } from '@/hooks/use-theme';
+import { authClient } from '@/lib/authClient';
+import { MobileHeader } from '@/components/layout/mobile-header';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -23,14 +27,14 @@ const TanStackRouterDevtools = import.meta.env.PROD
 function RootComponent() {
   const { theme } = useTheme();
   const { data: session, isPending } = authClient.useSession();
-  const { pathname } = useLocation();
-  const isAuthPage = pathname === '/sign-in' || pathname === '/sign-up';
+  const matches = useRouterState({ select: (s) => s.matches });
+  const isAuthPage = matches.some((match) => match.routeId === '/(auth)');
 
   if (isPending) {
     return (
-      <NavContainer>
+      <div className="min-h-screen flex justify-center items-center">
         <Spinner />
-      </NavContainer>
+      </div>
     );
   }
 
@@ -38,10 +42,13 @@ function RootComponent() {
     <>
       <Toaster theme={theme === 'dark' ? 'dark' : 'light'} />
       <div className="flex h-screen">
-        {!isAuthPage && <SidebarNav />}
-        <main className="flex-1 overflow-auto p-4">
-          <Outlet />
-        </main>
+        {!isAuthPage && <SidebarNav className="hidden md:flex" />}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {!isAuthPage && <MobileHeader />}
+          <main className="flex-1 overflow-auto p-4">
+            <Outlet />
+          </main>
+        </div>
       </div>
       <React.Suspense>
         <TanStackRouterDevtools position="bottom-right" />

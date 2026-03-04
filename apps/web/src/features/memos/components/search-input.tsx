@@ -29,7 +29,7 @@ export const SearchInput = () => {
         type="search"
         onChange={(e) => setValue(e.target.value)}
         placeholder="Search memos..."
-        className="pl-8 h-8"
+        className="pl-8 h-8 focus-visible:ring-0"
       />
       <button type="submit" className="sr-only">
         Search

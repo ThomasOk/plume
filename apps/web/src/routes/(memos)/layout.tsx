@@ -13,14 +13,14 @@ function MemosLayout() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-[280px] border-r p-4 flex flex-col gap-4">
+      <aside className="hidden md:flex flex-col gap-4 w-[280px] border-r p-4">
         <SearchInput />
         <StatisticsView />
         <TagList memos={memos || []} />
       </aside>
-      <main className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <Outlet />
-      </main>
+      </div>
     </div>
   );
 }
