@@ -12,7 +12,8 @@ export const useCreateMemo = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         //queryKey: trpc.memos.listPublic.queryKey(),
-        queryKey: [['memos']],
+        //queryKey: [['memos']],
+        queryKey: trpc.memos.pathKey(),
       });
     },
   });

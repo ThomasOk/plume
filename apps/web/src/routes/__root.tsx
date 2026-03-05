@@ -5,11 +5,11 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import React from 'react';
+import { MobileHeader } from '@/components/layout/mobile-header';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import Spinner from '@/components/ui/spinner';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
-import { MobileHeader } from '@/components/layout/mobile-header';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -26,7 +26,7 @@ const TanStackRouterDevtools = import.meta.env.PROD
 
 function RootComponent() {
   const { theme } = useTheme();
-  const { data: session, isPending } = authClient.useSession();
+  const { isPending } = authClient.useSession();
   const matches = useRouterState({ select: (s) => s.matches });
   const isAuthPage = matches.some((match) => match.routeId === '/(auth)');
 

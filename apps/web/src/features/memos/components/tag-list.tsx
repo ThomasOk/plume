@@ -1,13 +1,13 @@
 import { cn } from '@repo/ui/lib/utils';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import type { Memo } from '@/lib/types';
 import { RiHashtag } from 'react-icons/ri';
 
 interface TagListProps {
-  memos: Memo[];
+  tagCounts: Record<string, number>;
+  isLoading: boolean;
 }
 
-export const TagList = ({ memos }: TagListProps) => {
+export const TagList = ({ tagCounts, isLoading }: TagListProps) => {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   const selectedTag = search.tag;
@@ -19,22 +19,14 @@ export const TagList = ({ memos }: TagListProps) => {
     });
   };
 
-  const tagCounts = memos.reduce(
-    (acc, memo) => {
-      memo.tags.forEach((tag) => {
-        acc[tag] = (acc[tag] || 0) + 1;
-      });
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
   const sortedTags = Object.entries(tagCounts)
     .map(([tag, count]) => ({
       tag,
       count,
     }))
     .sort((a, b) => b.count - a.count);
+
+  if (isLoading) return null;
 
   return (
     <div className="mt-4">

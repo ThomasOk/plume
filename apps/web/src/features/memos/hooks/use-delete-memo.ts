@@ -12,7 +12,7 @@ export const useDeleteMemo = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         //queryKey: trpc.memos.listPublic.queryKey(),
-        queryKey: [['memos']],
+        queryKey: trpc.memos.pathKey(),
       });
     },
   });

@@ -39,7 +39,7 @@ export const list = protectedProcedure
 export const listPublic = publicProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [];
+    const conditions = [eq(memo.visibility, 'public')];
 
     if (input.date) {
       conditions.push(sql`DATE(${memo.createdAt}) = ${input.date}`);
@@ -74,6 +74,7 @@ export const create = protectedProcedure
           userId: ctx.session.user.id,
           content: input.content,
           tags: tags,
+          visibility: input.visibility,
           createdAt: now,
           updatedAt: now,
         })
@@ -97,6 +98,7 @@ export const update = protectedProcedure
         .set({
           content: input.content,
           tags: tags,
+          visibility: input.visibility,
           updatedAt: new Date(),
         })
         .where(and(eq(memo.id, input.id), eq(memo.userId, ctx.session.user.id)))
@@ -156,6 +158,44 @@ export const stats = protectedProcedure.query(async ({ ctx }) => {
   return rows.reduce(
     (acc, row) => {
       acc[row.date as string] = Number(row.count);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+});
+
+export const tags = protectedProcedure.query(async ({ ctx }) => {
+  const rows = await ctx.db
+    .select({
+      tag: sql<string>`unnest(${memo.tags})`.as('tag'),
+      count: sql<number>`count(*)`.as('count'),
+    })
+    .from(memo)
+    .where(eq(memo.userId, ctx.session.user.id))
+    .groupBy(sql`1`);
+
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.tag] = Number(row.count);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+});
+
+export const publicTags = publicProcedure.query(async ({ ctx }) => {
+  const rows = await ctx.db
+    .select({
+      tag: sql<string>`unnest(${memo.tags})`.as('tag'),
+      count: sql<number>`count(*)`.as('count'),
+    })
+    .from(memo)
+    .where(eq(memo.visibility, 'public'))
+    .groupBy(sql`1`);
+
+  return rows.reduce(
+    (acc, row) => {
+      acc[row.tag] = Number(row.count);
       return acc;
     },
     {} as Record<string, number>,
