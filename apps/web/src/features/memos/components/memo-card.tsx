@@ -30,12 +30,14 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { MdMoreVert } from 'react-icons/md';
+import { IoEarthOutline } from 'react-icons/io5';
 import { toast } from 'sonner';
 import type { Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteMemo, useUpdateMemo } from '../hooks';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
+import { VisibilitySelector } from './visibility-selector';
 
 interface MemoCardProps {
   memo: Memo;
@@ -51,15 +53,18 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
     formState: { isValid },
     reset,
     watch,
+    setValue,
   } = useForm<UpdateMemoInput>({
     resolver: zodResolver(updateMemoSchema),
     defaultValues: {
       id: memo.id,
       content: memo.content,
+      visibility: memo.visibility,
     },
   });
 
   const content = watch('content');
+  const visibility = watch('visibility');
   const charCount = content.length;
   const remaining = MAX_MEMO_CHARACTERS - charCount;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
@@ -99,7 +104,19 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
         <CardContent>
           <div>
             {/* Header with actions menu */}
-            <div className="flex justify-end">
+            <div className="flex justify-end items-center gap-1">
+              {memo.visibility === 'public' && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center">
+                        <IoEarthOutline className="size-4 text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Public</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -164,10 +181,15 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                   </div>
 
                   <div className="flex gap-2">
+                    <VisibilitySelector
+                      value={visibility ?? 'private'}
+                      onChange={(val) => setValue('visibility', val)}
+                    />
                     <Button
                       type="button"
                       disabled={updateMemo.isPending}
-                      variant="secondary"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         setIsEditing(false);
                         reset();
@@ -177,6 +199,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                     </Button>
                     <Button
                       type="submit"
+                      size="sm"
                       disabled={!isValid || updateMemo.isPending || isOverLimit}
                     >
                       {updateMemo.isPending ? 'Saving...' : 'Save'}

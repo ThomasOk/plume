@@ -6,20 +6,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@repo/ui/components/sheet';
+import { useLocation } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { GiFeather } from 'react-icons/gi';
 import { RiMenuLine } from 'react-icons/ri';
 import { SidebarNav } from './sidebar-nav';
-import { SearchInput, TagList, useMemos } from '@/features/memos';
+import { SearchInput, TagList, useSidebarTags } from '@/features/memos';
 import { StatisticsView } from '@/features/memos/components/statistics-view';
-import { authClient } from '@/lib/authClient';
-import { useEffect, useState } from 'react';
-import { useLocation } from '@tanstack/react-router';
 
 export const MobileHeader = () => {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
-  const { data: session } = authClient.useSession();
-  const { data: memos } = useMemos({ enabled: !!session?.user });
+  const { data, isLoading } = useSidebarTags();
 
   useEffect(() => {
     setOpen(false);
@@ -54,7 +52,7 @@ export const MobileHeader = () => {
           <div className="flex flex-col gap-6 pt-2 px-6">
             <SearchInput />
             <StatisticsView />
-            <TagList memos={memos || []} />
+            <TagList tagCounts={data ?? {}} isLoading={isLoading} />
           </div>
         </SheetContent>
       </Sheet>

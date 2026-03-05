@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import {
   MemoList,
-  useMemos,
+  usePrivateMemos,
   DateFilterBadge,
   TagFilterBadge,
   SearchFilterBadge,
@@ -26,7 +26,7 @@ function RouteComponent() {
     data: memos,
     isLoading,
     error,
-  } = useMemos({
+  } = usePrivateMemos({
     enabled: !!session?.user,
     date: selectedDate,
     tag: selectedTag,

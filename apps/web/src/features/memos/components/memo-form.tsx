@@ -7,6 +7,7 @@ import { cn } from '@repo/ui/lib/utils';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useCreateMemo } from '../hooks/use-create-memo';
+import { VisibilitySelector } from './visibility-selector';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
@@ -17,15 +18,18 @@ export const MemoForm = () => {
     formState: { errors, isValid },
     reset,
     watch,
+    setValue,
   } = useForm<CreateMemoInput>({
     resolver: zodResolver(createMemoSchema),
     defaultValues: {
       content: '',
+      visibility: 'private',
     },
   });
   const createMemo = useCreateMemo();
 
   const content = watch('content');
+  const visibility = watch('visibility');
   const charCount = content.length;
   const remaining = MAX_MEMO_CHARACTERS - charCount;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
@@ -97,8 +101,13 @@ export const MemoForm = () => {
                   {createMemo.error.message}
                 </p>
               )}
+              <VisibilitySelector
+                value={visibility ?? 'private'}
+                onChange={(val) => setValue('visibility', val)}
+              />
               <Button
                 type="submit"
+                size="sm"
                 disabled={!isValid || createMemo.isPending || isOverLimit}
               >
                 {createMemo.isPending ? 'Saving...' : 'Save'}

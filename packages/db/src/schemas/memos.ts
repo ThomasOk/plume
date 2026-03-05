@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, timestamp } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { user } from './auth';
+
+export const visibilityEnum = pgEnum('visibility', ['public', 'private']);
 
 export const memo = pgTable('memo', {
   id: text('id').primaryKey(),
@@ -14,6 +16,7 @@ export const memo = pgTable('memo', {
     .array()
     .notNull()
     .default(sql`ARRAY[]::text[]`),
+  visibility: visibilityEnum('visibility').notNull().default('private'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 });

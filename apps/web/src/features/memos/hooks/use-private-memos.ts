@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTRPC } from '@/lib/api';
 
-interface UseMemosOptions {
+interface UsePrivateMemosOptions {
   enabled?: boolean;
   date?: string;
   tag?: string;
   query?: string;
 }
 
-export const useMemos = (options?: UseMemosOptions) => {
+export const usePrivateMemos = (options?: UsePrivateMemosOptions) => {
   const trpc = useTRPC();
 
   return useQuery({
