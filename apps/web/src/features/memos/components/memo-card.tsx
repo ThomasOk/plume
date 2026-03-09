@@ -27,17 +27,18 @@ import {
 } from '@repo/ui/components/tooltip';
 import { cn } from '@repo/ui/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { MdMoreVert } from 'react-icons/md';
 import { IoEarthOutline } from 'react-icons/io5';
+import { MdMoreVert } from 'react-icons/md';
 import { toast } from 'sonner';
 import type { Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteMemo, useUpdateMemo } from '../hooks';
-import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
+import { TagSuggestions } from './tag-suggestions';
 import { VisibilitySelector } from './visibility-selector';
+import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 
 interface MemoCardProps {
   memo: Memo;
@@ -68,6 +69,18 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
   const charCount = content.length;
   const remaining = MAX_MEMO_CHARACTERS - charCount;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { ref: registerRef, ...rest } = register('content');
+
+  const onInsert = (text: string, startIndex: number, length: number) => {
+    const currentValue = textareaRef.current?.value ?? '';
+    const newValue =
+      currentValue.slice(0, startIndex) +
+      text +
+      currentValue.slice(startIndex + length);
+    setValue('content', newValue);
+  };
 
   const updateMemo = useUpdateMemo();
   const deleteMemo = useDeleteMemo();
@@ -100,7 +113,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
 
   return (
     <>
-      <Card className="py-3 rounded-xl transition-all hover:shadow-md hover:border-primary/50 overflow-hidden">
+      <Card className="py-3 rounded-xl transition-all hover:shadow-md hover:border-primary/50">
         <CardContent>
           <div>
             {/* Header with actions menu */}
@@ -136,12 +149,17 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
             {/* Memo content */}
             {isEditing ? (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
+                <div className="relative">
                   <Textarea
                     className="resize-none border-0 focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
-                    {...register('content')}
+                    ref={(el) => {
+                      registerRef(el);
+                      textareaRef.current = el;
+                    }}
+                    {...rest}
                     disabled={updateMemo.isPending}
                   />
+                  <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
