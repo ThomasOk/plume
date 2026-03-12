@@ -1,4 +1,4 @@
-import { desc, eq, and, sql, ilike } from '@repo/db';
+import { desc, eq, and, sql } from '@repo/db';
 import { memo } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
 import { protectedProcedure, publicProcedure } from '../../trpc';
@@ -8,25 +8,12 @@ import {
   deleteMemoSchema,
   listMemosSchema,
 } from './schemas';
-import { extractTagsFromContent } from './utils';
+import { extractTagsFromContent, buildFilterConditions } from './utils';
 
 export const list = protectedProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    // conditions before findMany
-    const conditions = [eq(memo.userId, ctx.session.user.id)];
-
-    if (input.date) {
-      conditions.push(sql`DATE(${memo.createdAt}) = ${input.date}`);
-    }
-
-    if (input.tag) {
-      conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
-    }
-
-    if (input.query) {
-      conditions.push(ilike(memo.content, `%${input.query}%`));
-    }
+    const conditions = [eq(memo.userId, ctx.session.user.id), ...buildFilterConditions(input)];
 
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
@@ -39,19 +26,7 @@ export const list = protectedProcedure
 export const listPublic = publicProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [eq(memo.visibility, 'public')];
-
-    if (input.date) {
-      conditions.push(sql`DATE(${memo.createdAt}) = ${input.date}`);
-    }
-
-    if (input.tag) {
-      conditions.push(sql`${memo.tags} @> ARRAY[${input.tag}]`);
-    }
-
-    if (input.query) {
-      conditions.push(ilike(memo.content, `%${input.query}%`));
-    }
+    const conditions = [eq(memo.visibility, 'public'), ...buildFilterConditions(input)];
 
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
