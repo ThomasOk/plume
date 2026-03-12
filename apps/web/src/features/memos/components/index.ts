@@ -4,5 +4,6 @@ export { DateFilterBadge } from './date-filter-badge';
 export { TagFilterBadge } from './tag-filter-badge';
 export { SearchFilterBadge } from './search-filter-badge';
 export { TagList } from './tag-list';
+export { TagTreeItem } from './tag-tree-item';
 export { SearchInput } from './search-input';
 export { VisibilitySelector } from './visibility-selector';

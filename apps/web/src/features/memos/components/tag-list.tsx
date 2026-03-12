@@ -1,6 +1,5 @@
-import { cn } from '@repo/ui/lib/utils';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import { RiHashtag } from 'react-icons/ri';
+import { buildTagTree } from '../utils';
+import { TagTreeItem } from './tag-tree-item';
 
 interface TagListProps {
   tagCounts: Record<string, number>;
@@ -8,46 +7,19 @@ interface TagListProps {
 }
 
 export const TagList = ({ tagCounts, isLoading }: TagListProps) => {
-  const navigate = useNavigate();
-  const search = useSearch({ strict: false });
-  const selectedTag = search.tag;
-
-  const handleClick = (tag: string) => {
-    navigate({
-      to: '.',
-      search: (prev) => ({ ...prev, tag }),
-    });
-  };
-
-  const sortedTags = Object.entries(tagCounts)
-    .map(([tag, count]) => ({
-      tag,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const tagTree = buildTagTree(tagCounts);
 
   if (isLoading) return null;
 
   return (
     <div className="mt-4">
       <h3 className="text-sm font-semibold mb-2">Tags</h3>
-      {sortedTags.length === 0 ? (
+      {tagTree.length === 0 ? (
         <p className="text-sm text-muted-foreground">No tags yet</p>
       ) : (
-        <ul className="space-y-1">
-          {sortedTags.map(({ tag, count }) => (
-            <li key={tag} className="text-sm">
-              <button
-                onClick={() => handleClick(tag)}
-                className={cn(
-                  'flex items-center text-sm cursor-pointer hover:opacity-80 truncate',
-                  tag === selectedTag && 'font-medium text-sky-800',
-                )}
-              >
-                <RiHashtag className="!size-4" />
-                {tag} ({count})
-              </button>
-            </li>
+        <ul className="space-y-2">
+          {tagTree.map((node) => (
+            <TagTreeItem key={node.fullPath} node={node} />
           ))}
         </ul>
       )}
