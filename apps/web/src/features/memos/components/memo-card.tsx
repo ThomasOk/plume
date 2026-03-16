@@ -30,7 +30,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { IoEarthOutline } from 'react-icons/io5';
-import { MdMoreVert } from 'react-icons/md';
+import { MdMoreVert, MdOutlineEdit, MdOutlineDelete } from 'react-icons/md';
 import { toast } from 'sonner';
 import type { Memo } from '@/lib/types';
 import type z from 'zod';
@@ -113,7 +113,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
 
   return (
     <>
-      <Card className="py-3 rounded-xl transition-all hover:shadow-md hover:border-primary/50">
+      <Card className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50">
         <CardContent>
           <div>
             {/* Header with actions menu */}
@@ -132,15 +132,17 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Memo actions">
                     <MdMoreVert className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <MdOutlineEdit className="size-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
+                    <MdOutlineDelete className="size-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -158,6 +160,11 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                     }}
                     {...rest}
                     disabled={updateMemo.isPending}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        handleSubmit(onSubmit)();
+                      }
+                    }}
                   />
                   <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
                 </div>
@@ -167,7 +174,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
-                          'text-sm font-medium transition-colors',
+                          'text-sm font-medium tabular-nums transition-colors',
                           isOverLimit
                             ? 'text-destructive'
                             : remaining < 1000

@@ -69,6 +69,11 @@ export const MemoForm = () => {
               }}
               {...rest}
               disabled={createMemo.isPending}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  handleSubmit(onSubmit)();
+                }
+              }}
             />
             <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
             {errors.content && (
@@ -83,7 +88,7 @@ export const MemoForm = () => {
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    'text-sm font-medium transition-colors',
+                    'text-sm font-medium tabular-nums transition-colors',
                     isOverLimit
                       ? 'text-destructive'
                       : remaining < 1000

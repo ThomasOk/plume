@@ -1,15 +1,17 @@
 import { cn } from '@repo/ui/lib/utils';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { useState } from 'react';
+import { MdChevronRight } from 'react-icons/md';
 import { RiHashtag } from 'react-icons/ri';
 import type { TagNode } from '../types';
-import { useState } from 'react';
-import { MdExpandMore, MdChevronRight } from 'react-icons/md';
 
 export const TagTreeItem = ({ node }: { node: TagNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   const selectedTag = search.tag;
+  const shouldReduceMotion = useReducedMotion();
 
   const handleClick = (tagPath: string) => {
     navigate({
@@ -24,8 +26,8 @@ export const TagTreeItem = ({ node }: { node: TagNode }) => {
         <button
           onClick={() => handleClick(node.fullPath)}
           className={cn(
-            'flex items-center text-sm cursor-pointer hover:opacity-80 truncate',
-            node.fullPath === selectedTag && 'font-medium text-sky-800',
+            'flex items-center text-sm font-medium cursor-pointer hover:opacity-80 truncate',
+            node.fullPath === selectedTag ? 'text-primary' : 'text-foreground',
           )}
         >
           <RiHashtag className="!size-4" />
@@ -37,19 +39,38 @@ export const TagTreeItem = ({ node }: { node: TagNode }) => {
         {node.children.length > 0 && (
           <button
             onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? 'Collapse tag' : 'Expand tag'}
             className="ml-1 cursor-pointer hover:opacity-80"
           >
-            {isOpen ? <MdExpandMore /> : <MdChevronRight />}
+            <MdChevronRight
+              className={cn(
+                'transition-transform duration-150 ease-out',
+                isOpen && 'rotate-90',
+              )}
+            />
           </button>
         )}
       </div>
-      {node.children.length > 0 && isOpen && (
-        <ul className="ml-2 border-l-2 pl-2 space-y-1 my-1">
-          {node.children.map((child) => (
-            <TagTreeItem key={child.fullPath} node={child} />
-          ))}
-        </ul>
-      )}
+
+      <AnimatePresence initial={false}>
+        {node.children.length > 0 && isOpen && (
+          <motion.ul
+            initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={shouldReduceMotion ? {} : { height: 0, opacity: 0 }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 0.15, ease: [0.215, 0.61, 0.355, 1] }
+            }
+            className="ml-2 border-l-2 pl-2 space-y-1 my-1 overflow-hidden"
+          >
+            {node.children.map((child) => (
+              <TagTreeItem key={child.fullPath} node={child} />
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
     </li>
   );
 };

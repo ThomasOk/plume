@@ -32,6 +32,7 @@
     "date-fns": "^4.1.0",
     "dotenv-cli": "catalog:",
     "highlight.js": "^11.11.1",
+    "motion": "^12.36.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",
