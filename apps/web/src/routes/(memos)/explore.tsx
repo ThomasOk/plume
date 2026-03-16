@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import {
   MemoList,
+  MemoListSkeleton,
   usePublicMemos,
   DateFilterBadge,
   TagFilterBadge,
@@ -25,19 +26,14 @@ function ExplorePage() {
     error,
   } = usePublicMemos({ date: selectedDate, tag: selectedTag, query });
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Explore</h1>
-        <p className="text-muted-foreground mt-1">
-          Discover public memos from all users.
-        </p>
-      </div>
+    <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
+      <h1 className="md:hidden text-lg font-semibold mb-4">Explore</h1>
       <div className="flex gap-2 flex-wrap">
         <DateFilterBadge />
         <TagFilterBadge />
         <SearchFilterBadge />
       </div>
-      {isLoading && <p className="text-muted-foreground">Loading memos...</p>}
+      {isLoading && <MemoListSkeleton />}
       {error && (
         <p className="text-destructive">Error loading memos: {error.message}</p>
       )}

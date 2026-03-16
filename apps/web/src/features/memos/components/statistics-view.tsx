@@ -31,10 +31,10 @@ export const StatisticsView = () => {
       <div className="mb-4 flex items-center justify-between">
         <div>{format(getMonthFirstDay(month), 'MMMM yyyy')}</div>
         <div>
-          <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
+          <Button variant="ghost" size="icon" aria-label="Previous month" onClick={handlePrevMonth}>
             <MdOutlineChevronLeft />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleNextMonth}>
+          <Button variant="ghost" size="icon" aria-label="Next month" onClick={handleNextMonth}>
             <MdOutlineChevronRight />
           </Button>
         </div>

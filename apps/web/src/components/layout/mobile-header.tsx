@@ -49,7 +49,7 @@ export const MobileHeader = () => {
           <SheetHeader>
             <SheetTitle className="sr-only">Filter</SheetTitle>
           </SheetHeader>
-          <div className="flex flex-col gap-6 pt-2 px-6">
+          <div className="flex flex-col gap-6 pt-2 px-6 overflow-y-auto">
             <SearchInput />
             <StatisticsView />
             <TagList tagCounts={data ?? {}} isLoading={isLoading} />
