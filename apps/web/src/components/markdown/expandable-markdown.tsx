@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@repo/ui/components/button';
-import { cn } from '@repo/ui/lib/utils';
+import { useState, useRef, useLayoutEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { MdExpandMore, MdExpandLess } from 'react-icons/md';
 import { MarkdownContent } from './markdown-content';
 
 interface ExpandableMarkdownProps {
@@ -15,9 +15,9 @@ export const ExpandableMarkdown = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [needsExpansion, setNeedsExpansion] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
-  useEffect(() => {
-    // Check if content height exceeds maxHeight
+  useLayoutEffect(() => {
     if (contentRef.current) {
       const contentHeight = contentRef.current.scrollHeight;
       setNeedsExpansion(contentHeight > maxHeight);
@@ -26,37 +26,49 @@ export const ExpandableMarkdown = ({
 
   return (
     <div className="relative">
-      <div
+      <motion.div
         ref={contentRef}
-        className={cn(
-          'overflow-hidden transition-all duration-300',
-          !isExpanded && needsExpansion && 'relative'
-        )}
-        style={{
-          maxHeight: !isExpanded && needsExpansion ? `${maxHeight}px` : 'none',
+        initial={false}
+        animate={{
+          height: isExpanded || !needsExpansion ? 'auto' : maxHeight,
         }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { duration: 0.3, ease: [0.455, 0.03, 0.515, 0.955] }
+        }
+        style={
+          !isExpanded && needsExpansion
+            ? { maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }
+            : undefined
+        }
+        className="overflow-hidden relative"
       >
         <MarkdownContent content={content} />
+      </motion.div>
 
-        {/* Gradient fade effect when collapsed */}
-        {!isExpanded && needsExpansion && (
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-        )}
-      </div>
-
-      {/* Show more / Show less button */}
-      {needsExpansion && (
-        <div className="mt-2 flex justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-muted-foreground hover:text-foreground"
+      <AnimatePresence>
+        {needsExpansion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-1 flex justify-start"
           >
-            {isExpanded ? 'Show less' : 'Show more'}
-          </Button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="inline-flex items-center gap-1 px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>{isExpanded ? 'Show less' : 'Show more'}</span>
+              {isExpanded ? (
+                <MdExpandLess className="size-3.5" />
+              ) : (
+                <MdExpandMore className="size-3.5" />
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
