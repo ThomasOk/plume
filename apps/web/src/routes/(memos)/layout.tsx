@@ -11,7 +11,7 @@ function MemosLayout() {
 
   return (
     <div className="flex h-full">
-      <aside className="hidden md:flex flex-col gap-4 w-[280px] border-r p-4">
+      <aside className="hidden md:flex flex-col gap-4 w-[280px] border-r p-4 overflow-y-auto">
         <SearchInput />
         <StatisticsView />
         <TagList tagCounts={data ?? {}} isLoading={isLoading} />

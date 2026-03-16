@@ -1,5 +1,6 @@
 export { MemoCard } from './memo-card';
 export { MemoList } from './memo-list';
+export { MemoListSkeleton } from './memo-list-skeleton';
 export { DateFilterBadge } from './date-filter-badge';
 export { TagFilterBadge } from './tag-filter-badge';
 export { SearchFilterBadge } from './search-filter-badge';
