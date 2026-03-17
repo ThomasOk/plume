@@ -40,6 +40,15 @@ export const MarkdownContent = ({ content }: MarkdownContentProps) => {
           [rehypeSanitize, sanitizeSchema], // Sanitize for security (blocks XSS)
         ]}
         components={{
+          a: ({
+            href,
+            children,
+            ...rest
+          }: React.ComponentProps<'a'>) => (
+            <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
+              {children}
+            </a>
+          ),
           input: (
             props: React.ComponentProps<'input'> & { node?: Element },
           ) => {
