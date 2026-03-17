@@ -9,7 +9,9 @@ import { useForm } from 'react-hook-form';
 import { MdOutlineCloseFullscreen, MdOutlineOpenInFull } from 'react-icons/md';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCreateMemo } from '../hooks/use-create-memo';
+import { useDraft } from '../hooks/use-draft';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 
@@ -34,6 +36,8 @@ export const MemoForm = () => {
     },
   });
 
+  const { user } = useAuth();
+  const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, 'memo-draft');
   const createMemo = useCreateMemo();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { ref: registerRef, ...rest } = register('content');
@@ -41,6 +45,20 @@ export const MemoForm = () => {
   const visibility = watch('visibility') ?? 'private';
   const charCount = content.length;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
+
+  // Restore draft on mount (once user is available)
+  const hasRestoredDraft = useRef(false);
+  useEffect(() => {
+    if (!user?.id || hasRestoredDraft.current) return;
+    hasRestoredDraft.current = true;
+    const saved = getDraft();
+    if (saved) setValue('content', saved);
+  }, [user?.id, getDraft, setValue]);
+
+  // Auto-save draft on content change
+  useEffect(() => {
+    saveDraft(content);
+  }, [content, saveDraft]);
 
   // Re-focus inline textarea when focus mode closes
   const wasFocusModeRef = useRef(false);
@@ -73,6 +91,7 @@ export const MemoForm = () => {
   const onSubmit = (data: CreateMemoInput) => {
     createMemo.mutate(data, {
       onSuccess: () => {
+        clearDraft();
         reset();
         setIsFocusMode(false);
       },
