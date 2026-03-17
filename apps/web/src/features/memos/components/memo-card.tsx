@@ -18,26 +18,32 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu';
-import { Textarea } from '@repo/ui/components/textarea';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@repo/ui/components/tooltip';
-import { cn } from '@repo/ui/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
-import { useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { IoEarthOutline } from 'react-icons/io5';
-import { MdMoreVert, MdOutlineEdit, MdOutlineDelete } from 'react-icons/md';
+import {
+  MdMoreVert,
+  MdOutlineCloseFullscreen,
+  MdOutlineDelete,
+  MdOutlineEdit,
+  MdOutlineOpenInFull,
+} from 'react-icons/md';
 import { toast } from 'sonner';
 import type { Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteMemo, useUpdateMemo } from '../hooks';
-import { TagSuggestions } from './tag-suggestions';
-import { VisibilitySelector } from './visibility-selector';
+import { MemoFooter } from './memo-footer';
+import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 
 interface MemoCardProps {
@@ -47,6 +53,8 @@ type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
 export const MemoCard = ({ memo }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const {
     register,
@@ -65,9 +73,8 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
   });
 
   const content = watch('content');
-  const visibility = watch('visibility');
+  const visibility = watch('visibility') ?? 'private';
   const charCount = content.length;
-  const remaining = MAX_MEMO_CHARACTERS - charCount;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -85,10 +92,45 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
   const updateMemo = useUpdateMemo();
   const deleteMemo = useDeleteMemo();
 
+  // Body scroll lock while in focus mode
+  useEffect(() => {
+    if (!isFocusMode) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isFocusMode]);
+
+  // Re-focus inline textarea when focus mode closes
+  const wasFocusModeRef = useRef(false);
+  useEffect(() => {
+    if (wasFocusModeRef.current && !isFocusMode && isEditing) {
+      textareaRef.current?.focus();
+    }
+    wasFocusModeRef.current = isFocusMode;
+  }, [isFocusMode, isEditing]);
+
+  // Escape key to exit focus mode
+  useEffect(() => {
+    if (!isFocusMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFocusMode(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isFocusMode]);
+
+  const exitEdit = () => {
+    setIsEditing(false);
+    setIsFocusMode(false);
+    reset();
+  };
+
   const onSubmit = (data: UpdateMemoInput) => {
     updateMemo.mutate(data, {
       onSuccess: () => {
         setIsEditing(false);
+        setIsFocusMode(false);
       },
       onError: (error) => {
         toast.error(error.message);
@@ -111,6 +153,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
     );
   };
 
+
   return (
     <>
       <Card className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50">
@@ -118,6 +161,16 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
           <div>
             {/* Header with actions menu */}
             <div className="flex justify-end items-center gap-1">
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() => setIsFocusMode(true)}
+                  aria-label="Enter focus mode"
+                  className="text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
+                >
+                  <MdOutlineOpenInFull className="size-4" />
+                </button>
+              )}
               {memo.visibility === 'public' && (
                 <TooltipProvider>
                   <Tooltip>
@@ -130,136 +183,157 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                   </Tooltip>
                 </TooltipProvider>
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Memo actions">
-                    <MdMoreVert className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                    <MdOutlineEdit className="size-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
-                    <MdOutlineDelete className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            {/* Memo content */}
-            {isEditing ? (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="relative">
-                  <Textarea
-                    className="resize-none border-0 focus-visible:border-0 focus-visible:ring-0 focus-visible:outline-none p-0"
-                    ref={(el) => {
-                      registerRef(el);
-                      textareaRef.current = el;
-                    }}
-                    {...rest}
-                    disabled={updateMemo.isPending}
-                    onKeyDown={(e) => {
-                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                        handleSubmit(onSubmit)();
-                      }
-                    }}
-                  />
-                  <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'text-sm font-medium tabular-nums transition-colors',
-                          isOverLimit
-                            ? 'text-destructive'
-                            : remaining < 1000
-                              ? 'text-destructive/70'
-                              : 'text-muted-foreground',
-                        )}
-                      >
-                        {charCount.toLocaleString()} /{' '}
-                        {MAX_MEMO_CHARACTERS.toLocaleString()}
-                      </span>
-                      {isOverLimit && (
-                        <span className="text-destructive text-xs font-medium">
-                          {Math.abs(remaining).toLocaleString()} characters over
-                          limit
-                        </span>
-                      )}
-                      {!isOverLimit && remaining < 1000 && remaining > 0 && (
-                        <span className="text-destructive/70 text-xs">
-                          {remaining.toLocaleString()} characters remaining
-                        </span>
-                      )}
-                    </div>
-                    {isOverLimit && (
-                      <p className="text-xs text-destructive">
-                        Please remove {Math.abs(remaining).toLocaleString()}{' '}
-                        characters to save
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <VisibilitySelector
-                      value={visibility ?? 'private'}
-                      onChange={(val) => setValue('visibility', val)}
-                    />
+              {!isEditing && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
-                      type="button"
-                      disabled={updateMemo.isPending}
                       variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditing(false);
-                        reset();
-                      }}
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Memo actions"
                     >
-                      Cancel
+                      <MdMoreVert className="h-4 w-4" />
                     </Button>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={!isValid || updateMemo.isPending || isOverLimit}
-                    >
-                      {updateMemo.isPending ? 'Saving...' : 'Save'}
-                    </Button>
-                  </div>
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                      <MdOutlineEdit className="size-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
+                      <MdOutlineDelete className="size-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
+            {/* Memo content or edit form */}
+            {isEditing ? (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                <MemoTextarea
+                  textareaRef={textareaRef}
+                  registerRef={registerRef}
+                  fieldProps={rest}
+                  isPending={updateMemo.isPending}
+                  onSubmit={handleSubmit(onSubmit)}
+                  onInsert={onInsert}
+                  autoFocus={!isFocusMode}
+                />
+                <MemoFooter
+                  charCount={charCount}
+                  isOverLimit={isOverLimit}
+                  isPending={updateMemo.isPending}
+                  isValid={isValid}
+                  visibility={visibility}
+                  onVisibilityChange={(val) => setValue('visibility', val)}
+                  onCancel={exitEdit}
+                />
               </form>
             ) : (
-              // <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-              //   {memo.content}
-              // </p>
               <MemoContext.Provider value={{ memo }}>
                 <ExpandableMarkdown content={memo.content} maxHeight={500} />
               </MemoContext.Provider>
             )}
-            <div className="flex items-center justify-end">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <time
-                      dateTime={memo.createdAt.toISOString()}
-                      className="text-xs text-muted-foreground cursor-help"
-                    >
-                      {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
-                    </time>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">{format(memo.createdAt, 'PPpp')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+
+            {/* Timestamp — hidden while editing to avoid layout overlap */}
+            {!isEditing && (
+              <div className="flex items-center justify-end">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <time
+                        dateTime={memo.createdAt.toISOString()}
+                        className="text-xs text-muted-foreground cursor-help"
+                      >
+                        {formatDistanceToNow(memo.createdAt, {
+                          addSuffix: true,
+                        })}
+                      </time>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">
+                        {format(memo.createdAt, 'PPpp')}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Focus mode overlay for edit */}
+      {createPortal(
+        <AnimatePresence>
+          {isFocusMode && isEditing && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+                onClick={() => setIsFocusMode(false)}
+              />
+
+              {/* Card */}
+              <div className="fixed inset-4 z-50 flex items-center justify-center pointer-events-none">
+                <motion.div
+                  className="w-full max-w-5xl h-full pointer-events-auto"
+                  initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
+                  transition={{ type: 'spring', bounce: 0.1, duration: prefersReducedMotion ? 0 : 0.3 }}
+                >
+                  <Card className="rounded-xl h-full flex flex-col py-0 relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsFocusMode(false)}
+                      aria-label="Exit focus mode"
+                      className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
+                    >
+                      <MdOutlineCloseFullscreen className="size-4" />
+                    </button>
+                    <CardContent className="px-4 pr-10 pt-3 pb-4 flex flex-col flex-1 overflow-hidden">
+                      <form
+                        onSubmit={handleSubmit(onSubmit)}
+                        className="flex flex-col flex-1 overflow-hidden gap-3"
+                      >
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                          <MemoTextarea
+                            textareaRef={textareaRef}
+                            registerRef={registerRef}
+                            fieldProps={rest}
+                            isPending={updateMemo.isPending}
+                            onSubmit={handleSubmit(onSubmit)}
+                            onInsert={onInsert}
+                            autoFocus
+                          />
+                        </div>
+                        <MemoFooter
+                          charCount={charCount}
+                          isOverLimit={isOverLimit}
+                          isPending={updateMemo.isPending}
+                          isValid={isValid}
+                          visibility={visibility}
+                          onVisibilityChange={(val) => setValue('visibility', val)}
+                          onCancel={exitEdit}
+                        />
+                      </form>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
