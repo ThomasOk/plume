@@ -1,5 +1,5 @@
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-
+import type { Pool } from 'pg';
 import * as schema from './schema';
 
 export interface DatabaseClientOptions {
@@ -7,7 +7,9 @@ export interface DatabaseClientOptions {
   max?: number;
 }
 
-export type DatabaseInstance = NodePgDatabase<typeof schema>;
+export type DatabaseInstance = NodePgDatabase<typeof schema> & {
+  $client: Pool;
+};
 
 export const createDb = (opts?: DatabaseClientOptions): DatabaseInstance => {
   return drizzle({

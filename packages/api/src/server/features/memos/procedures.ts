@@ -13,7 +13,10 @@ import { extractTagsFromContent, buildFilterConditions } from './utils';
 export const list = protectedProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [eq(memo.userId, ctx.session.user.id), ...buildFilterConditions(input)];
+    const conditions = [
+      eq(memo.userId, ctx.session.user.id),
+      ...buildFilterConditions(input),
+    ];
 
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
@@ -26,7 +29,10 @@ export const list = protectedProcedure
 export const listPublic = publicProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [eq(memo.visibility, 'public'), ...buildFilterConditions(input)];
+    const conditions = [
+      eq(memo.visibility, 'public'),
+      ...buildFilterConditions(input),
+    ];
 
     const memos = await ctx.db.query.memo.findMany({
       where: and(...conditions),
@@ -55,7 +61,7 @@ export const create = protectedProcedure
         })
         .returning();
 
-      return newMemo;
+      return newMemo!;
     } catch (error) {
       console.error('Failed to create memo:', error);
       throw new Error('Unable to save memo. Please try again.');

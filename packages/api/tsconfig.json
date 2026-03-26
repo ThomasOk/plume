@@ -1,8 +1,8 @@
 {
   "extends": "@repo/typescript-config/internal-package.json",
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "types": ["vite/client"]
+    "types": ["vite/client", "vitest/globals"]
   }
 }

@@ -31,6 +31,10 @@
       "dependsOn": ["^build"],
       "outputs": [".cache/tsbuildinfo.json"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
     "push": {
       "env": ["DB_POSTGRES_URL"],
       "cache": false,
