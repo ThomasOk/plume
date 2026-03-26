@@ -7,6 +7,7 @@
     "build": "pnpm env:run build",
     "clean": "git clean -xdf .cache dist .turbo node_modules",
     "dev": "pnpm env:run dev",
+    "test": "vitest run",
     "env:copy-example": "shx -- cp -n .env.example .env",
     "env:remove": "shx -- rm -f .env",
     "env:run": "dotenv -- vite --configLoader runner",
@@ -58,6 +59,9 @@
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tanstack/router-plugin": "catalog:",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "^14.6.1",
     "@trpc/server": "catalog:",
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
@@ -66,9 +70,11 @@
     "@types/textarea-caret": "^3.0.4",
     "@vitejs/plugin-react-swc": "catalog:",
     "eslint": "catalog:",
+    "happy-dom": "catalog:",
     "prettier": "catalog:",
     "shx": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }
