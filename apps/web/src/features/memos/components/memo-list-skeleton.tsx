@@ -8,7 +8,7 @@ const lineWidths = [
 ];
 
 const MemoCardSkeleton = ({ index }: { index: number }) => {
-  const lines = lineWidths[index % lineWidths.length];
+  const lines = lineWidths[index % lineWidths.length] ?? [];
 
   return (
     <Card className="py-3 rounded-xl">

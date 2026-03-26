@@ -33,7 +33,7 @@ export const router = t.router;
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
   let waitMsDisplay = '';
-  if (t._config.isDev) {
+  if (t._config.isDev && process.env.NODE_ENV !== 'test') {
     // artificial delay in dev 100-500ms
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
