@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as DebugRouteImport } from './routes/debug'
 import { Route as CalendarDemoRouteImport } from './routes/calendar-demo'
 import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
@@ -35,11 +34,6 @@ const ResourcesRoute = ResourcesRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugRoute = DebugRouteImport.update({
-  id: '/debug',
-  path: '/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarDemoRoute = CalendarDemoRouteImport.update({
@@ -83,7 +77,6 @@ const memosprivateIndexRoute = memosprivateIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof memosprivateIndexRoute
   '/calendar-demo': typeof CalendarDemoRoute
-  '/debug': typeof DebugRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
@@ -94,7 +87,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof memosprivateIndexRoute
   '/calendar-demo': typeof CalendarDemoRoute
-  '/debug': typeof DebugRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
@@ -107,7 +99,6 @@ export interface FileRoutesById {
   '/(auth)': typeof authLayoutRouteWithChildren
   '/(memos)': typeof memosLayoutRouteWithChildren
   '/calendar-demo': typeof CalendarDemoRoute
-  '/debug': typeof DebugRoute
   '/notifications': typeof NotificationsRoute
   '/resources': typeof ResourcesRoute
   '/settings': typeof SettingsRoute
@@ -122,7 +113,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/calendar-demo'
-    | '/debug'
     | '/notifications'
     | '/resources'
     | '/settings'
@@ -133,7 +123,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/calendar-demo'
-    | '/debug'
     | '/notifications'
     | '/resources'
     | '/settings'
@@ -145,7 +134,6 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/(memos)'
     | '/calendar-demo'
-    | '/debug'
     | '/notifications'
     | '/resources'
     | '/settings'
@@ -160,7 +148,6 @@ export interface RootRouteChildren {
   authLayoutRoute: typeof authLayoutRouteWithChildren
   memosLayoutRoute: typeof memosLayoutRouteWithChildren
   CalendarDemoRoute: typeof CalendarDemoRoute
-  DebugRoute: typeof DebugRoute
   NotificationsRoute: typeof NotificationsRoute
   ResourcesRoute: typeof ResourcesRoute
   SettingsRoute: typeof SettingsRoute
@@ -187,13 +174,6 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug': {
-      id: '/debug'
-      path: '/debug'
-      fullPath: '/debug'
-      preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar-demo': {
@@ -298,7 +278,6 @@ const rootRouteChildren: RootRouteChildren = {
   authLayoutRoute: authLayoutRouteWithChildren,
   memosLayoutRoute: memosLayoutRouteWithChildren,
   CalendarDemoRoute: CalendarDemoRoute,
-  DebugRoute: DebugRoute,
   NotificationsRoute: NotificationsRoute,
   ResourcesRoute: ResourcesRoute,
   SettingsRoute: SettingsRoute,
