@@ -1,0 +1,1 @@
+ALTER TABLE "memo" ALTER COLUMN "content" SET DATA TYPE varchar(8000);

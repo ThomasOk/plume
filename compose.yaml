@@ -60,16 +60,19 @@ services:
 
   drizzle:
     restart: 'no'
-    command: /bin/sh
+    command: pnpm --filter @repo/db migrate
     build:
       context: .
       dockerfile: ./packages/db/Dockerfile
     environment:
       - DB_POSTGRES_URL=postgres://postgres:postgres@db:5432/postgres
       - TURBO_UI=true
+    depends_on:
+      db:
+        condition: service_healthy
     profiles:
       # Using profiles to avoid starting this container by default.
-      # We only use this to run `pnpm db:push`
+      # Run migrations with: docker compose --profile drizzle run drizzle
       - drizzle
 
 volumes:
