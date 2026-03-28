@@ -14,6 +14,10 @@
     "start": {
       "env": ["PUBLIC_*", "PROD"],
       "persistent": true
+    },
+    "test:e2e": {
+      "env": ["TEST_USER_EMAIL", "TEST_USER_PASSWORD"],
+      "cache": false
     }
   }
 }

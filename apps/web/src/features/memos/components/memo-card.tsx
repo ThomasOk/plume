@@ -153,10 +153,12 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
     );
   };
 
-
   return (
     <>
-      <Card className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50">
+      <Card
+        data-testid="memo-card"
+        className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50"
+      >
         <CardContent>
           <div>
             {/* Header with actions menu */}
@@ -200,7 +202,9 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                       <MdOutlineEdit className="size-4" />
                       Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
+                    <DropdownMenuItem
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
                       <MdOutlineDelete className="size-4" />
                       Delete
                     </DropdownMenuItem>
@@ -276,7 +280,10 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+                transition={{
+                  duration: prefersReducedMotion ? 0 : 0.2,
+                  ease: 'easeOut',
+                }}
                 onClick={() => setIsFocusMode(false)}
               />
 
@@ -284,10 +291,17 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
               <div className="fixed inset-4 z-50 flex items-center justify-center pointer-events-none">
                 <motion.div
                   className="w-full max-w-5xl h-full pointer-events-auto"
-                  initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
+                  initial={{
+                    opacity: 0,
+                    scale: prefersReducedMotion ? 1 : 0.98,
+                  }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
-                  transition={{ type: 'spring', bounce: 0.1, duration: prefersReducedMotion ? 0 : 0.3 }}
+                  transition={{
+                    type: 'spring',
+                    bounce: 0.1,
+                    duration: prefersReducedMotion ? 0 : 0.3,
+                  }}
                 >
                   <Card className="rounded-xl h-full flex flex-col py-0 relative">
                     <button
@@ -320,7 +334,9 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                           isPending={updateMemo.isPending}
                           isValid={isValid}
                           visibility={visibility}
-                          onVisibilityChange={(val) => setValue('visibility', val)}
+                          onVisibilityChange={(val) =>
+                            setValue('visibility', val)
+                          }
                           onCancel={exitEdit}
                         />
                       </form>
