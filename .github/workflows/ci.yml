@@ -66,11 +66,9 @@ jobs:
           echo "PUBLIC_WEB_URL=http://localhost:8085" >> apps/web/.env
 
           echo "SERVER_POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/plume_test" > apps/server/.env
-          echo "BETTER_AUTH_SECRET=ci-secret-key" >> apps/server/.env
+          echo "SERVER_AUTH_SECRET=ci-secret-key" >> apps/server/.env
           echo "BETTER_AUTH_URL=http://localhost:3035" >> apps/server/.env
-          echo "PORT=3035" >> apps/server/.env
-          echo "NODE_ENV=development" >> apps/server/.env
-          echo "FRONTEND_URL=http://localhost:8085" >> apps/server/.env
+          echo "PUBLIC_WEB_URL=http://localhost:8085" >> apps/server/.env
 
           echo "TEST_USER_EMAIL=${TEST_USER_EMAIL}" > apps/web/.env.test
           echo "TEST_USER_PASSWORD=${TEST_USER_PASSWORD}" >> apps/web/.env.test
