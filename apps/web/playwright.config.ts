@@ -1,4 +1,3 @@
-import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 
@@ -31,13 +30,13 @@ export default defineConfig({
   webServer: [
     {
       command: 'pnpm dev',
-      cwd: path.resolve(__dirname),
+      cwd: import.meta.dirname,
       url: 'http://localhost:8085',
       reuseExistingServer: !process.env.CI,
     },
     {
       command: 'pnpm dev',
-      cwd: path.resolve(__dirname, '../server'),
+      cwd: new URL('../server', import.meta.url).pathname,
       url: 'http://localhost:3035',
       reuseExistingServer: !process.env.CI,
     },
