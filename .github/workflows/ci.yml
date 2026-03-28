@@ -65,7 +65,7 @@ jobs:
           echo "PUBLIC_SERVER_URL=http://localhost:3035" > apps/web/.env
           echo "PUBLIC_WEB_URL=http://localhost:8085" >> apps/web/.env
 
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/plume_test" > apps/server/.env
+          echo "SERVER_POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/plume_test" > apps/server/.env
           echo "BETTER_AUTH_SECRET=ci-secret-key" >> apps/server/.env
           echo "BETTER_AUTH_URL=http://localhost:3035" >> apps/server/.env
           echo "PORT=3035" >> apps/server/.env
@@ -77,7 +77,7 @@ jobs:
 
       - name: Run database migrations
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/plume_test
+          DB_POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/plume_test
         run: pnpm --filter @repo/db migrate
 
       - name: Run E2E tests
