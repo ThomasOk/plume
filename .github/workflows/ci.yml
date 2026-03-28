@@ -75,10 +75,10 @@ jobs:
           echo "TEST_USER_EMAIL=${TEST_USER_EMAIL}" > apps/web/.env.test
           echo "TEST_USER_PASSWORD=${TEST_USER_PASSWORD}" >> apps/web/.env.test
 
-      - name: Push database schema
+      - name: Run database migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/plume_test
-        run: pnpm db:push
+        run: pnpm --filter @repo/db migrate
 
       - name: Run E2E tests
         run: pnpm --filter web test:e2e
