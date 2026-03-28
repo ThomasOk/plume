@@ -6,7 +6,7 @@ export default [
   ...reactConfig,
   ...restrictEnvAccess,
   {
-    files: ['vite.config.ts'],
+    files: ['vite.config.ts', 'playwright.config.ts', 'e2e/**'],
     rules: {
       'no-restricted-properties': 'off',
     },

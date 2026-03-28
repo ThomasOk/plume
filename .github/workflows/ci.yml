@@ -24,3 +24,69 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: ci
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: plume_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install chromium --with-deps
+
+      - name: Create env files
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: |
+          echo "PUBLIC_SERVER_URL=http://localhost:3035" > apps/web/.env
+          echo "PUBLIC_WEB_URL=http://localhost:8085" >> apps/web/.env
+
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/plume_test" > apps/server/.env
+          echo "BETTER_AUTH_SECRET=ci-secret-key" >> apps/server/.env
+          echo "BETTER_AUTH_URL=http://localhost:3035" >> apps/server/.env
+          echo "PORT=3035" >> apps/server/.env
+          echo "NODE_ENV=development" >> apps/server/.env
+          echo "FRONTEND_URL=http://localhost:8085" >> apps/server/.env
+
+          echo "TEST_USER_EMAIL=${TEST_USER_EMAIL}" > apps/web/.env.test
+          echo "TEST_USER_PASSWORD=${TEST_USER_PASSWORD}" >> apps/web/.env.test
+
+      - name: Push database schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/plume_test
+        run: pnpm db:push
+
+      - name: Run E2E tests
+        run: pnpm --filter web test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

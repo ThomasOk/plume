@@ -8,6 +8,7 @@ export default defineConfig({
     },
   },
   test: {
+    exclude: ['**/node_modules/**', '**/e2e/**'],
     globals: true,
     hookTimeout: 60000,
     environment: 'happy-dom',
