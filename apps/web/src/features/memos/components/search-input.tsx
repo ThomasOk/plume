@@ -1,4 +1,5 @@
 import { Input } from '@repo/ui/components/input';
+import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { RiSearchLine } from 'react-icons/ri';
@@ -16,6 +17,7 @@ export const SearchInput = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    sounds.click();
     navigate({
       to: '.',
       search: (prev) => ({ ...prev, query: value.trim() || undefined }),

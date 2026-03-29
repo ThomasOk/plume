@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { sounds } from '@/lib/sounds';
 import hljs from 'highlight.js';
 import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
 import './code-block.css';
@@ -30,6 +31,7 @@ export const CodeBlock = ({ children, className, inline }: CodeBlockProps) => {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(codeContent);
+      sounds.click();
       setCopied(true);
       // Reset after 2 seconds
       setTimeout(() => setCopied(false), 2000);

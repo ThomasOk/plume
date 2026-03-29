@@ -1,4 +1,5 @@
 import { ChevronDownIcon } from '@radix-ui/react-icons';
+import { sounds } from '@/lib/sounds';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,7 @@ export const VisibilitySelector = ({
   const Icon = current.icon;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -45,7 +46,7 @@ export const VisibilitySelector = ({
             <DropdownMenuItem
               key={option.value}
               className="gap-2 cursor-pointer"
-              onClick={() => onChange(option.value)}
+              onClick={() => { sounds.tick(); onChange(option.value); }}
             >
               <OptionIcon className="size-4" />
               <span className="flex-1">{option.label}</span>

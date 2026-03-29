@@ -24,6 +24,7 @@ import {
 } from 'react-icons/ri';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
+import { sounds } from '@/lib/sounds';
 
 interface SidebarNavProps {
   collapsed?: boolean;
@@ -102,6 +103,7 @@ export const SidebarNav = ({
               <Button
                 variant="ghost"
                 size={collapsed ? 'icon' : 'default'}
+                onClick={sounds.click}
                 className={cn(
                   'cursor-pointer',
                   collapsed
@@ -121,7 +123,7 @@ export const SidebarNav = ({
       </nav>
       {sessionData && (
         <div className="mt-auto">
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -143,7 +145,7 @@ export const SidebarNav = ({
                   Theme
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => setTheme('light')}>
+                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('light'); }}>
                     <RiCheckLine
                       className={
                         theme === 'light' ? 'opacity-100' : 'opacity-0'
@@ -151,13 +153,13 @@ export const SidebarNav = ({
                     />
                     Light
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('dark'); }}>
                     <RiCheckLine
                       className={theme === 'dark' ? 'opacity-100' : 'opacity-0'}
                     />
                     Dark
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme('paper')}>
+                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('paper'); }}>
                     <RiCheckLine
                       className={
                         theme === 'paper' ? 'opacity-100' : 'opacity-0'

@@ -9,11 +9,12 @@ import { useForm } from 'react-hook-form';
 import { MdOutlineCloseFullscreen, MdOutlineOpenInFull } from 'react-icons/md';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCreateMemo } from '../hooks/use-create-memo';
 import { useDraft } from '../hooks/use-draft';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { sounds } from '@/lib/sounds';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
@@ -37,6 +38,11 @@ export const MemoForm = () => {
   });
 
   const { user } = useAuth();
+
+  const closeFocusMode = () => {
+    setIsFocusMode(false);
+    sounds.collapse();
+  };
   const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, 'memo-draft');
   const createMemo = useCreateMemo();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -82,7 +88,7 @@ export const MemoForm = () => {
   useEffect(() => {
     if (!isFocusMode) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFocusMode(false);
+      if (e.key === 'Escape') closeFocusMode();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -110,43 +116,45 @@ export const MemoForm = () => {
     setValue('content', newValue);
   };
 
-
   return (
     <>
       {/* Normal card — kept in DOM to preserve layout space, invisible when focus mode active */}
       <div className={cn('mb-2', isFocusMode && 'invisible')}>
         <Card className="py-3 rounded-xl relative">
-            <button
-              type="button"
-              onClick={() => setIsFocusMode(true)}
-              aria-label="Enter focus mode"
-              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
-            >
-              <MdOutlineOpenInFull className="size-4" />
-            </button>
-            <CardContent className="px-4 pr-10">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-                <MemoTextarea
-                  textareaRef={textareaRef}
-                  registerRef={registerRef}
-                  fieldProps={rest}
-                  isPending={createMemo.isPending}
-                  onSubmit={handleSubmit(onSubmit)}
-                  onInsert={onInsert}
-                  placeholder="Write your memo here..."
-                  errorMessage={errors.content?.message}
-                />
-                <MemoFooter
-                  charCount={charCount}
-                  isOverLimit={isOverLimit}
-                  isPending={createMemo.isPending}
-                  isValid={isValid}
-                  visibility={visibility}
-                  onVisibilityChange={(val) => setValue('visibility', val)}
-                />
-              </form>
-            </CardContent>
-          </Card>
+          <button
+            type="button"
+            onClick={() => {
+              setIsFocusMode(true);
+              sounds.expand();
+            }}
+            aria-label="Enter focus mode"
+            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
+          >
+            <MdOutlineOpenInFull className="size-4" />
+          </button>
+          <CardContent className="px-4 pr-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+              <MemoTextarea
+                textareaRef={textareaRef}
+                registerRef={registerRef}
+                fieldProps={rest}
+                isPending={createMemo.isPending}
+                onSubmit={handleSubmit(onSubmit)}
+                onInsert={onInsert}
+                placeholder="Write your memo here..."
+                errorMessage={errors.content?.message}
+              />
+              <MemoFooter
+                charCount={charCount}
+                isOverLimit={isOverLimit}
+                isPending={createMemo.isPending}
+                isValid={isValid}
+                visibility={visibility}
+                onVisibilityChange={(val) => setValue('visibility', val)}
+              />
+            </form>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Focus mode overlay rendered in a portal */}
@@ -160,23 +168,33 @@ export const MemoForm = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
-                onClick={() => setIsFocusMode(false)}
+                transition={{
+                  duration: prefersReducedMotion ? 0 : 0.2,
+                  ease: 'easeOut',
+                }}
+                onClick={closeFocusMode}
               />
 
               {/* Card */}
               <div className="fixed inset-4 z-50 flex items-center justify-center pointer-events-none">
                 <motion.div
                   className="w-full max-w-5xl h-full pointer-events-auto"
-                  initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
+                  initial={{
+                    opacity: 0,
+                    scale: prefersReducedMotion ? 1 : 0.98,
+                  }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
-                  transition={{ type: 'spring', bounce: 0.1, duration: prefersReducedMotion ? 0 : 0.3 }}
+                  transition={{
+                    type: 'spring',
+                    bounce: 0.1,
+                    duration: prefersReducedMotion ? 0 : 0.3,
+                  }}
                 >
                   <Card className="rounded-xl h-full flex flex-col py-0 relative">
                     <button
                       type="button"
-                      onClick={() => setIsFocusMode(false)}
+                      onClick={closeFocusMode}
                       aria-label="Exit focus mode"
                       className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
                     >
@@ -201,13 +219,15 @@ export const MemoForm = () => {
                           />
                         </div>
                         <MemoFooter
-                  charCount={charCount}
-                  isOverLimit={isOverLimit}
-                  isPending={createMemo.isPending}
-                  isValid={isValid}
-                  visibility={visibility}
-                  onVisibilityChange={(val) => setValue('visibility', val)}
-                />
+                          charCount={charCount}
+                          isOverLimit={isOverLimit}
+                          isPending={createMemo.isPending}
+                          isValid={isValid}
+                          visibility={visibility}
+                          onVisibilityChange={(val) =>
+                            setValue('visibility', val)
+                          }
+                        />
                       </form>
                     </CardContent>
                   </Card>
