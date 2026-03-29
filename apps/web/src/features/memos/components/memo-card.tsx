@@ -195,7 +195,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                 </TooltipProvider>
               )}
               {!isEditing && (
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -212,7 +212,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => setIsDeleteDialogOpen(true)}
+                      onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
                     >
                       <MdOutlineDelete className="size-4" />
                       Delete
