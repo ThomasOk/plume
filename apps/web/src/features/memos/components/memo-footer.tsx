@@ -1,5 +1,6 @@
 import { MAX_MEMO_CHARACTERS } from '@repo/api/schemas';
 import { Button } from '@repo/ui/components/button';
+import { sounds } from '@/lib/sounds';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
 import { VisibilitySelector } from './visibility-selector';
@@ -128,6 +129,7 @@ export const MemoFooter = ({
           type="submit"
           size="sm"
           disabled={!isValid || isPending || isOverLimit}
+          onClick={sounds.click}
         >
           {isPending ? 'Saving...' : 'Save'}
         </Button>

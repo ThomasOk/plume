@@ -1,4 +1,5 @@
 import { Badge } from '@repo/ui/components/badge';
+import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { MdClose } from 'react-icons/md';
@@ -33,7 +34,7 @@ export const TagFilterBadge = () => {
             <RiHashtag className="!size-4 -mr-1" />
             {selectedTag}
             <button
-              onClick={handleRemoveFilter}
+              onClick={() => { sounds.click(); handleRemoveFilter(); }}
               aria-label="Remove tag filter"
               className="ml-1 cursor-pointer hover:bg-accent rounded-full p-0.5 transition-colors"
             >

@@ -45,6 +45,7 @@ import { useDeleteMemo, useUpdateMemo } from '../hooks';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
+import { sounds } from '@/lib/sounds';
 
 interface MemoCardProps {
   memo: Memo;
@@ -92,6 +93,11 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
   const updateMemo = useUpdateMemo();
   const deleteMemo = useDeleteMemo();
 
+  const closeFocusMode = () => {
+    setIsFocusMode(false);
+    sounds.collapse();
+  };
+
   // Body scroll lock while in focus mode
   useEffect(() => {
     if (!isFocusMode) return;
@@ -114,7 +120,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
   useEffect(() => {
     if (!isFocusMode) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFocusMode(false);
+      if (e.key === 'Escape') closeFocusMode();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -166,7 +172,10 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
               {isEditing && (
                 <button
                   type="button"
-                  onClick={() => setIsFocusMode(true)}
+                  onClick={() => {
+                    setIsFocusMode(true);
+                    sounds.expand();
+                  }}
                   aria-label="Enter focus mode"
                   className="text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
                 >
@@ -284,7 +293,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                   duration: prefersReducedMotion ? 0 : 0.2,
                   ease: 'easeOut',
                 }}
-                onClick={() => setIsFocusMode(false)}
+                onClick={closeFocusMode}
               />
 
               {/* Card */}
@@ -306,7 +315,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                   <Card className="rounded-xl h-full flex flex-col py-0 relative">
                     <button
                       type="button"
-                      onClick={() => setIsFocusMode(false)}
+                      onClick={closeFocusMode}
                       aria-label="Exit focus mode"
                       className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
                     >
@@ -369,6 +378,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
+                sounds.click();
                 handleDelete();
               }}
             >

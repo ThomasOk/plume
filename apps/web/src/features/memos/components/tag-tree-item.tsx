@@ -1,4 +1,5 @@
 import { cn } from '@repo/ui/lib/utils';
+import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
@@ -24,7 +25,7 @@ export const TagTreeItem = ({ node }: { node: TagNode }) => {
     <li>
       <div className="flex items-center justify-between w-full">
         <button
-          onClick={() => handleClick(node.fullPath)}
+          onClick={() => { sounds.click(); handleClick(node.fullPath); }}
           className={cn(
             'flex items-center text-sm font-medium cursor-pointer hover:opacity-80 truncate',
             node.fullPath === selectedTag ? 'text-primary' : 'text-foreground',
@@ -38,7 +39,7 @@ export const TagTreeItem = ({ node }: { node: TagNode }) => {
         </button>
         {node.children.length > 0 && (
           <button
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => { sounds.pop(); setIsOpen(!isOpen); }}
             aria-label={isOpen ? 'Collapse tag' : 'Expand tag'}
             className="ml-1 cursor-pointer hover:opacity-80"
           >

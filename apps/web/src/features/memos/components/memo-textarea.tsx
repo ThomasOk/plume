@@ -1,5 +1,6 @@
 import { Textarea } from '@repo/ui/components/textarea';
 import type { RefObject } from 'react';
+import { sounds } from '@/lib/sounds';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { TagSuggestions } from './tag-suggestions';
 
@@ -40,6 +41,7 @@ export const MemoTextarea = ({
         disabled={isPending}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            sounds.click();
             onSubmit();
           }
         }}

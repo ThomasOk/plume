@@ -1,4 +1,5 @@
 import { cn } from '@repo/ui/lib/utils';
+import { sounds } from '@/lib/sounds';
 import type { CalendarDayCell } from './types';
 import {
   Tooltip,
@@ -35,7 +36,7 @@ export const CalendarCell = ({
             cell.isToday && 'ring-2 ring-primary/30  font-semibold',
             cell.isSelected && 'ring-2 ring-primary  font-bold',
           )}
-          onClick={() => isClickable && onClick?.(cell.date)}
+          onClick={() => { if (isClickable) { sounds.click(); onClick?.(cell.date); } }}
         >
           <div
             className={cn(
