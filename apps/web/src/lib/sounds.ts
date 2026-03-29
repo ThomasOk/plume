@@ -115,6 +115,33 @@ export const sounds = {
     }
   },
 
+  warning: () => {
+    try {
+      const ctx = getAudioContext();
+      const t = ctx.currentTime;
+
+      [0, 0.225].forEach((delay, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.value = i === 0 ? 704 : 558;
+
+        const start = t + delay;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.21, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.18);
+      });
+    } catch {
+      // Audio errors are non-fatal — silently ignored
+    }
+  },
+
   collapse: () => {
     try {
       const ctx = getAudioContext();
