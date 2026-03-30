@@ -1,6 +1,7 @@
 import { router } from '../../trpc';
 import {
   list,
+  getById,
   create,
   update,
   deleteMemo,
@@ -12,6 +13,7 @@ import {
 
 export const memosRouter = router({
   list,
+  getById,
   listPublic,
   create,
   update,

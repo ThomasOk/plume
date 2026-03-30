@@ -1,5 +1,6 @@
 import { desc, eq, and, sql } from '@repo/db';
-import { memo } from '@repo/db/schema';
+import { memo, user } from '@repo/db/schema';
+import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
 import { protectedProcedure, publicProcedure } from '../../trpc';
 import {
@@ -7,8 +8,44 @@ import {
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
+  getByIdSchema,
 } from './schemas';
 import { extractTagsFromContent, buildFilterConditions } from './utils';
+
+export const getById = publicProcedure
+  .input(getByIdSchema)
+  .query(async ({ ctx, input }) => {
+    const [row] = await ctx.db
+      .select({
+        id: memo.id,
+        userId: memo.userId,
+        content: memo.content,
+        tags: memo.tags,
+        visibility: memo.visibility,
+        createdAt: memo.createdAt,
+        updatedAt: memo.updatedAt,
+        authorName: user.name,
+        authorImage: user.image,
+      })
+      .from(memo)
+      .leftJoin(user, eq(memo.userId, user.id))
+      .where(eq(memo.id, input.id))
+      .limit(1);
+
+    if (!row) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+    }
+
+    if (row.visibility === 'private' && ctx.session?.user.id !== row.userId) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+    }
+
+    const { authorName, authorImage, ...memoData } = row;
+    return {
+      ...memoData,
+      author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
+    };
+  });
 
 export const list = protectedProcedure
   .input(listMemosSchema)
@@ -34,12 +71,27 @@ export const listPublic = publicProcedure
       ...buildFilterConditions(input),
     ];
 
-    const memos = await ctx.db.query.memo.findMany({
-      where: and(...conditions),
-      orderBy: [desc(memo.createdAt)],
-    });
+    const rows = await ctx.db
+      .select({
+        id: memo.id,
+        userId: memo.userId,
+        content: memo.content,
+        tags: memo.tags,
+        visibility: memo.visibility,
+        createdAt: memo.createdAt,
+        updatedAt: memo.updatedAt,
+        authorName: user.name,
+        authorImage: user.image,
+      })
+      .from(memo)
+      .leftJoin(user, eq(memo.userId, user.id))
+      .where(and(...conditions))
+      .orderBy(desc(memo.createdAt));
 
-    return memos;
+    return rows.map(({ authorName, authorImage, ...memoData }) => ({
+      ...memoData,
+      author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
+    }));
   });
 
 export const create = protectedProcedure

@@ -15,6 +15,10 @@ export const deleteMemoSchema = z.object({
   id: z.string().min(1, 'ID is required'),
 });
 
+export const getByIdSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+});
+
 export const listMemosSchema = z.object({
   date: z.string().optional(),
   tag: z.string().optional(),

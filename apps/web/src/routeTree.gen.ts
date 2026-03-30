@@ -15,6 +15,7 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as CalendarDemoRouteImport } from './routes/calendar-demo'
 import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
+import { Route as MemosMemoIdRouteImport } from './routes/memos.$memoId'
 import { Route as memosExploreRouteImport } from './routes/(memos)/explore'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
@@ -47,6 +48,11 @@ const memosLayoutRoute = memosLayoutRouteImport.update({
 } as any)
 const authLayoutRoute = authLayoutRouteImport.update({
   id: '/(auth)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemosMemoIdRoute = MemosMemoIdRouteImport.update({
+  id: '/memos/$memoId',
+  path: '/memos/$memoId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const memosExploreRoute = memosExploreRouteImport.update({
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
+  '/memos/$memoId': typeof MemosMemoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof memosprivateIndexRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
+  '/memos/$memoId': typeof MemosMemoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(memos)/explore': typeof memosExploreRoute
+  '/memos/$memoId': typeof MemosMemoIdRoute
   '/(memos)/(private)/': typeof memosprivateIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/explore'
+    | '/memos/$memoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/explore'
+    | '/memos/$memoId'
   id:
     | '__root__'
     | '/(auth)'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(memos)/explore'
+    | '/memos/$memoId'
     | '/(memos)/(private)/'
   fileRoutesById: FileRoutesById
 }
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   ResourcesRoute: typeof ResourcesRoute
   SettingsRoute: typeof SettingsRoute
+  MemosMemoIdRoute: typeof MemosMemoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof authLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memos/$memoId': {
+      id: '/memos/$memoId'
+      path: '/memos/$memoId'
+      fullPath: '/memos/$memoId'
+      preLoaderRoute: typeof MemosMemoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(memos)/explore': {
@@ -281,6 +301,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   ResourcesRoute: ResourcesRoute,
   SettingsRoute: SettingsRoute,
+  MemosMemoIdRoute: MemosMemoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -7,3 +7,4 @@ export { useMemosStats } from './use-memos-stats';
 export { usePrivateMemoTags } from './use-private-memo-tags';
 export { usePublicMemoTags } from './use-public-memo-tags';
 export { useSidebarTags } from './use-sidebar-tags';
+export { useMemoById } from './use-memo-by-id';
