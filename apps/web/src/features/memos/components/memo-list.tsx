@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from 'motion/react';
-import type { Memo } from '@/lib/types';
+import type { Author, Memo } from '@/lib/types';
 import { MemoCard } from './memo-card';
 
+type MemoListItem = Memo & { author?: Author };
+
 interface MemoListProps {
-  memos: Memo[];
+  memos: MemoListItem[];
 }
 
 export const MemoList = ({ memos }: MemoListProps) => {
@@ -28,7 +30,7 @@ export const MemoList = ({ memos }: MemoListProps) => {
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }}
           >
-            <MemoCard memo={memo} />
+            <MemoCard memo={memo} author={memo.author} />
           </motion.div>
         ))}
       </AnimatePresence>

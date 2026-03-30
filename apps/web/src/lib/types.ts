@@ -20,9 +20,11 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
  * Memo type
  *
  * Inferred from `memos.list` return type
- * Array of memos ’ extract single element type with [number]
+ * Array of memos ï¿½ extract single element type with [number]
  */
 export type Memo = RouterOutputs['memos']['list'][number];
+export type MemoWithAuthor = RouterOutputs['memos']['listPublic'][number];
+export type Author = MemoWithAuthor['author'];
 
 // As you add more features, add types here
 // Examples for later:

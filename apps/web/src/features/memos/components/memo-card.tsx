@@ -16,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu';
 import {
@@ -24,6 +25,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@repo/ui/components/tooltip';
+import { Link } from '@tanstack/react-router';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@repo/ui/components/avatar';
 import { formatDistanceToNow, format } from 'date-fns';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
@@ -36,9 +43,10 @@ import {
   MdOutlineDelete,
   MdOutlineEdit,
   MdOutlineOpenInFull,
+  MdOutlineOpenInNew,
 } from 'react-icons/md';
 import { toast } from 'sonner';
-import type { Memo } from '@/lib/types';
+import type { Author, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteMemo, useUpdateMemo } from '../hooks';
@@ -49,10 +57,11 @@ import { sounds } from '@/lib/sounds';
 
 interface MemoCardProps {
   memo: Memo;
+  author?: Author;
 }
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
-export const MemoCard = ({ memo }: MemoCardProps) => {
+export const MemoCard = ({ memo, author }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -168,7 +177,49 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
         <CardContent>
           <div>
             {/* Header with actions menu */}
-            <div className="flex justify-end items-center gap-1">
+            <div className="flex justify-between items-center gap-1">
+              {/* Header left — hidden while editing */}
+              {!isEditing ? (
+                <div className="flex items-center gap-2 min-w-0">
+                  {author && (
+                    <Avatar className="size-7 shrink-0">
+                      <AvatarImage src={author.image ?? undefined} />
+                      <AvatarFallback className="text-xs">
+                        {author.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="flex flex-col min-w-0">
+                    {author && (
+                      <span className="text-xs font-medium truncate leading-tight">
+                        {author.name}
+                      </span>
+                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link
+                            to="/memos/$memoId"
+                            params={{ memoId: memo.id }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
+                          >
+                            <time dateTime={memo.createdAt.toISOString()}>
+                              {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
+                            </time>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">{format(memo.createdAt, 'PPpp')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-1">
               {isEditing && (
                 <button
                   type="button"
@@ -207,6 +258,13 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/memos/$memoId" params={{ memoId: memo.id }}>
+                        <MdOutlineOpenInNew className="size-4" />
+                        Open
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setIsEditing(true)}>
                       <MdOutlineEdit className="size-4" />
                       Edit
@@ -220,6 +278,7 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              </div>
             </div>
 
             {/* Memo content or edit form */}
@@ -250,30 +309,6 @@ export const MemoCard = ({ memo }: MemoCardProps) => {
               </MemoContext.Provider>
             )}
 
-            {/* Timestamp — hidden while editing to avoid layout overlap */}
-            {!isEditing && (
-              <div className="flex items-center justify-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <time
-                        dateTime={memo.createdAt.toISOString()}
-                        className="text-xs text-muted-foreground cursor-help"
-                      >
-                        {formatDistanceToNow(memo.createdAt, {
-                          addSuffix: true,
-                        })}
-                      </time>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs">
-                        {format(memo.createdAt, 'PPpp')}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
