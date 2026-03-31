@@ -10,7 +10,7 @@ export default defineConfig({
   outDir: './dist',
   clean: true,
   env: { IS_SERVER_BUILD: 'true' },
-  loader: { '.json': 'copy' },
+  loader: { '.json': 'json' },
   minify: false,
   sourcemap: true,
 
