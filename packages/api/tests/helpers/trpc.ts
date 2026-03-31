@@ -1,8 +1,15 @@
 import type { DatabaseInstance } from '@repo/db';
+import type { StorageService } from '../../src/server/trpc';
 import { appRouter } from '../../src/server/index';
 
+const mockStorage: StorageService = {
+  generateUploadUrl: async (key) => `https://mock-r2.example.com/${key}`,
+  getPublicUrl: (key) => `https://mock-r2.example.com/${key}`,
+  deleteObject: async () => {},
+};
+
 export const createTestCaller = (db: DatabaseInstance) => {
-  return appRouter.createCaller({ db, session: null });
+  return appRouter.createCaller({ db, storage: mockStorage, session: null });
 };
 
 export const createAuthenticatedCaller = (
@@ -12,6 +19,7 @@ export const createAuthenticatedCaller = (
   const now = new Date();
   return appRouter.createCaller({
     db,
+    storage: mockStorage,
     session: {
       user: {
         id: userId,

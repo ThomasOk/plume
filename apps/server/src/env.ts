@@ -19,6 +19,13 @@ export const envSchema = z.object({
   BETTER_AUTH_URL: z.url(),
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  // Cloudflare R2
+  SERVER_R2_ACCOUNT_ID: z.string().min(1),
+  SERVER_R2_ACCESS_KEY_ID: z.string().min(1),
+  SERVER_R2_SECRET_ACCESS_KEY: z.string().min(1),
+  SERVER_R2_BUCKET_NAME: z.string().min(1),
+  SERVER_R2_PUBLIC_URL: z.url(),
+  SERVER_R2_UPLOAD_SIZE_LIMIT_MB: z.string().default('30').transform(Number),
 });
 
 export const env = envSchema.parse(process.env);

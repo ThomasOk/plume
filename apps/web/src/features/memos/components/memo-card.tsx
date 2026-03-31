@@ -54,6 +54,7 @@ import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 import { sounds } from '@/lib/sounds';
+import { AttachmentList, useAttachmentsByMemo } from '@/features/attachments';
 
 interface MemoCardProps {
   memo: Memo;
@@ -63,6 +64,7 @@ type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
 export const MemoCard = ({ memo, author }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const { data: attachments } = useAttachmentsByMemo(memo.id);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -306,6 +308,9 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
             ) : (
               <MemoContext.Provider value={{ memo }}>
                 <ExpandableMarkdown content={memo.content} maxHeight={500} />
+                {attachments && attachments.length > 0 && (
+                  <AttachmentList savedAttachments={attachments} />
+                )}
               </MemoContext.Provider>
             )}
 

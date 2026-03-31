@@ -25,8 +25,4 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 export type Memo = RouterOutputs['memos']['list'][number];
 export type MemoWithAuthor = RouterOutputs['memos']['listPublic'][number];
 export type Author = MemoWithAuthor['author'];
-
-// As you add more features, add types here
-// Examples for later:
-// export type Tag = RouterOutputs['tags']['list'][number];
-// export type User = RouterOutputs['auth']['getUser'];
+export type Attachment = RouterOutputs['attachments']['list'][number];
