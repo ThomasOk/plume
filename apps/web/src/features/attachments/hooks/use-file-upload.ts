@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { nanoid } from 'nanoid';
 import { useRef, useState } from 'react';
 import { useTRPC } from '@/lib/api';
@@ -23,6 +23,7 @@ interface UseFileUploadOptions {
 
 export const useFileUpload = (options?: UseFileUploadOptions) => {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,22 +33,29 @@ export const useFileUpload = (options?: UseFileUploadOptions) => {
   const confirmUploadMutation = useMutation(
     trpc.attachments.confirmUpload.mutationOptions(),
   );
+  const deleteUploadMutation = useMutation(
+    trpc.attachments.delete.mutationOptions(),
+  );
 
   const uploadFile = async (localId: string, file: File) => {
     try {
       // Step 1 — Ask our server for a presigned PUT URL and create the DB row
-      const { id: attachmentId, uploadUrl } =
+      const { id: attachmentId, uploadUrl, contentDisposition } =
         await getUploadUrlMutation.mutateAsync({
           filename: file.name,
           mimeType: file.type || 'application/octet-stream',
           size: file.size,
         });
 
-      // Step 2 — PUT the file directly to R2 (bypasses our server)
+      // Step 2 — PUT the file directly to R2 (bypasses our server).
+      // Content-Disposition must match exactly what was signed in the presigned URL.
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+          'Content-Disposition': contentDisposition,
+        },
       });
 
       if (!response.ok) {
@@ -93,7 +101,19 @@ export const useFileUpload = (options?: UseFileUploadOptions) => {
   const removeLocalFile = (localId: string) => {
     setLocalFiles((prev) => {
       const target = prev.find((f) => f.localId === localId);
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+        if (target.attachmentId) {
+          deleteUploadMutation
+            .mutateAsync({ id: target.attachmentId })
+            .then(() => {
+              queryClient.invalidateQueries({
+                queryKey: trpc.attachments.list.queryKey(),
+              });
+            })
+            .catch(console.error);
+        }
+      }
       return prev.filter((f) => f.localId !== localId);
     });
   };

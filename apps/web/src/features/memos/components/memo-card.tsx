@@ -54,7 +54,12 @@ import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 import { sounds } from '@/lib/sounds';
-import { AttachmentList, useAttachmentsByMemo } from '@/features/attachments';
+import {
+  AttachmentList,
+  useAttachmentsByMemo,
+  useDeleteAttachment,
+  useFileUpload,
+} from '@/features/attachments';
 
 interface MemoCardProps {
   memo: Memo;
@@ -65,6 +70,16 @@ type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 export const MemoCard = ({ memo, author }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { data: attachments } = useAttachmentsByMemo(memo.id);
+  const deleteAttachment = useDeleteAttachment();
+  const {
+    localFiles,
+    fileInputRef,
+    triggerFileSelect,
+    handleFilesSelected,
+    removeLocalFile,
+    isUploading,
+    clearAll,
+  } = useFileUpload({ memoId: memo.id });
   const [isFocusMode, setIsFocusMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -141,6 +156,7 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
     setIsEditing(false);
     setIsFocusMode(false);
     reset();
+    clearAll();
   };
 
   const onSubmit = (data: UpdateMemoInput) => {
@@ -286,6 +302,13 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
             {/* Memo content or edit form */}
             {isEditing ? (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+                />
                 <MemoTextarea
                   textareaRef={textareaRef}
                   registerRef={registerRef}
@@ -295,14 +318,21 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
                   onInsert={onInsert}
                   autoFocus={!isFocusMode}
                 />
+                <AttachmentList
+                  localFiles={localFiles}
+                  savedAttachments={attachments}
+                  onRemoveLocalFile={removeLocalFile}
+                  onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
+                />
                 <MemoFooter
                   charCount={charCount}
                   isOverLimit={isOverLimit}
-                  isPending={updateMemo.isPending}
+                  isPending={updateMemo.isPending || isUploading}
                   isValid={isValid}
                   visibility={visibility}
                   onVisibilityChange={(val) => setValue('visibility', val)}
                   onCancel={exitEdit}
+                  onAttachFile={triggerFileSelect}
                 />
               </form>
             ) : (
@@ -377,16 +407,23 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
                             autoFocus
                           />
                         </div>
+                        <AttachmentList
+                          localFiles={localFiles}
+                          savedAttachments={attachments}
+                          onRemoveLocalFile={removeLocalFile}
+                          onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
+                        />
                         <MemoFooter
                           charCount={charCount}
                           isOverLimit={isOverLimit}
-                          isPending={updateMemo.isPending}
+                          isPending={updateMemo.isPending || isUploading}
                           isValid={isValid}
                           visibility={visibility}
                           onVisibilityChange={(val) =>
                             setValue('visibility', val)
                           }
                           onCancel={exitEdit}
+                          onAttachFile={triggerFileSelect}
                         />
                       </form>
                     </CardContent>

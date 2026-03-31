@@ -1,5 +1,5 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTRPC } from '@/lib/api';
-import { useQuery } from '@tanstack/react-query';
 
 export const useAttachments = () => {
   const trpc = useTRPC();
@@ -9,4 +9,17 @@ export const useAttachments = () => {
 export const useAttachmentsByMemo = (memoId: string) => {
   const trpc = useTRPC();
   return useQuery(trpc.attachments.list.queryOptions({ memoId }));
+};
+
+export const useDeleteAttachment = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...trpc.attachments.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.attachments.list.queryKey(),
+      });
+    },
+  });
 };

@@ -30,14 +30,22 @@ const CharacterIndicator = ({ charCount }: { charCount: number }) => {
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none',
       )}
       role={isVisible ? 'status' : undefined}
-      aria-label={isVisible ? `${charCount} of ${MAX_MEMO_CHARACTERS} characters used` : undefined}
+      aria-label={
+        isVisible
+          ? `${charCount} of ${MAX_MEMO_CHARACTERS} characters used`
+          : undefined
+      }
     >
       {/* Number — always in DOM to avoid layout shift, toggled via opacity */}
       <span
         className={cn(
           'text-xs tabular-nums transition-opacity duration-150',
-          isOverLimit ? 'font-medium text-destructive' : 'text-muted-foreground',
-          showNumber ? 'opacity-100' : 'pointer-events-none select-none opacity-0',
+          isOverLimit
+            ? 'font-medium text-destructive'
+            : 'text-muted-foreground',
+          showNumber
+            ? 'opacity-100'
+            : 'pointer-events-none select-none opacity-0',
         )}
         aria-hidden={!showNumber}
       >
@@ -116,14 +124,16 @@ export const MemoFooter = ({
     <div className="flex items-center justify-between gap-2 pt-3">
       <div className="flex items-center gap-1">
         {onAttachFile && (
-          <button
+          <Button
             type="button"
-            onClick={onAttachFile}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+            variant="outline"
+            size="icon"
+            onClick={() => { sounds.click(); onAttachFile(); }}
+            className="size-6 text-muted-foreground"
             aria-label="Attach file"
           >
             <MdOutlineAttachFile className="size-4" />
-          </button>
+          </Button>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -152,4 +162,3 @@ export const MemoFooter = ({
     </div>
   );
 };
-

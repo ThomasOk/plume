@@ -29,7 +29,11 @@ export const getUploadUrl = protectedProcedure
       : '';
     const storageKey = `uploads/${ctx.session.user.id}/${id}${ext}`;
 
-    const uploadUrl = await ctx.storage.generateUploadUrl(storageKey, input.mimeType);
+    const { url: uploadUrl, contentDisposition } = await ctx.storage.generateUploadUrl(
+      storageKey,
+      input.mimeType,
+      input.filename,
+    );
 
     const now = new Date();
     await ctx.db.insert(attachment).values({
@@ -45,7 +49,7 @@ export const getUploadUrl = protectedProcedure
       updatedAt: now,
     });
 
-    return { id, uploadUrl, storageKey };
+    return { id, uploadUrl, contentDisposition, storageKey };
   });
 
 // Called after the client PUT to R2 succeeds — marks the attachment as active

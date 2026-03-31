@@ -12,14 +12,22 @@ const client = new S3Client({
   },
 });
 
-// Presigned URL for direct client-to-R2 upload (PUT), expires in 5 minutes
-export async function generateUploadUrl(key: string, mimeType: string): Promise<string> {
+// Presigned URL for direct client-to-R2 upload (PUT), expires in 5 minutes.
+// ContentDisposition is signed so R2 stores it on the object and serves it on every request.
+export async function generateUploadUrl(
+  key: string,
+  mimeType: string,
+  filename: string,
+): Promise<{ url: string; contentDisposition: string }> {
+  const contentDisposition = `inline; filename*=UTF-8''${encodeURIComponent(filename)}`;
   const command = new PutObjectCommand({
     Bucket: env.SERVER_R2_BUCKET_NAME,
     Key: key,
     ContentType: mimeType,
+    ContentDisposition: contentDisposition,
   });
-  return getSignedUrl(client, command, { expiresIn: 300 });
+  const url = await getSignedUrl(client, command, { expiresIn: 300 });
+  return { url, contentDisposition };
 }
 
 // Public URL for accessing an uploaded file

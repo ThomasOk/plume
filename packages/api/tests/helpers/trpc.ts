@@ -3,7 +3,10 @@ import type { StorageService } from '../../src/server/trpc';
 import { appRouter } from '../../src/server/index';
 
 const mockStorage: StorageService = {
-  generateUploadUrl: async (key) => `https://mock-r2.example.com/${key}`,
+  generateUploadUrl: async (key, _mimeType, filename) => ({
+    url: `https://mock-r2.example.com/${key}`,
+    contentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  }),
   getPublicUrl: (key) => `https://mock-r2.example.com/${key}`,
   deleteObject: async () => {},
 };
