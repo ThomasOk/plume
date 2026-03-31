@@ -80,13 +80,7 @@ app.use(
 );
 
 app.get('/', (c) => {
-  return c.text('Hello Hono!');
-});
-
-app.get('/project/:projectId', (c) => {
-  const { projectId } = c.req.param();
-
-  return c.json({ project: projectId });
+  return c.json({ name: 'plume-api', status: 'ok' });
 });
 
 const server = serve(
