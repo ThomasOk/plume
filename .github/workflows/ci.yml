@@ -69,6 +69,11 @@ jobs:
           echo "SERVER_AUTH_SECRET=ci-secret-key" >> apps/server/.env
           echo "BETTER_AUTH_URL=http://localhost:3035" >> apps/server/.env
           echo "PUBLIC_WEB_URL=http://localhost:8085" >> apps/server/.env
+          echo "SERVER_R2_ACCOUNT_ID=fake-account-id" >> apps/server/.env
+          echo "SERVER_R2_ACCESS_KEY_ID=fake-access-key" >> apps/server/.env
+          echo "SERVER_R2_SECRET_ACCESS_KEY=fake-secret-key" >> apps/server/.env
+          echo "SERVER_R2_BUCKET_NAME=fake-bucket" >> apps/server/.env
+          echo "SERVER_R2_PUBLIC_URL=https://fake.r2.dev" >> apps/server/.env
 
           echo "TEST_USER_EMAIL=${TEST_USER_EMAIL}" > apps/web/.env.test
           echo "TEST_USER_PASSWORD=${TEST_USER_PASSWORD}" >> apps/web/.env.test

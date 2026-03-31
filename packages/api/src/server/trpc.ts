@@ -3,16 +3,25 @@ import SuperJSON from 'superjson';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
 
+export interface StorageService {
+  generateUploadUrl(key: string, mimeType: string, filename: string): Promise<{ url: string; contentDisposition: string }>;
+  getPublicUrl(key: string): string;
+  deleteObject(key: string): Promise<void>;
+}
+
 export const createTRPCContext = async ({
   auth,
   db,
+  storage,
   headers,
 }: {
   auth: AuthInstance;
   db: DatabaseInstance;
+  storage: StorageService;
   headers: Headers;
 }): Promise<{
   db: DatabaseInstance;
+  storage: StorageService;
   session: AuthInstance['$Infer']['Session'] | null;
 }> => {
   const session = await auth.api.getSession({
@@ -20,6 +29,7 @@ export const createTRPCContext = async ({
   });
   return {
     db,
+    storage,
     session,
   };
 };

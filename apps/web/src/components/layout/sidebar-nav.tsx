@@ -46,7 +46,7 @@ export const SidebarNav = ({
     ? [
         { to: '/', icon: RiHome4Line, label: 'Home' },
         { to: '/explore', icon: IoEarthOutline, label: 'Explore' },
-        { to: '/resources', icon: GrAttachment, label: 'Resources' },
+        { to: '/attachments', icon: GrAttachment, label: 'Attachments' },
         {
           to: '/notifications',
           icon: GoBell,

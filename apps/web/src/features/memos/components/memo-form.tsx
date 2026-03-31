@@ -15,6 +15,7 @@ import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { sounds } from '@/lib/sounds';
+import { AttachmentList, useFileUpload } from '@/features/attachments';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
@@ -45,6 +46,7 @@ export const MemoForm = () => {
   };
   const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, 'memo-draft');
   const createMemo = useCreateMemo();
+  const { localFiles, fileInputRef, triggerFileSelect, handleFilesSelected, removeLocalFile, confirmAll, clearAll, isUploading } = useFileUpload();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { ref: registerRef, ...rest } = register('content');
   const content = watch('content');
@@ -94,17 +96,17 @@ export const MemoForm = () => {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isFocusMode]);
 
-  const onSubmit = (data: CreateMemoInput) => {
-    createMemo.mutate(data, {
-      onSuccess: () => {
-        clearDraft();
-        reset();
-        setIsFocusMode(false);
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
+  const onSubmit = async (data: CreateMemoInput) => {
+    try {
+      const newMemo = await createMemo.mutateAsync(data);
+      await confirmAll(newMemo.id);
+      clearDraft();
+      clearAll();
+      reset();
+      setIsFocusMode(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save memo');
+    }
   };
 
   const onInsert = (text: string, startIndex: number, length: number) => {
@@ -144,15 +146,27 @@ export const MemoForm = () => {
                 placeholder="Write your memo here..."
                 errorMessage={errors.content?.message}
               />
+              <AttachmentList
+                localFiles={localFiles}
+                onRemoveLocalFile={removeLocalFile}
+              />
               <MemoFooter
                 charCount={charCount}
                 isOverLimit={isOverLimit}
-                isPending={createMemo.isPending}
+                isPending={createMemo.isPending || isUploading}
                 isValid={isValid}
                 visibility={visibility}
                 onVisibilityChange={(val) => setValue('visibility', val)}
+                onAttachFile={triggerFileSelect}
               />
             </form>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+            />
           </CardContent>
         </Card>
       </div>
@@ -218,15 +232,20 @@ export const MemoForm = () => {
                             errorMessage={errors.content?.message}
                           />
                         </div>
+                        <AttachmentList
+                          localFiles={localFiles}
+                          onRemoveLocalFile={removeLocalFile}
+                        />
                         <MemoFooter
                           charCount={charCount}
                           isOverLimit={isOverLimit}
-                          isPending={createMemo.isPending}
+                          isPending={createMemo.isPending || isUploading}
                           isValid={isValid}
                           visibility={visibility}
                           onVisibilityChange={(val) =>
                             setValue('visibility', val)
                           }
+                          onAttachFile={triggerFileSelect}
                         />
                       </form>
                     </CardContent>

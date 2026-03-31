@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { env } from './env';
+import * as storage from './lib/storage';
 
 const trustedOrigins = [env.PUBLIC_WEB_URL].map((url) => new URL(url).origin);
 
@@ -31,7 +32,7 @@ const auth = createAuth({
         }
       : undefined,
 });
-const api = createApi({ auth, db });
+const api = createApi({ auth, db, storage });
 
 const app = new Hono<{
   Variables: {

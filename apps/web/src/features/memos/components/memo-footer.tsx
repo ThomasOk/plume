@@ -3,6 +3,7 @@ import { Button } from '@repo/ui/components/button';
 import { sounds } from '@/lib/sounds';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
+import { MdOutlineAttachFile } from 'react-icons/md';
 import { VisibilitySelector } from './visibility-selector';
 
 const SHOW_THRESHOLD = 0.7;
@@ -29,14 +30,22 @@ const CharacterIndicator = ({ charCount }: { charCount: number }) => {
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none',
       )}
       role={isVisible ? 'status' : undefined}
-      aria-label={isVisible ? `${charCount} of ${MAX_MEMO_CHARACTERS} characters used` : undefined}
+      aria-label={
+        isVisible
+          ? `${charCount} of ${MAX_MEMO_CHARACTERS} characters used`
+          : undefined
+      }
     >
       {/* Number — always in DOM to avoid layout shift, toggled via opacity */}
       <span
         className={cn(
           'text-xs tabular-nums transition-opacity duration-150',
-          isOverLimit ? 'font-medium text-destructive' : 'text-muted-foreground',
-          showNumber ? 'opacity-100' : 'pointer-events-none select-none opacity-0',
+          isOverLimit
+            ? 'font-medium text-destructive'
+            : 'text-muted-foreground',
+          showNumber
+            ? 'opacity-100'
+            : 'pointer-events-none select-none opacity-0',
         )}
         aria-hidden={!showNumber}
       >
@@ -98,6 +107,7 @@ interface MemoFooterProps {
   visibility: 'public' | 'private';
   onVisibilityChange: (value: 'public' | 'private') => void;
   onCancel?: () => void;
+  onAttachFile?: () => void;
 }
 
 export const MemoFooter = ({
@@ -108,9 +118,24 @@ export const MemoFooter = ({
   visibility,
   onVisibilityChange,
   onCancel,
+  onAttachFile,
 }: MemoFooterProps) => {
   return (
-    <div className="flex items-center justify-end gap-2 pt-3">
+    <div className="flex items-center justify-between gap-2 pt-3">
+      <div className="flex items-center gap-1">
+        {onAttachFile && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => { sounds.click(); onAttachFile(); }}
+            className="size-6 text-muted-foreground"
+            aria-label="Attach file"
+          >
+            <MdOutlineAttachFile className="size-4" />
+          </Button>
+        )}
+      </div>
       <div className="flex items-center gap-2">
         <CharacterIndicator charCount={charCount} />
         <VisibilitySelector value={visibility} onChange={onVisibilityChange} />
