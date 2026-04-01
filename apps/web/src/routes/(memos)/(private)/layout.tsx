@@ -6,7 +6,7 @@ export const Route = createFileRoute('/(memos)/(private)')({
     const { data } = await authClient.getSession();
 
     if (!data?.user) {
-      throw redirect({ to: '/sign-in' });
+      throw redirect({ to: '/explore' });
     }
   },
   component: PrivateMemosLayout,

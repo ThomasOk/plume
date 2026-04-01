@@ -56,7 +56,7 @@ import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 import { sounds } from '@/lib/sounds';
 import {
   AttachmentList,
-  useAttachmentsByMemo,
+  usePublicAttachmentsByMemo,
   useDeleteAttachment,
   useFileUpload,
 } from '@/features/attachments';
@@ -69,7 +69,7 @@ type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
 export const MemoCard = ({ memo, author }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const { data: attachments } = useAttachmentsByMemo(memo.id);
+  const { data: attachments } = usePublicAttachmentsByMemo(memo.id);
   const deleteAttachment = useDeleteAttachment();
   const {
     localFiles,

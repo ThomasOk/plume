@@ -26,3 +26,7 @@ export const deleteAttachmentSchema = z.object({
 export const listAttachmentsSchema = z.object({
   memoId: z.string().optional(),
 });
+
+export const listByMemoSchema = z.object({
+  memoId: z.string().min(1),
+});
