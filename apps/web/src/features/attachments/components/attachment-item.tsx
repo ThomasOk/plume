@@ -1,4 +1,10 @@
+import { useState } from 'react';
 import { cn } from '@repo/ui/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@repo/ui/components/dialog';
 import {
   MdOutlineClose,
   MdOutlineDescription,
@@ -99,50 +105,99 @@ export const SavedAttachmentItem = ({
   onRemove,
 }: SavedAttachmentItemProps) => {
   const isImage = attachment.mimeType.startsWith('image/');
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const thumbnail = isImage ? (
+    <img
+      src={attachment.url}
+      alt={attachment.filename}
+      className="size-8 rounded object-cover shrink-0"
+    />
+  ) : (
+    <div className="size-8 rounded bg-muted flex items-center justify-center shrink-0">
+      <FileIcon mimeType={attachment.mimeType} />
+    </div>
+  );
+
+  const info = (
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-xs font-medium leading-tight">
+        {attachment.filename}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {formatFileSize(attachment.size)}
+      </p>
+    </div>
+  );
+
+  const removeButton = onRemove && (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove(attachment.id);
+      }}
+      className="absolute -top-1.5 -right-1.5 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-foreground text-background"
+      aria-label={`Remove ${attachment.filename}`}
+    >
+      <MdOutlineClose className="size-3" />
+    </button>
+  );
+
+  const baseClass =
+    'relative group flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm max-w-48 hover:bg-muted/50 transition-colors';
 
   return (
-    <a
-      href={attachment.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative group flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm max-w-48 hover:bg-muted/50 transition-colors"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <>
       {isImage ? (
-        <img
-          src={attachment.url}
-          alt={attachment.filename}
-          className="size-8 rounded object-cover shrink-0"
-        />
-      ) : (
-        <div className="size-8 rounded bg-muted flex items-center justify-center shrink-0">
-          <FileIcon mimeType={attachment.mimeType} />
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium leading-tight">
-          {attachment.filename}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {formatFileSize(attachment.size)}
-        </p>
-      </div>
-
-      {onRemove && (
         <button
           type="button"
           onClick={(e) => {
-            e.preventDefault();
             e.stopPropagation();
-            onRemove(attachment.id);
+            setPreviewOpen(true);
           }}
-          className="absolute -top-1.5 -right-1.5 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-foreground text-background"
-          aria-label={`Remove ${attachment.filename}`}
+          className={cn(baseClass, 'cursor-zoom-in')}
         >
-          <MdOutlineClose className="size-3" />
+          {thumbnail}
+          {info}
+          {removeButton}
         </button>
+      ) : (
+        <a
+          href={attachment.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={baseClass}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {thumbnail}
+          {info}
+          {removeButton}
+        </a>
       )}
-    </a>
+
+      {isImage && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent
+            className="!w-screen !h-screen !max-w-screen p-0 border-0 shadow-none bg-transparent [&>button]:hidden"
+            aria-describedby={undefined}
+          >
+            <DialogTitle className="sr-only">{attachment.filename}</DialogTitle>
+            <div
+              className="w-full h-full flex items-center justify-center p-4 sm:p-8 cursor-zoom-out"
+              onClick={() => setPreviewOpen(false)}
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.filename}
+                className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+                draggable={false}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 };

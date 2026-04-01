@@ -1,13 +1,14 @@
 import { eq, and, desc } from '@repo/db';
-import { attachment } from '@repo/db/schema';
+import { attachment, memo } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
-import { protectedProcedure } from '../../trpc';
+import { protectedProcedure, publicProcedure } from '../../trpc';
 import {
   getUploadUrlSchema,
   confirmUploadSchema,
   deleteAttachmentSchema,
   listAttachmentsSchema,
+  listByMemoSchema,
 } from './schemas';
 
 // Returns a presigned PUT URL so the client can upload directly to R2,
@@ -134,4 +135,36 @@ export const deleteAttachment = protectedProcedure
     await ctx.storage.deleteObject(deleted.storageKey);
 
     return { success: true };
+  });
+
+// Returns active attachments for a memo, accessible without authentication if the memo is public.
+export const listByMemo = publicProcedure
+  .input(listByMemoSchema)
+  .query(async ({ ctx, input }) => {
+    const [memoRow] = await ctx.db
+      .select({ userId: memo.userId, visibility: memo.visibility })
+      .from(memo)
+      .where(eq(memo.id, input.memoId))
+      .limit(1);
+
+    if (!memoRow) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+    }
+
+    if (memoRow.visibility === 'private') {
+      if (!ctx.session || ctx.session.user.id !== memoRow.userId) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Access denied' });
+      }
+    }
+
+    const rows = await ctx.db
+      .select()
+      .from(attachment)
+      .where(and(eq(attachment.memoId, input.memoId), eq(attachment.status, 'active')))
+      .orderBy(desc(attachment.createdAt));
+
+    return rows.map((row) => ({
+      ...row,
+      url: ctx.storage.getPublicUrl(row.storageKey),
+    }));
   });
