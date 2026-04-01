@@ -15,10 +15,7 @@ const ThemeContext = createContext<{
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(
-    (localStorage.theme as Theme) ??
-      (window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'),
+    (localStorage.theme as Theme) ?? 'paper',
   );
 
   useEffect(() => {
