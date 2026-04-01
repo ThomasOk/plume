@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-test('redirects to /sign-in when not authenticated', async ({ page }) => {
+test('redirects to /explore when not authenticated', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveURL(/sign-in/);
+  await expect(page).toHaveURL(/explore/);
 });
 
 test('signs in with valid credentials', async ({ page }) => {
