@@ -18,7 +18,6 @@ A full-stack note-taking application built as a portfolio project to demonstrate
 | Monorepo   | Turborepo, pnpm workspaces                           |
 | Testing    | Vitest (unit + integration), real PostgreSQL test DB |
 | CI/CD      | GitHub Actions                                       |
-| Deployment | Docker Compose, nginx                                |
 
 Everything is TypeScript, end-to-end — from database schema to tRPC router types to React components.
 
