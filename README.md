@@ -2,7 +2,7 @@
 
 A full-stack note-taking application built as a portfolio project to demonstrate production-grade TypeScript development practices. The app lets users write, organize, and share short notes (memos) with Markdown support, hashtag-based organization, and file attachments.
 
-**Live demo:** [plume-app.dev](https://useplume.me)
+**Live demo:** [useplume.me](https://useplume.me)
 
 ---
 
