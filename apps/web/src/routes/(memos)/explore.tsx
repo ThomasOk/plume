@@ -63,7 +63,7 @@ function ExplorePage() {
       </div>
       {isLoading && <MemoListSkeleton />}
       {error && (
-        <p className="text-destructive">Error loading memos: {error.message}</p>
+        <p className="text-destructive">Something went wrong. Please try again.</p>
       )}
       {memos && <MemoList memos={memos} />}
     </div>
