@@ -46,8 +46,7 @@ function RouteComponent() {
         {isLoading && <MemoListSkeleton />}
         {error && (
           <p className="text-destructive">
-            Error loading memos:
-            {error.message}
+            Something went wrong. Please try again.
           </p>
         )}
         {memos && <MemoList memos={memos} />}

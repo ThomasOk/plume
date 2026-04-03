@@ -16,97 +16,113 @@ import { extractTagsFromContent, buildFilterConditions } from './utils';
 export const getById = publicProcedure
   .input(getByIdSchema)
   .query(async ({ ctx, input }) => {
-    const [row] = await ctx.db
-      .select({
-        id: memo.id,
-        userId: memo.userId,
-        parentId: memo.parentId,
-        content: memo.content,
-        tags: memo.tags,
-        visibility: memo.visibility,
-        createdAt: memo.createdAt,
-        updatedAt: memo.updatedAt,
-        authorName: user.name,
-        authorImage: user.image,
-      })
-      .from(memo)
-      .leftJoin(user, eq(memo.userId, user.id))
-      .where(eq(memo.id, input.id))
-      .limit(1);
+    try {
+      const [row] = await ctx.db
+        .select({
+          id: memo.id,
+          userId: memo.userId,
+          parentId: memo.parentId,
+          content: memo.content,
+          tags: memo.tags,
+          visibility: memo.visibility,
+          createdAt: memo.createdAt,
+          updatedAt: memo.updatedAt,
+          authorName: user.name,
+          authorImage: user.image,
+        })
+        .from(memo)
+        .leftJoin(user, eq(memo.userId, user.id))
+        .where(eq(memo.id, input.id))
+        .limit(1);
 
-    if (!row) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      if (!row) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      }
+
+      if (row.visibility === 'private' && ctx.session?.user.id !== row.userId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      }
+
+      const { authorName, authorImage, ...memoData } = row;
+      return {
+        ...memoData,
+        author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('Failed to get memo:', error);
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to load memo. Please try again.' });
     }
-
-    if (row.visibility === 'private' && ctx.session?.user.id !== row.userId) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
-    }
-
-    const { authorName, authorImage, ...memoData } = row;
-    return {
-      ...memoData,
-      author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
-    };
   });
 
 export const list = protectedProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [
-      eq(memo.userId, ctx.session.user.id),
-      isNull(memo.parentId),
-      ...buildFilterConditions(input),
-    ];
+    try {
+      const conditions = [
+        eq(memo.userId, ctx.session.user.id),
+        isNull(memo.parentId),
+        ...buildFilterConditions(input),
+      ];
 
-    return ctx.db
-      .select({
-        id: memo.id,
-        userId: memo.userId,
-        parentId: memo.parentId,
-        content: memo.content,
-        tags: memo.tags,
-        visibility: memo.visibility,
-        createdAt: memo.createdAt,
-        updatedAt: memo.updatedAt,
-        commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
-      })
-      .from(memo)
-      .where(and(...conditions))
-      .orderBy(desc(memo.createdAt));
+      return await ctx.db
+        .select({
+          id: memo.id,
+          userId: memo.userId,
+          parentId: memo.parentId,
+          content: memo.content,
+          tags: memo.tags,
+          visibility: memo.visibility,
+          createdAt: memo.createdAt,
+          updatedAt: memo.updatedAt,
+          commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
+        })
+        .from(memo)
+        .where(and(...conditions))
+        .orderBy(desc(memo.createdAt));
+    } catch (error) {
+      console.error('Failed to list memos:', error);
+      throw new Error('Unable to load memos. Please try again.');
+    }
   });
 
 export const listPublic = publicProcedure
   .input(listMemosSchema)
   .query(async ({ ctx, input }) => {
-    const conditions = [
-      eq(memo.visibility, 'public'),
-      isNull(memo.parentId),
-      ...buildFilterConditions(input),
-    ];
+    try {
+      const conditions = [
+        eq(memo.visibility, 'public'),
+        isNull(memo.parentId),
+        ...buildFilterConditions(input),
+      ];
 
-    const rows = await ctx.db
-      .select({
-        id: memo.id,
-        userId: memo.userId,
-        parentId: memo.parentId,
-        content: memo.content,
-        tags: memo.tags,
-        visibility: memo.visibility,
-        createdAt: memo.createdAt,
-        updatedAt: memo.updatedAt,
-        commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
-        authorName: user.name,
-        authorImage: user.image,
-      })
-      .from(memo)
-      .leftJoin(user, eq(memo.userId, user.id))
-      .where(and(...conditions))
-      .orderBy(desc(memo.createdAt));
+      const rows = await ctx.db
+        .select({
+          id: memo.id,
+          userId: memo.userId,
+          parentId: memo.parentId,
+          content: memo.content,
+          tags: memo.tags,
+          visibility: memo.visibility,
+          createdAt: memo.createdAt,
+          updatedAt: memo.updatedAt,
+          commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
+          authorName: user.name,
+          authorImage: user.image,
+        })
+        .from(memo)
+        .leftJoin(user, eq(memo.userId, user.id))
+        .where(and(...conditions))
+        .orderBy(desc(memo.createdAt));
 
-    return rows.map(({ authorName, authorImage, ...memoData }) => ({
-      ...memoData,
-      author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
-    }));
+      return rows.map(({ authorName, authorImage, ...memoData }) => ({
+        ...memoData,
+        author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
+      }));
+    } catch (error) {
+      console.error('Failed to list public memos:', error);
+      throw new Error('Unable to load memos. Please try again.');
+    }
   });
 
 export const create = protectedProcedure
@@ -164,43 +180,49 @@ export const create = protectedProcedure
 export const listComments = publicProcedure
   .input(listCommentsSchema)
   .query(async ({ ctx, input }) => {
-    const [parent] = await ctx.db
-      .select({ id: memo.id, visibility: memo.visibility, userId: memo.userId })
-      .from(memo)
-      .where(and(eq(memo.id, input.memoId), isNull(memo.parentId)))
-      .limit(1);
+    try {
+      const [parent] = await ctx.db
+        .select({ id: memo.id, visibility: memo.visibility, userId: memo.userId })
+        .from(memo)
+        .where(and(eq(memo.id, input.memoId), isNull(memo.parentId)))
+        .limit(1);
 
-    if (!parent) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      if (!parent) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      }
+
+      // Private memos: only the owner can see comments
+      if (parent.visibility === 'private' && ctx.session?.user.id !== parent.userId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
+      }
+
+      const rows = await ctx.db
+        .select({
+          id: memo.id,
+          userId: memo.userId,
+          parentId: memo.parentId,
+          content: memo.content,
+          tags: memo.tags,
+          visibility: memo.visibility,
+          createdAt: memo.createdAt,
+          updatedAt: memo.updatedAt,
+          authorName: user.name,
+          authorImage: user.image,
+        })
+        .from(memo)
+        .leftJoin(user, eq(memo.userId, user.id))
+        .where(eq(memo.parentId, input.memoId))
+        .orderBy(desc(memo.createdAt));
+
+      return rows.map(({ authorName, authorImage, ...memoData }) => ({
+        ...memoData,
+        author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
+      }));
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('Failed to list comments:', error);
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to load comments. Please try again.' });
     }
-
-    // Private memos: only the owner can see comments
-    if (parent.visibility === 'private' && ctx.session?.user.id !== parent.userId) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Memo not found' });
-    }
-
-    const rows = await ctx.db
-      .select({
-        id: memo.id,
-        userId: memo.userId,
-        parentId: memo.parentId,
-        content: memo.content,
-        tags: memo.tags,
-        visibility: memo.visibility,
-        createdAt: memo.createdAt,
-        updatedAt: memo.updatedAt,
-        authorName: user.name,
-        authorImage: user.image,
-      })
-      .from(memo)
-      .leftJoin(user, eq(memo.userId, user.id))
-      .where(eq(memo.parentId, input.memoId))
-      .orderBy(desc(memo.createdAt));
-
-    return rows.map(({ authorName, authorImage, ...memoData }) => ({
-      ...memoData,
-      author: { name: authorName ?? 'Unknown', image: authorImage ?? null },
-    }));
   });
 
 export const update = protectedProcedure
@@ -262,58 +284,73 @@ export const deleteMemo = protectedProcedure
   });
 
 export const stats = protectedProcedure.query(async ({ ctx }) => {
-  const rows = await ctx.db
-    .select({
-      date: sql`DATE(${memo.createdAt})`.as('date'),
-      count: sql`COUNT(*)`.as('count'),
-    })
-    .from(memo)
-    .where(and(eq(memo.userId, ctx.session.user.id), isNull(memo.parentId)))
-    .groupBy(sql`DATE(${memo.createdAt})`);
+  try {
+    const rows = await ctx.db
+      .select({
+        date: sql`DATE(${memo.createdAt})`.as('date'),
+        count: sql`COUNT(*)`.as('count'),
+      })
+      .from(memo)
+      .where(and(eq(memo.userId, ctx.session.user.id), isNull(memo.parentId)))
+      .groupBy(sql`DATE(${memo.createdAt})`);
 
-  return rows.reduce(
-    (acc, row) => {
-      acc[row.date as string] = Number(row.count);
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+    return rows.reduce(
+      (acc, row) => {
+        acc[row.date as string] = Number(row.count);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  } catch (error) {
+    console.error('Failed to load stats:', error);
+    throw new Error('Unable to load stats. Please try again.');
+  }
 });
 
 export const tags = protectedProcedure.query(async ({ ctx }) => {
-  const rows = await ctx.db
-    .select({
-      tag: sql<string>`unnest(${memo.tags})`.as('tag'),
-      count: sql<number>`count(*)`.as('count'),
-    })
-    .from(memo)
-    .where(and(eq(memo.userId, ctx.session.user.id), isNull(memo.parentId)))
-    .groupBy(sql`1`);
+  try {
+    const rows = await ctx.db
+      .select({
+        tag: sql<string>`unnest(${memo.tags})`.as('tag'),
+        count: sql<number>`count(*)`.as('count'),
+      })
+      .from(memo)
+      .where(and(eq(memo.userId, ctx.session.user.id), isNull(memo.parentId)))
+      .groupBy(sql`1`);
 
-  return rows.reduce(
-    (acc, row) => {
-      acc[row.tag] = Number(row.count);
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+    return rows.reduce(
+      (acc, row) => {
+        acc[row.tag] = Number(row.count);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  } catch (error) {
+    console.error('Failed to load tags:', error);
+    throw new Error('Unable to load tags. Please try again.');
+  }
 });
 
 export const publicTags = publicProcedure.query(async ({ ctx }) => {
-  const rows = await ctx.db
-    .select({
-      tag: sql<string>`unnest(${memo.tags})`.as('tag'),
-      count: sql<number>`count(*)`.as('count'),
-    })
-    .from(memo)
-    .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId)))
-    .groupBy(sql`1`);
+  try {
+    const rows = await ctx.db
+      .select({
+        tag: sql<string>`unnest(${memo.tags})`.as('tag'),
+        count: sql<number>`count(*)`.as('count'),
+      })
+      .from(memo)
+      .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId)))
+      .groupBy(sql`1`);
 
-  return rows.reduce(
-    (acc, row) => {
-      acc[row.tag] = Number(row.count);
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+    return rows.reduce(
+      (acc, row) => {
+        acc[row.tag] = Number(row.count);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  } catch (error) {
+    console.error('Failed to load public tags:', error);
+    throw new Error('Unable to load tags. Please try again.');
+  }
 });
