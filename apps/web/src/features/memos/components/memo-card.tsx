@@ -48,6 +48,7 @@ import {
 import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
 import { CommentPreview } from './comment-preview';
@@ -118,6 +119,8 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
     setValue('content', newValue);
   };
 
+  const { user } = useAuth();
+  const isOwner = user?.id === memo.userId;
   const updateMemo = useUpdateMemo();
   const isComment = !!memo.parentId;
   const deleteMemo = useDeleteMemo();
@@ -221,15 +224,24 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Link
-                            to="/memos/$memoId"
-                            params={{ memoId: memo.id }}
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
-                          >
-                            <time dateTime={memo.createdAt.toISOString()}>
+                          {isComment ? (
+                            <time
+                              dateTime={memo.createdAt.toISOString()}
+                              className="text-xs text-muted-foreground leading-tight"
+                            >
                               {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
                             </time>
-                          </Link>
+                          ) : (
+                            <Link
+                              to="/memos/$memoId"
+                              params={{ memoId: memo.id }}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
+                            >
+                              <time dateTime={memo.createdAt.toISOString()}>
+                                {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
+                              </time>
+                            </Link>
+                          )}
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs">{format(memo.createdAt, 'PPpp')}</p>
@@ -268,7 +280,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {!isEditing && (
+              {!isEditing && (!isComment || isOwner) && (
                 <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -281,23 +293,29 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link to="/memos/$memoId" params={{ memoId: memo.id }}>
-                        <MdOutlineOpenInNew className="size-4" />
-                        Open
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <MdOutlineEdit className="size-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
-                    >
-                      <MdOutlineDelete className="size-4" />
-                      Delete
-                    </DropdownMenuItem>
+                    {!isComment && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/memos/$memoId" params={{ memoId: memo.id }}>
+                          <MdOutlineOpenInNew className="size-4" />
+                          Open
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {isOwner && (
+                      <>
+                        {!isComment && <DropdownMenuSeparator />}
+                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                          <MdOutlineEdit className="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
+                        >
+                          <MdOutlineDelete className="size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -334,6 +352,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   isOverLimit={isOverLimit}
                   isPending={updateMemo.isPending || isUploading}
                   isValid={isValid}
+                  isComment={isComment}
                   visibility={visibility}
                   onVisibilityChange={(val) => setValue('visibility', val)}
                   onCancel={exitEdit}
