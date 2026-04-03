@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
-import type { Memo } from '@/lib/types';
+import type { Comment, Memo } from '@/lib/types';
 
 interface MemoContextValue {
-  memo: Memo;
+  memo: Memo | Comment;
 }
 
 export const MemoContext = createContext<MemoContextValue | null>(null);

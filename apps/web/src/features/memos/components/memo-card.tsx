@@ -46,10 +46,11 @@ import {
   MdOutlineOpenInNew,
 } from 'react-icons/md';
 import { toast } from 'sonner';
-import type { Author, Memo } from '@/lib/types';
+import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
-import { useDeleteMemo, useUpdateMemo } from '../hooks';
+import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
+import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
@@ -62,12 +63,13 @@ import {
 } from '@/features/attachments';
 
 interface MemoCardProps {
-  memo: Memo;
+  memo: Memo | Comment;
   author?: Author;
+  hideCommentPreview?: boolean;
 }
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
-export const MemoCard = ({ memo, author }: MemoCardProps) => {
+export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { data: attachments } = usePublicAttachmentsByMemo(memo.id);
   const deleteAttachment = useDeleteAttachment();
@@ -117,7 +119,10 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
   };
 
   const updateMemo = useUpdateMemo();
+  const isComment = !!memo.parentId;
   const deleteMemo = useDeleteMemo();
+  const deleteComment = useDeleteComment(memo.parentId ?? '');
+  const deleteAction = isComment ? deleteComment : deleteMemo;
 
   const closeFocusMode = () => {
     setIsFocusMode(false);
@@ -172,12 +177,12 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
   };
 
   const handleDelete = () => {
-    deleteMemo.mutate(
+    deleteAction.mutate(
       { id: memo.id },
       {
         onSuccess: () => {
           setIsDeleteDialogOpen(false);
-          toast.success('Memo deleted successfully');
+          toast.success(isComment ? 'Comment deleted successfully' : 'Memo deleted successfully');
         },
         onError: (error) => {
           toast.error(error.message);
@@ -341,6 +346,9 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
                 {attachments && attachments.length > 0 && (
                   <AttachmentList savedAttachments={attachments} />
                 )}
+                {'commentCount' in memo && memo.commentCount > 0 && !hideCommentPreview && (
+                  <CommentPreview memoId={memo.id} commentCount={memo.commentCount} />
+                )}
               </MemoContext.Provider>
             )}
 
@@ -443,11 +451,11 @@ export const MemoCard = ({ memo, author }: MemoCardProps) => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Are you sure you want to delete this memo?
+              {isComment ? 'Are you sure you want to delete this comment?' : 'Are you sure you want to delete this memo?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              memo.
+              This action cannot be undone. This will permanently delete your{' '}
+              {isComment ? 'comment' : 'memo'}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
