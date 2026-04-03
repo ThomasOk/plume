@@ -25,6 +25,7 @@ import {
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
 import { sounds } from '@/lib/sounds';
+import { useNotifications } from '@/features/notifications/hooks/use-notifications';
 
 interface SidebarNavProps {
   collapsed?: boolean;
@@ -39,6 +40,8 @@ export const SidebarNav = ({
   const { theme, setTheme } = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { data: notifications } = useNotifications();
+  const unreadCount = notifications?.filter((n) => n.status === 'UNREAD').length ?? 0;
 
   const logoNav = sessionData ? '/' : '/explore';
 
@@ -114,7 +117,14 @@ export const SidebarNav = ({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <Icon className="w-6 h-6 shrink-0" />
+                <span className="relative shrink-0">
+                  <Icon className="w-6 h-6" />
+                  {item.to === '/notifications' && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-primary text-primary-foreground leading-none">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </span>
                 {!collapsed && <span>{item.label}</span>}
               </Button>
             </Link>

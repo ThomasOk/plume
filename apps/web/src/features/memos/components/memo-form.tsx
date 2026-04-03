@@ -170,6 +170,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                 isOverLimit={isOverLimit}
                 isPending={(isComment ? createComment : createMemo).isPending || isUploading}
                 isValid={isValid}
+                isComment={isComment}
                 visibility={visibility}
                 onVisibilityChange={(val) => setValue('visibility', val)}
                 onAttachFile={triggerFileSelect}

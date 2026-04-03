@@ -104,6 +104,7 @@ interface MemoFooterProps {
   isOverLimit: boolean;
   isPending: boolean;
   isValid: boolean;
+  isComment?: boolean;
   visibility: 'public' | 'private';
   onVisibilityChange: (value: 'public' | 'private') => void;
   onCancel?: () => void;
@@ -115,6 +116,7 @@ export const MemoFooter = ({
   isOverLimit,
   isPending,
   isValid,
+  isComment = false,
   visibility,
   onVisibilityChange,
   onCancel,
@@ -138,7 +140,7 @@ export const MemoFooter = ({
       </div>
       <div className="flex items-center gap-2">
         <CharacterIndicator charCount={charCount} />
-        <VisibilitySelector value={visibility} onChange={onVisibilityChange} />
+        {!isComment && <VisibilitySelector value={visibility} onChange={onVisibilityChange} />}
         {onCancel && (
           <Button
             type="button"

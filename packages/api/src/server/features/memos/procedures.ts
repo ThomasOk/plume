@@ -1,5 +1,5 @@
 import { desc, eq, and, isNull, sql } from '@repo/db';
-import { memo, user } from '@repo/db/schema';
+import { memo, user, notification } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
 import { protectedProcedure, publicProcedure } from '../../trpc';
@@ -133,26 +133,29 @@ export const create = protectedProcedure
       const tags = extractTagsFromContent(input.content);
 
       // If parentId is provided, verify the parent memo exists and is accessible
+      let parent: { id: string; parentId: string | null; visibility: 'public' | 'private'; userId: string } | undefined;
       if (input.parentId) {
-        const [parent] = await ctx.db
+        const [found] = await ctx.db
           .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility, userId: memo.userId })
           .from(memo)
           .where(eq(memo.id, input.parentId))
           .limit(1);
 
-        if (!parent) {
+        if (!found) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Parent memo not found' });
         }
 
         // Enforce flat comments: cannot comment on a comment
-        if (parent.parentId !== null) {
+        if (found.parentId !== null) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot comment on a comment' });
         }
 
         // Cannot comment on a private memo unless you own it
-        if (parent.visibility === 'private' && parent.userId !== ctx.session.user.id) {
+        if (found.visibility === 'private' && found.userId !== ctx.session.user.id) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot comment on a private memo' });
         }
+
+        parent = found;
       }
 
       const [newMemo] = await ctx.db
@@ -163,11 +166,25 @@ export const create = protectedProcedure
           parentId: input.parentId ?? null,
           content: input.content,
           tags: tags,
-          visibility: input.visibility,
+          // Comments inherit the parent memo's visibility
+          visibility: parent ? parent.visibility : input.visibility,
           createdAt: now,
           updatedAt: now,
         })
         .returning();
+
+      // Notify the parent memo owner when someone else comments on their memo
+      if (input.parentId && parent && parent.userId !== ctx.session.user.id) {
+        await ctx.db.insert(notification).values({
+          id: nanoid(),
+          senderId: ctx.session.user.id,
+          receiverId: parent.userId,
+          type: 'MEMO_COMMENT',
+          entityId: newMemo!.id,
+          status: 'UNREAD',
+          createdAt: now,
+        });
+      }
 
       return newMemo!;
     } catch (error) {
