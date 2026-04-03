@@ -8,3 +8,6 @@ export { usePrivateMemoTags } from './use-private-memo-tags';
 export { usePublicMemoTags } from './use-public-memo-tags';
 export { useSidebarTags } from './use-sidebar-tags';
 export { useMemoById } from './use-memo-by-id';
+export { useComments } from './use-comments';
+export { useCreateComment } from './use-create-comment';
+export { useDeleteComment } from './use-delete-comment';

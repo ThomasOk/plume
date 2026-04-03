@@ -26,3 +26,4 @@ export type Memo = RouterOutputs['memos']['list'][number];
 export type MemoWithAuthor = RouterOutputs['memos']['listPublic'][number];
 export type Author = MemoWithAuthor['author'];
 export type Attachment = RouterOutputs['attachments']['list'][number];
+export type Comment = RouterOutputs['memos']['listComments'][number];

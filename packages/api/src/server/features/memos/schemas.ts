@@ -4,7 +4,13 @@ import { stringFormat, z } from 'zod';
 // Export the character limit constant for use in UI
 export { MAX_MEMO_CHARACTERS };
 
-export const createMemoSchema = insertMemoSchema;
+export const createMemoSchema = insertMemoSchema.extend({
+  parentId: z.string().optional(),
+});
+
+export const listCommentsSchema = z.object({
+  memoId: z.string().min(1, 'Memo ID is required'),
+});
 
 export const updateMemoSchema = insertMemoSchema.extend({
   id: z.string().min(1, 'ID is required'),

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { format } from 'date-fns';
 import { useMemoById } from '@/features/memos';
+import { CommentSection } from '@/features/memos/components/comment-section';
 import { MemoCard } from '@/features/memos/components/memo-card';
 import { MemoContext } from '@/features/memos/contexts/memo-context';
 
@@ -36,10 +37,12 @@ function MemoDetailPage() {
     <div className="container mx-auto px-4 pt-6 pb-12 max-w-5xl">
       <div className="flex gap-6 items-start">
         {/* Main — memo card */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-8">
           <MemoContext.Provider value={{ memo }}>
-            <MemoCard memo={memo} author={memo.author} />
+            <MemoCard memo={memo} author={memo.author} hideCommentPreview />
           </MemoContext.Provider>
+
+          {!memo.parentId && <CommentSection memoId={memo.id} />}
         </div>
 
         {/* Sidebar — metadata */}

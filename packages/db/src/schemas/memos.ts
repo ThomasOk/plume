@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, pgEnum, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, varchar, text, timestamp, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { user } from './auth';
@@ -11,6 +11,11 @@ export const memo = pgTable('memo', {
   userId: text('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
+  // Self-referential FK: null = root memo, non-null = comment on a parent memo.
+  // ON DELETE CASCADE ensures comments are deleted when the parent is deleted.
+  parentId: text('parent_id').references((): AnyPgColumn => memo.id, {
+    onDelete: 'cascade',
+  }),
   // VARCHAR(8000) enforces the limit at the DB level.
   // This limits by character count (not bytes). In practice, 8000 latin characters
   // stay well under PostgreSQL's TOAST threshold. We accept the trade-off vs a

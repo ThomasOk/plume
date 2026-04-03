@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { MdOutlineCloseFullscreen, MdOutlineOpenInFull } from 'react-icons/md';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useCreateComment } from '../hooks/use-create-comment';
 import { useCreateMemo } from '../hooks/use-create-memo';
 import { useDraft } from '../hooks/use-draft';
 import { MemoFooter } from './memo-footer';
@@ -19,7 +20,13 @@ import { AttachmentList, useFileUpload } from '@/features/attachments';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 
-export const MemoForm = () => {
+interface MemoFormProps {
+  parentMemoId?: string;
+  onSuccess?: () => void;
+}
+
+export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
+  const isComment = Boolean(parentMemoId);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
@@ -44,8 +51,13 @@ export const MemoForm = () => {
     setIsFocusMode(false);
     sounds.collapse();
   };
-  const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, 'memo-draft');
+  // Use a distinct draft key for comments so they don't overwrite the main memo draft
+  const draftKey = isComment ? `comment-draft-${parentMemoId}` : 'memo-draft';
+  const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, draftKey);
   const createMemo = useCreateMemo();
+  // useCreateComment must always be called (rules of hooks) — parentMemoId ?? '' is safe
+  // because createComment is only used when isComment is true
+  const createComment = useCreateComment(parentMemoId ?? '');
   const { localFiles, fileInputRef, triggerFileSelect, handleFilesSelected, removeLocalFile, confirmAll, clearAll, isUploading } = useFileUpload();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { ref: registerRef, ...rest } = register('content');
@@ -98,12 +110,15 @@ export const MemoForm = () => {
 
   const onSubmit = async (data: CreateMemoInput) => {
     try {
-      const newMemo = await createMemo.mutateAsync(data);
+      const mutation = isComment ? createComment : createMemo;
+      const payload = isComment ? { ...data, parentId: parentMemoId } : data;
+      const newMemo = await mutation.mutateAsync(payload);
       await confirmAll(newMemo.id);
       clearDraft();
       clearAll();
       reset();
       setIsFocusMode(false);
+      onSuccess?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save memo');
     }
@@ -143,7 +158,7 @@ export const MemoForm = () => {
                 isPending={createMemo.isPending}
                 onSubmit={handleSubmit(onSubmit)}
                 onInsert={onInsert}
-                placeholder="Write your memo here..."
+                placeholder={isComment ? 'Write a comment...' : 'Write your memo here...'}
                 errorMessage={errors.content?.message}
               />
               <AttachmentList
@@ -153,7 +168,7 @@ export const MemoForm = () => {
               <MemoFooter
                 charCount={charCount}
                 isOverLimit={isOverLimit}
-                isPending={createMemo.isPending || isUploading}
+                isPending={(isComment ? createComment : createMemo).isPending || isUploading}
                 isValid={isValid}
                 visibility={visibility}
                 onVisibilityChange={(val) => setValue('visibility', val)}
@@ -227,7 +242,7 @@ export const MemoForm = () => {
                             isPending={createMemo.isPending}
                             onSubmit={handleSubmit(onSubmit)}
                             onInsert={onInsert}
-                            placeholder="Write your memo here..."
+                            placeholder={isComment ? 'Write a comment...' : 'Write your memo here...'}
                             autoFocus
                             errorMessage={errors.content?.message}
                           />
@@ -239,7 +254,7 @@ export const MemoForm = () => {
                         <MemoFooter
                           charCount={charCount}
                           isOverLimit={isOverLimit}
-                          isPending={createMemo.isPending || isUploading}
+                          isPending={(isComment ? createComment : createMemo).isPending || isUploading}
                           isValid={isValid}
                           visibility={visibility}
                           onVisibilityChange={(val) =>
