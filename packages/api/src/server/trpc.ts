@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import SuperJSON from 'superjson';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
+import { MemoNotFoundError, InsufficientPermissionsError } from './lib/errors';
 
 export interface StorageService {
   generateUploadUrl(key: string, mimeType: string, filename: string): Promise<{ url: string; contentDisposition: string }>;
@@ -40,6 +41,22 @@ export const t = initTRPC.context<typeof createTRPCContext>().create({
 
 export const router = t.router;
 
+const errorMiddleware = t.middleware(async ({ next }) => {
+  try {
+    return await next();
+  } catch (error) {
+    if (error instanceof TRPCError) throw error;
+    if (error instanceof MemoNotFoundError) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
+    }
+    if (error instanceof InsufficientPermissionsError) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+    }
+    console.error('[TRPC] Unexpected error:', error);
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
+  }
+});
+
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
   let waitMsDisplay = '';
@@ -58,7 +75,7 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
   return result;
 });
 
-export const publicProcedure = t.procedure.use(timingMiddleware);
+export const publicProcedure = t.procedure.use(errorMiddleware).use(timingMiddleware);
 
 export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
   if (!ctx.session?.user) {
