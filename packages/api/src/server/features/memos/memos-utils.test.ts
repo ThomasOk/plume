@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  extractTagsFromContent,
-  buildTagTree,
-  buildFilterConditions,
-} from './utils';
+import { extractTagsFromContent, buildFilterConditions } from './memos-utils';
 
 // extractTagsFromContent
 
@@ -67,75 +63,6 @@ describe('extractTagsFromContent', () => {
 
   it('preserves order of first occurrence', () => {
     expect(extractTagsFromContent('#c #a #b')).toEqual(['c', 'a', 'b']);
-  });
-});
-
-// buildTagTree
-
-describe('buildTagTree', () => {
-  it('returns an empty array for an empty object', () => {
-    expect(buildTagTree({})).toEqual([]);
-  });
-
-  it('builds a single flat node', () => {
-    const result = buildTagTree({ cooking: 5 });
-    expect(result).toEqual([
-      { name: 'cooking', fullPath: 'cooking', count: 5, children: [] },
-    ]);
-  });
-
-  it('builds multiple flat nodes', () => {
-    const result = buildTagTree({ cooking: 5, travel: 2 });
-    expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ name: 'cooking', count: 5 });
-    expect(result[1]).toMatchObject({ name: 'travel', count: 2 });
-  });
-
-  it('builds a nested node (parent with no direct count)', () => {
-    const result = buildTagTree({ 'cooking/french': 3 });
-    expect(result).toEqual([
-      {
-        name: 'cooking',
-        fullPath: 'cooking',
-        count: 0,
-        children: [
-          {
-            name: 'french',
-            fullPath: 'cooking/french',
-            count: 3,
-            children: [],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('assigns count to parent when it has its own entry', () => {
-    const result = buildTagTree({ cooking: 5, 'cooking/french': 3 });
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ name: 'cooking', count: 5 });
-    expect(result[0]!.children).toHaveLength(1);
-    expect(result[0]!.children[0]).toMatchObject({
-      name: 'french',
-      count: 3,
-    });
-  });
-
-  it('handles deeply nested tags', () => {
-    const result = buildTagTree({ 'a/b/c': 1 });
-    expect(result[0]?.name).toBe('a');
-    expect(result[0]?.children[0]?.name).toBe('b');
-    expect(result[0]?.children[0]?.children[0]).toMatchObject({
-      name: 'c',
-      fullPath: 'a/b/c',
-      count: 1,
-    });
-  });
-
-  it('sets correct fullPath at each level', () => {
-    const result = buildTagTree({ 'dev/web': 4 });
-    expect(result[0]?.fullPath).toBe('dev');
-    expect(result[0]?.children[0]?.fullPath).toBe('dev/web');
   });
 });
 

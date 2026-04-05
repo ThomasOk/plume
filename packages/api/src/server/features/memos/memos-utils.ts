@@ -3,8 +3,13 @@
  */
 
 import { sql, ilike } from '@repo/db';
+
+export const formatAuthor = (name: string | null, image: string | null) => ({
+  name: name ?? 'Unknown',
+  image: image ?? null,
+});
 import { memo } from '@repo/db/schema';
-import type { listMemosSchema } from './schemas';
+import type { listMemosSchema } from './memos-schemas';
 import type { z } from 'zod';
 
 type ListMemosInput = z.infer<typeof listMemosSchema>;
@@ -66,30 +71,3 @@ export const extractTagsFromContent = (content: string): string[] => {
   return [...new Set(tags)];
 };
 
-type TagNode = {
-  name: string;
-  fullPath: string;
-  count: number;
-  children: TagNode[];
-};
-export const buildTagTree = (tags: Record<string, number>): TagNode[] => {
-  const roots: TagNode[] = [];
-  for (const [tagPath, count] of Object.entries(tags)) {
-    const segments = tagPath.split('/');
-    let currentChildren = roots;
-    segments.forEach((segment, index) => {
-      if (!currentChildren.some((tag) => tag.name === segment)) {
-        currentChildren.push({
-          name: segment,
-          fullPath: segments.slice(0, index + 1).join('/'),
-          count: index === segments.length - 1 ? count : 0,
-          children: [],
-        });
-      }
-      const node = currentChildren.find((tag) => tag.name === segment)!;
-      currentChildren = node.children;
-    });
-  }
-
-  return roots;
-};

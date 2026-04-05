@@ -1,14 +1,16 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import SuperJSON from 'superjson';
+import type { StorageService } from './shared/storage';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
-import { MemoNotFoundError, InsufficientPermissionsError } from './lib/errors';
-
-export interface StorageService {
-  generateUploadUrl(key: string, mimeType: string, filename: string): Promise<{ url: string; contentDisposition: string }>;
-  getPublicUrl(key: string): string;
-  deleteObject(key: string): Promise<void>;
-}
+import {
+  MemoNotFoundError,
+  InsufficientPermissionsError,
+  AttachmentNotFoundError,
+  NotificationNotFoundError,
+  FileSizeLimitExceededError,
+} from './shared/errors';
+export type { StorageService };
 
 export const createTRPCContext = async ({
   auth,
@@ -51,6 +53,15 @@ const errorMiddleware = t.middleware(async ({ next }) => {
     }
     if (error instanceof InsufficientPermissionsError) {
       throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+    }
+    if (error instanceof AttachmentNotFoundError) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
+    }
+    if (error instanceof NotificationNotFoundError) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
+    }
+    if (error instanceof FileSizeLimitExceededError) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
     }
     console.error('[TRPC] Unexpected error:', error);
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
