@@ -12,20 +12,32 @@ import {
 } from './shared/errors';
 export type { StorageService };
 
+export interface AppLogger {
+  info(obj: object | string, msg?: string): void;
+  error(obj: object | string, msg?: string): void;
+  debug(obj: object | string, msg?: string): void;
+}
+
 export const createTRPCContext = async ({
   auth,
   db,
   storage,
   headers,
+  requestId,
+  logger,
 }: {
   auth: AuthInstance;
   db: DatabaseInstance;
   storage: StorageService;
   headers: Headers;
+  requestId: string;
+  logger: AppLogger;
 }): Promise<{
   db: DatabaseInstance;
   storage: StorageService;
   session: AuthInstance['$Infer']['Session'] | null;
+  requestId: string;
+  logger: AppLogger;
 }> => {
   const session = await auth.api.getSession({
     headers,
@@ -34,6 +46,8 @@ export const createTRPCContext = async ({
     db,
     storage,
     session,
+    requestId,
+    logger,
   };
 };
 
@@ -43,7 +57,7 @@ export const t = initTRPC.context<typeof createTRPCContext>().create({
 
 export const router = t.router;
 
-const errorMiddleware = t.middleware(async ({ next }) => {
+const errorMiddleware = t.middleware(async ({ ctx, next }) => {
   try {
     return await next();
   } catch (error) {
@@ -63,27 +77,35 @@ const errorMiddleware = t.middleware(async ({ next }) => {
     if (error instanceof FileSizeLimitExceededError) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
     }
-    console.error('[TRPC] Unexpected error:', error);
+    ctx.logger.error(
+      { requestId: ctx.requestId, err: error },
+      'Unexpected error',
+    );
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
   }
 });
 
-const timingMiddleware = t.middleware(async ({ next, path }) => {
+const timingMiddleware = t.middleware(async ({ ctx, next, path }) => {
   const start = Date.now();
-  let waitMsDisplay = '';
   if (t._config.isDev && process.env.NODE_ENV !== 'test') {
     // artificial delay in dev 100-500ms
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
-    waitMsDisplay = ` (artificial delay: ${waitMs}ms)`;
   }
-  const result = await next();
-  const end = Date.now();
-
-  console.log(
-    `\t[TRPC] /${path} executed after ${end - start}ms${waitMsDisplay}`,
-  );
-  return result;
+  let ok = false;
+  try {
+    const result = await next();
+    ok = result.ok;
+    return result;
+  } finally {
+    ctx.logger.info({
+      requestId: ctx.requestId,
+      procedure: path,
+      userId: ctx.session?.user.id ?? null,
+      durationMs: Date.now() - start,
+      ok,
+    });
+  }
 });
 
 export const publicProcedure = t.procedure.use(errorMiddleware).use(timingMiddleware);

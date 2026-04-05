@@ -5,8 +5,8 @@ import { createAuth } from '@repo/auth/server';
 import { createDb } from '@repo/db/client';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
 import { env } from './env';
+import { logger } from './lib/logger';
 import * as storage from './lib/storage';
 
 const trustedOrigins = [env.PUBLIC_WEB_URL].map((url) => new URL(url).origin);
@@ -38,6 +38,7 @@ const app = new Hono<{
   Variables: {
     user: typeof auth.$Infer.Session.user | null;
     session: typeof auth.$Infer.Session.session | null;
+    requestId: string;
   };
 }>();
 
@@ -45,7 +46,22 @@ app.get('/healthcheck', (c) => {
   return c.text('OK');
 });
 
-app.use(logger());
+app.use(async (c, next) => {
+  c.set('requestId', crypto.randomUUID());
+  await next();
+});
+
+app.use(async (c, next) => {
+  const start = Date.now();
+  await next();
+  logger.info({
+    requestId: c.get('requestId'),
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    durationMs: Date.now() - start,
+  });
+});
 
 app.use(
   wildcardPath.BETTER_AUTH,
@@ -75,7 +91,12 @@ app.use(
   wildcardPath.TRPC,
   trpcServer({
     router: api.trpcRouter,
-    createContext: (c) => api.createTRPCContext({ headers: c.req.headers }),
+    createContext: (opts, c) =>
+      api.createTRPCContext({
+        headers: opts.req.headers,
+        requestId: c.var.requestId,
+        logger,
+      }),
   }),
 );
 
@@ -91,16 +112,16 @@ const server = serve(
   },
   (info) => {
     const host = info.family === 'IPv6' ? `[${info.address}]` : info.address;
-    console.log(`Hono internal server: http://${host}:${info.port}`);
+    logger.info({ host, port: info.port }, 'Server started');
   },
 );
 
 const shutdown = () => {
   server.close((error) => {
     if (error) {
-      console.error(error);
+      logger.error({ err: error }, 'Error during shutdown');
     } else {
-      console.log('\nServer has stopped gracefully.');
+      logger.info('Server stopped gracefully');
     }
     process.exit(0);
   });
