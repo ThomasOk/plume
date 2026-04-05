@@ -1,17 +1,3 @@
-import { createFileRoute, redirect, Link } from '@tanstack/react-router';
-import { authClient } from '@/lib/authClient';
-import { useAttachments, useDeleteAttachment } from '@/features/attachments';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import {
-  MdOutlineOpenInNew,
-  MdOutlineDescription,
-  MdOutlineMovie,
-  MdOutlineAudiotrack,
-  MdOutlineArchive,
-  MdOutlineImage,
-} from 'react-icons/md';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +8,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@repo/ui/components/alert-dialog';
-import { Dialog, DialogContent, DialogTitle } from '@repo/ui/components/dialog';
 import { Button } from '@repo/ui/components/button';
+import { Dialog, DialogContent, DialogTitle } from '@repo/ui/components/dialog';
 import { Separator } from '@repo/ui/components/separator';
+import { createFileRoute, redirect, Link } from '@tanstack/react-router';
+import { format } from 'date-fns';
+import { useState } from 'react';
+import {
+  MdOutlineOpenInNew,
+  MdOutlineDescription,
+  MdOutlineMovie,
+  MdOutlineAudiotrack,
+  MdOutlineArchive,
+  MdOutlineImage,
+} from 'react-icons/md';
+import { toast } from 'sonner';
 import type { Attachment } from '@/lib/types';
+import { useAttachments, useDeleteAttachment } from '@/features/attachments';
+import { authClient } from '@/lib/authClient';
 
 export const Route = createFileRoute('/attachments')({
   beforeLoad: async () => {

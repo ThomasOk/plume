@@ -22,10 +22,10 @@ import {
   RiSettings4Line,
   RiUserLine,
 } from 'react-icons/ri';
+import { useNotifications } from '@/features/notifications/hooks/use-notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
 import { sounds } from '@/lib/sounds';
-import { useNotifications } from '@/features/notifications/hooks/use-notifications';
 
 interface SidebarNavProps {
   collapsed?: boolean;

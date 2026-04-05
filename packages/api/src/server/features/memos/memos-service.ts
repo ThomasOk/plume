@@ -1,11 +1,7 @@
-import { desc, eq, and, isNull, sql } from '@repo/db';
-import type { DatabaseInstance } from '@repo/db/client';
-import { memo, user } from '@repo/db/schema';
-import { nanoid } from 'nanoid';
+import { desc, eq, and, isNull, sql, inArray } from '@repo/db';
+import { memo, user, attachment } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
-import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
-import { createCommentNotification } from '../../shared/notifications';
-import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
+import { nanoid } from 'nanoid';
 import type {
   createMemoSchema,
   updateMemoSchema,
@@ -14,7 +10,12 @@ import type {
   listCommentsSchema,
   getByIdSchema,
 } from './memos-schemas';
+import type { StorageService } from '../../shared/storage';
+import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
+import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
+import { createCommentNotification } from '../../shared/notifications';
+import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -25,7 +26,7 @@ type GetByIdInput = z.infer<typeof getByIdSchema>;
 
 type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'userId'>;
 
-export async function getMemoById(db: DatabaseInstance, sessionUserId: string | null, input: GetByIdInput) {
+export async function getMemoById(db: DatabaseInstance, storage: StorageService, sessionUserId: string | null, input: GetByIdInput) {
   const [row] = await db
     .select({
       id: memo.id,
@@ -48,11 +49,39 @@ export async function getMemoById(db: DatabaseInstance, sessionUserId: string | 
   if (row.visibility === 'private' && sessionUserId !== row.userId) throw new MemoNotFoundError();
 
   const { authorName, authorImage, ...memoData } = row;
-  return { ...memoData, author: formatAuthor(authorName, authorImage) };
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, [memoData.id]);
+  return {
+    ...memoData,
+    author: formatAuthor(authorName, authorImage),
+    attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+  };
 }
 
-export async function listMemos(db: DatabaseInstance, userId: string, input: ListMemosInput) {
-  return db
+async function fetchAttachmentsForMemos(
+  db: DatabaseInstance,
+  storage: StorageService,
+  memoIds: string[],
+) {
+  if (memoIds.length === 0) return new Map<string, (typeof attachment.$inferSelect & { url: string })[]>();
+
+  const rows = await db
+    .select()
+    .from(attachment)
+    .where(and(inArray(attachment.memoId, memoIds), eq(attachment.status, 'active')))
+    .orderBy(desc(attachment.createdAt));
+
+  const byMemoId = new Map<string, (typeof attachment.$inferSelect & { url: string })[]>();
+  for (const row of rows) {
+    if (!row.memoId) continue;
+    const list = byMemoId.get(row.memoId) ?? [];
+    list.push({ ...row, url: storage.getPublicUrl(row.storageKey) });
+    byMemoId.set(row.memoId, list);
+  }
+  return byMemoId;
+}
+
+export async function listMemos(db: DatabaseInstance, storage: StorageService, userId: string, input: ListMemosInput) {
+  const memos = await db
     .select({
       id: memo.id,
       userId: memo.userId,
@@ -67,9 +96,13 @@ export async function listMemos(db: DatabaseInstance, userId: string, input: Lis
     .from(memo)
     .where(and(eq(memo.userId, userId), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(desc(memo.createdAt));
+
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memos.map((m) => m.id));
+
+  return memos.map((m) => ({ ...m, attachments: attachmentsByMemoId.get(m.id) ?? [] }));
 }
 
-export async function listPublicMemos(db: DatabaseInstance, input: ListMemosInput) {
+export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, input: ListMemosInput) {
   const rows = await db
     .select({
       id: memo.id,
@@ -89,9 +122,12 @@ export async function listPublicMemos(db: DatabaseInstance, input: ListMemosInpu
     .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(desc(memo.createdAt));
 
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
+
   return rows.map(({ authorName, authorImage, ...memoData }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
+    attachments: attachmentsByMemoId.get(memoData.id) ?? [],
   }));
 }
 
@@ -137,7 +173,7 @@ export async function createMemo(db: DatabaseInstance, userId: string, input: Cr
   return newMemo;
 }
 
-export async function listMemoComments(db: DatabaseInstance, sessionUserId: string | null, input: ListCommentsInput) {
+export async function listMemoComments(db: DatabaseInstance, storage: StorageService, sessionUserId: string | null, input: ListCommentsInput) {
   const [parent] = await db
     .select({ id: memo.id, visibility: memo.visibility, userId: memo.userId })
     .from(memo)
@@ -165,9 +201,12 @@ export async function listMemoComments(db: DatabaseInstance, sessionUserId: stri
     .where(eq(memo.parentId, input.memoId))
     .orderBy(desc(memo.createdAt));
 
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
+
   return rows.map(({ authorName, authorImage, ...memoData }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
+    attachments: attachmentsByMemoId.get(memoData.id) ?? [],
   }));
 }
 

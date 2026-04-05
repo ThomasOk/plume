@@ -1,11 +1,11 @@
 import { cn } from '@repo/ui/lib/utils';
-import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
 import { MdChevronRight } from 'react-icons/md';
 import { RiHashtag } from 'react-icons/ri';
 import type { TagNode } from '../types';
+import { sounds } from '@/lib/sounds';
 
 export const TagTreeItem = ({ node }: { node: TagNode }) => {
   const [isOpen, setIsOpen] = useState(false);

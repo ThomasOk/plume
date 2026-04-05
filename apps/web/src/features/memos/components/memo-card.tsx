@@ -10,6 +10,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@repo/ui/components/alert-dialog';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@repo/ui/components/avatar';
 import { Button } from '@repo/ui/components/button';
 import { Card, CardContent } from '@repo/ui/components/card';
 import {
@@ -26,11 +31,6 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip';
 import { Link } from '@tanstack/react-router';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@repo/ui/components/avatar';
 import { formatDistanceToNow, format } from 'date-fns';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
@@ -48,20 +48,19 @@ import {
 import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
-import { useAuth } from '@/features/auth/hooks/use-auth';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
-import { sounds } from '@/lib/sounds';
 import {
   AttachmentList,
-  usePublicAttachmentsByMemo,
   useDeleteAttachment,
   useFileUpload,
 } from '@/features/attachments';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { sounds } from '@/lib/sounds';
 
 interface MemoCardProps {
   memo: Memo | Comment;
@@ -72,7 +71,7 @@ type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
 export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const { data: attachments } = usePublicAttachmentsByMemo(memo.id);
+  const savedAttachments = memo.attachments;
   const deleteAttachment = useDeleteAttachment();
   const {
     localFiles,
@@ -343,7 +342,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                 />
                 <AttachmentList
                   localFiles={localFiles}
-                  savedAttachments={attachments}
+                  savedAttachments={savedAttachments}
                   onRemoveLocalFile={removeLocalFile}
                   onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
                 />
@@ -362,8 +361,8 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
             ) : (
               <MemoContext.Provider value={{ memo }}>
                 <ExpandableMarkdown content={memo.content} maxHeight={500} />
-                {attachments && attachments.length > 0 && (
-                  <AttachmentList savedAttachments={attachments} />
+                {savedAttachments.length > 0 && (
+                  <AttachmentList savedAttachments={savedAttachments} />
                 )}
                 {'commentCount' in memo && memo.commentCount > 0 && !hideCommentPreview && (
                   <CommentPreview memoId={memo.id} commentCount={memo.commentCount} />
@@ -436,7 +435,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                         </div>
                         <AttachmentList
                           localFiles={localFiles}
-                          savedAttachments={attachments}
+                          savedAttachments={savedAttachments}
                           onRemoveLocalFile={removeLocalFile}
                           onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
                         />

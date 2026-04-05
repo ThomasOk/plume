@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { cn } from '@repo/ui/lib/utils';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@repo/ui/components/dialog';
+import { cn } from '@repo/ui/lib/utils';
+import { useState } from 'react';
 import {
   MdOutlineClose,
   MdOutlineDescription,

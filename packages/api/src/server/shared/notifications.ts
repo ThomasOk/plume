@@ -1,6 +1,6 @@
-import type { DatabaseInstance } from '@repo/db/client';
 import { notification } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
+import type { DatabaseInstance } from '@repo/db/client';
 
 export async function createCommentNotification(
   db: DatabaseInstance,

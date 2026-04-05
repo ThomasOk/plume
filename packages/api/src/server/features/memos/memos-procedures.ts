@@ -22,15 +22,15 @@ import {
 
 export const getById = publicProcedure
   .input(getByIdSchema)
-  .query(({ ctx, input }) => getMemoById(ctx.db, ctx.session?.user.id ?? null, input));
+  .query(({ ctx, input }) => getMemoById(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
 
 export const list = protectedProcedure
   .input(listMemosSchema)
-  .query(({ ctx, input }) => listMemos(ctx.db, ctx.session.user.id, input));
+  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, ctx.session.user.id, input));
 
 export const listPublic = publicProcedure
   .input(listMemosSchema)
-  .query(({ ctx, input }) => listPublicMemos(ctx.db, input));
+  .query(({ ctx, input }) => listPublicMemos(ctx.db, ctx.storage, input));
 
 export const create = protectedProcedure
   .input(createMemoSchema)
@@ -38,7 +38,7 @@ export const create = protectedProcedure
 
 export const listComments = publicProcedure
   .input(listCommentsSchema)
-  .query(({ ctx, input }) => listMemoComments(ctx.db, ctx.session?.user.id ?? null, input));
+  .query(({ ctx, input }) => listMemoComments(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
 
 export const update = protectedProcedure
   .input(updateMemoSchema)

@@ -1,8 +1,8 @@
 import { Input } from '@repo/ui/components/input';
-import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { RiSearchLine } from 'react-icons/ri';
+import { sounds } from '@/lib/sounds';
 
 export const SearchInput = () => {
   const search = useSearch({ strict: false });

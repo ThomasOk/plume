@@ -1,9 +1,9 @@
 import { desc, eq, and } from '@repo/db';
-import type { DatabaseInstance } from '@repo/db/client';
 import { notification, memo, user } from '@repo/db/schema';
-import { NotificationNotFoundError } from '../../shared/errors';
 import type { archiveNotificationSchema, deleteNotificationSchema } from './notifications-schemas';
+import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
+import { NotificationNotFoundError } from '../../shared/errors';
 
 type ArchiveNotificationInput = z.infer<typeof archiveNotificationSchema>;
 type DeleteNotificationInput = z.infer<typeof deleteNotificationSchema>;

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { Button } from '@repo/ui/components/button';
+import { useSearch } from '@tanstack/react-router';
 import { format, addMonths, subMonths } from 'date-fns';
+import { useState } from 'react';
+import { MdOutlineChevronLeft, MdOutlineChevronRight } from 'react-icons/md';
+import { useMemosStats } from '../hooks';
 import { MonthCalendar } from '@/components/calendar';
 import { getMonthFirstDay } from '@/components/calendar/utils';
-import { useMemosStats } from '../hooks';
-import { useSearch } from '@tanstack/react-router';
 import { useDateFilterNavigation } from '@/hooks/use-date-filter-navigation';
-import { Button } from '@repo/ui/components/button';
-import { MdOutlineChevronLeft, MdOutlineChevronRight } from 'react-icons/md';
 
 export const StatisticsView = () => {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));

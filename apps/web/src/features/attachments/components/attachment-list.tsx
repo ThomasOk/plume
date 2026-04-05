@@ -1,5 +1,5 @@
-import type { Attachment } from '@/lib/types';
 import type { LocalFile } from '../hooks/use-file-upload';
+import type { Attachment } from '@/lib/types';
 import { LocalAttachmentItem, SavedAttachmentItem } from './attachment-item';
 
 interface AttachmentListProps {
