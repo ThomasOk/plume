@@ -1,5 +1,5 @@
 import { router } from '../../trpc';
-import { getUploadUrl, confirmUpload, list, deleteAttachment, listByMemo } from './procedures';
+import { getUploadUrl, confirmUpload, list, deleteAttachment, listByMemo } from './attachments-procedures';
 
 export const attachmentsRouter = router({
   getUploadUrl,

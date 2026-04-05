@@ -10,7 +10,7 @@ import {
   stats,
   tags,
   publicTags,
-} from './procedures';
+} from './memos-procedures';
 
 export const memosRouter = router({
   list,

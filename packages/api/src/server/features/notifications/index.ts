@@ -1,5 +1,5 @@
 import { router } from '../../trpc';
-import { list, markAsArchived, markAllAsArchived, deleteNotification } from './procedures';
+import { list, markAsArchived, markAllAsArchived, deleteNotification } from './notifications-procedures';
 
 export const notificationsRouter = router({
   list,
