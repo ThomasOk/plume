@@ -1,10 +1,10 @@
+import type { AppLogger, StorageService } from './trpc';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
-import { memosRouter } from './features/memos';
 import { attachmentsRouter } from './features/attachments';
+import { memosRouter } from './features/memos';
 import { notificationsRouter } from './features/notifications';
 import { createTRPCContext as createTRPCContextInternal, router } from './trpc';
-import type { AppLogger, StorageService } from './trpc';
 
 export const appRouter = router({
   memos: memosRouter,

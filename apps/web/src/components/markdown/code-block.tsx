@@ -1,7 +1,7 @@
+import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
+import hljs from 'highlight.js';
 import { useMemo, useState } from 'react';
 import { sounds } from '@/lib/sounds';
-import hljs from 'highlight.js';
-import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
 import './code-block.css';
 import './highlight-themes.css';
 

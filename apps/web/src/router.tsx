@@ -1,11 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRouter as createTanstackRouter } from '@tanstack/react-router';
+import Spinner from '@/components/ui/spinner';
+import { env } from '@/env';
+import { TRPCProvider } from '@/lib/api';
 import { queryClient } from '@/lib/queryClient';
 import { trpcClient } from '@/lib/trpcClient';
-import { TRPCProvider } from '@/lib/api';
-import { env } from '@/env';
 import { routeTree } from '@/routeTree.gen';
-import Spinner from '@/components/ui/spinner';
 
 export function createRouter() {
   const router = createTanstackRouter({

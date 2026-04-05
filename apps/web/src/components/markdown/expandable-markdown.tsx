@@ -1,5 +1,5 @@
-import { useState, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { MdExpandMore, MdExpandLess } from 'react-icons/md';
 import { MarkdownContent } from './markdown-content';
 

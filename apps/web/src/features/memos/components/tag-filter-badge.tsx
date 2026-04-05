@@ -1,9 +1,9 @@
 import { Badge } from '@repo/ui/components/badge';
-import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { MdClose } from 'react-icons/md';
 import { RiHashtag } from 'react-icons/ri';
+import { sounds } from '@/lib/sounds';
 
 export const TagFilterBadge = () => {
   const navigate = useNavigate();

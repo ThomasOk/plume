@@ -1,5 +1,5 @@
-import type { DatabaseInstance } from '@repo/db';
 import type { AppLogger, StorageService } from '../../src/server/trpc';
+import type { DatabaseInstance } from '@repo/db';
 import { appRouter } from '../../src/server/index';
 
 const mockLogger: AppLogger = {

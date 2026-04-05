@@ -1,9 +1,9 @@
-import type { Element } from 'hast';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
+import type { Element } from 'hast';
 import { CodeBlock } from './code-block';
 import { TaskListItem } from './task-list-item';
 import { isTaskListItemNode } from '@/utils/markdown';

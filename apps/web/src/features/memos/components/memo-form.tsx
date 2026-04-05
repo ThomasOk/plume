@@ -14,9 +14,9 @@ import { useCreateMemo } from '../hooks/use-create-memo';
 import { useDraft } from '../hooks/use-draft';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
+import { AttachmentList, useFileUpload } from '@/features/attachments';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { sounds } from '@/lib/sounds';
-import { AttachmentList, useFileUpload } from '@/features/attachments';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 

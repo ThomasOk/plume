@@ -1,9 +1,9 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
 import { Button } from '@repo/ui/components/button';
-import { authClient } from '@/lib/authClient';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { NotificationList } from '@/features/notifications/components/notification-list';
 import { useMarkAllArchived } from '@/features/notifications/hooks/use-mark-all-archived';
 import { useNotifications } from '@/features/notifications/hooks/use-notifications';
-import { NotificationList } from '@/features/notifications/components/notification-list';
+import { authClient } from '@/lib/authClient';
 
 export const Route = createFileRoute('/notifications')({
   beforeLoad: async () => {

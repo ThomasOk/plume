@@ -1,8 +1,8 @@
 import { Textarea } from '@repo/ui/components/textarea';
 import type { RefObject } from 'react';
-import { sounds } from '@/lib/sounds';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { TagSuggestions } from './tag-suggestions';
+import { sounds } from '@/lib/sounds';
 
 interface MemoTextareaProps {
   textareaRef: RefObject<HTMLTextAreaElement | null>;

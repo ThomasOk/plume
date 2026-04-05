@@ -1,5 +1,4 @@
 import { ChevronDownIcon } from '@radix-ui/react-icons';
-import { sounds } from '@/lib/sounds';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +7,7 @@ import {
 } from '@repo/ui/components/dropdown-menu';
 import { IoEarthOutline } from 'react-icons/io5';
 import { RiCheckLine, RiLockLine } from 'react-icons/ri';
+import { sounds } from '@/lib/sounds';
 
 interface VisibilitySelectorProps {
   value: 'public' | 'private';

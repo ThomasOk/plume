@@ -1,10 +1,10 @@
 import { MAX_MEMO_CHARACTERS } from '@repo/api/schemas';
 import { Button } from '@repo/ui/components/button';
-import { sounds } from '@/lib/sounds';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
 import { MdOutlineAttachFile } from 'react-icons/md';
 import { VisibilitySelector } from './visibility-selector';
+import { sounds } from '@/lib/sounds';
 
 const SHOW_THRESHOLD = 0.7;
 const WARN_THRESHOLD = MAX_MEMO_CHARACTERS - 1000;

@@ -1,9 +1,9 @@
 import '@/style.css';
 import '@fontsource-variable/inter';
 import { RouterProvider } from '@tanstack/react-router';
-import { ThemeProvider } from '@/hooks/use-theme';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { ThemeProvider } from '@/hooks/use-theme';
 import { createRouter } from '@/router';
 
 const ROOT_ELEMENT_ID = 'app';

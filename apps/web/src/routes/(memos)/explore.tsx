@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { GiFeather } from 'react-icons/gi';
 import {
   MemoList,
   MemoListSkeleton,
@@ -7,9 +8,8 @@ import {
   TagFilterBadge,
   SearchFilterBadge,
 } from '@/features/memos';
-import { memosSearchSchema } from '@/lib/schemas/search-params';
 import { authClient } from '@/lib/authClient';
-import { GiFeather } from 'react-icons/gi';
+import { memosSearchSchema } from '@/lib/schemas/search-params';
 
 export const Route = createFileRoute('/(memos)/explore')({
   validateSearch: (search) => memosSearchSchema.parse(search),

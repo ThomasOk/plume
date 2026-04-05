@@ -1,9 +1,9 @@
 import { Badge } from '@repo/ui/components/badge';
-import { sounds } from '@/lib/sounds';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { CiCalendar } from 'react-icons/ci';
 import { MdClose } from 'react-icons/md';
+import { sounds } from '@/lib/sounds';
 
 export const DateFilterBadge = () => {
   const navigate = useNavigate();

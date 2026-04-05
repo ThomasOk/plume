@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
+import type { CalendarDayCell } from '../components/calendar/types';
 import { CalendarCell } from '../components/calendar/calendar-cell';
 import { MonthCalendar } from '../components/calendar/month-calendar';
-import type { CalendarDayCell } from '../components/calendar/types';
 import { StatisticsView } from '@/features/memos/components/statistics-view';
 
 export const Route = createFileRoute('/calendar-demo')({

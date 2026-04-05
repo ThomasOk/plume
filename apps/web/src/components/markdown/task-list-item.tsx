@@ -4,8 +4,8 @@ import type { Memo } from '@/lib/types';
 import type { InputHTMLAttributes } from 'react';
 import { useMemoContext } from '@/features/memos/contexts/memo-context';
 import { useTRPC } from '@/lib/api';
-import { toggleTaskAtIndex } from '@/utils/markdown-manipulation';
 import { authClient } from '@/lib/authClient';
+import { toggleTaskAtIndex } from '@/utils/markdown-manipulation';
 
 const getTaskIndex = (checkbox: HTMLInputElement): number | null => {
   const listItem = checkbox.closest('li');
