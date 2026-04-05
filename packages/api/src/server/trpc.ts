@@ -13,9 +13,9 @@ import {
 export type { StorageService };
 
 export interface AppLogger {
-  info(obj: object, msg?: string): void;
-  error(obj: object, msg?: string): void;
-  debug(obj: object, msg?: string): void;
+  info(obj: object | string, msg?: string): void;
+  error(obj: object | string, msg?: string): void;
+  debug(obj: object | string, msg?: string): void;
 }
 
 export const createTRPCContext = async ({
@@ -92,18 +92,20 @@ const timingMiddleware = t.middleware(async ({ ctx, next, path }) => {
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
-  const result = await next();
-  const durationMs = Date.now() - start;
-
-  ctx.logger.info({
-    requestId: ctx.requestId,
-    procedure: path,
-    userId: ctx.session?.user.id ?? null,
-    durationMs,
-    ok: result.ok,
-  });
-
-  return result;
+  let ok = false;
+  try {
+    const result = await next();
+    ok = result.ok;
+    return result;
+  } finally {
+    ctx.logger.info({
+      requestId: ctx.requestId,
+      procedure: path,
+      userId: ctx.session?.user.id ?? null,
+      durationMs: Date.now() - start,
+      ok,
+    });
+  }
 });
 
 export const publicProcedure = t.procedure.use(errorMiddleware).use(timingMiddleware);

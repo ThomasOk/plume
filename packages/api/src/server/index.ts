@@ -36,4 +36,4 @@ export const createApi = ({
 };
 
 export type AppRouter = typeof appRouter;
-export type { StorageService };
+export type { AppLogger, StorageService };

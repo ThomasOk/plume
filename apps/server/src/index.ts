@@ -38,6 +38,7 @@ const app = new Hono<{
   Variables: {
     user: typeof auth.$Infer.Session.user | null;
     session: typeof auth.$Infer.Session.session | null;
+    requestId: string;
   };
 }>();
 
@@ -46,9 +47,15 @@ app.get('/healthcheck', (c) => {
 });
 
 app.use(async (c, next) => {
+  c.set('requestId', crypto.randomUUID());
+  await next();
+});
+
+app.use(async (c, next) => {
   const start = Date.now();
   await next();
   logger.info({
+    requestId: c.get('requestId'),
     method: c.req.method,
     path: c.req.path,
     status: c.res.status,
@@ -84,10 +91,10 @@ app.use(
   wildcardPath.TRPC,
   trpcServer({
     router: api.trpcRouter,
-    createContext: (c) =>
+    createContext: (opts, c) =>
       api.createTRPCContext({
-        headers: c.req.headers,
-        requestId: crypto.randomUUID(),
+        headers: opts.req.headers,
+        requestId: c.var.requestId,
         logger,
       }),
   }),
@@ -114,7 +121,7 @@ const shutdown = () => {
     if (error) {
       logger.error({ err: error }, 'Error during shutdown');
     } else {
-      logger.info({}, 'Server stopped gracefully');
+      logger.info('Server stopped gracefully');
     }
     process.exit(0);
   });
