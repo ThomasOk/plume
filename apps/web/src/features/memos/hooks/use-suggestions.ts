@@ -7,6 +7,7 @@ interface UseSuggestionsOptions<T> {
   items: T[];
   filterItems: (items: T[], query: string) => T[];
   onAutocomplete: (item: T, word: string, startIndex: number) => void;
+  onQueryChange?: (query: string) => void;
 }
 
 export function useSuggestions<T>({
@@ -15,6 +16,7 @@ export function useSuggestions<T>({
   items,
   filterItems,
   onAutocomplete,
+  onQueryChange,
 }: UseSuggestionsOptions<T>) {
   const [position, setPosition] = useState<{
     top: number;
@@ -22,12 +24,13 @@ export function useSuggestions<T>({
     height: number;
   } | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const selectedRef = useRef(0);
+  const selectedRef = useRef(selectedIndex);
   selectedRef.current = selectedIndex;
   const positionRef = useRef(position);
   positionRef.current = position;
 
-  const hide = () => setPosition(null);
+  const onQueryChangeRef = useRef(onQueryChange);
+  onQueryChangeRef.current = onQueryChange;
 
   const getCurrentWord = (): [string, number] => {
     const editor = editorRef?.current;
@@ -43,12 +46,23 @@ export function useSuggestions<T>({
     return [wordBefore + wordAfter, cursorPos - wordBefore.length];
   };
 
-  const suggestionsRef: React.RefObject<T[]> = useRef([]);
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  // Recomputed on every render — when async `items` arrive, the parent re-renders
+  // and this automatically picks up the new suggestions without any extra effect.
+  const suggestionsRef = useRef<T[]>([]);
+  suggestionsRef.current = (() => {
+    const [word] = getCurrentWord();
+    if (!word.startsWith(triggerChar)) return [];
+    const query = word.slice(triggerChar.length);
+    return filterItems(items, query);
+  })();
 
-  const filterItemsRef = useRef(filterItems);
-  filterItemsRef.current = filterItems;
+  const isVisibleRef = useRef(false);
+  isVisibleRef.current = !!(position && suggestionsRef.current.length > 0);
+
+  const hide = () => {
+    onQueryChangeRef.current?.('');
+    setPosition(null);
+  };
 
   const handleAutocomplete = (item: T) => {
     const [word, startIndex] = getCurrentWord();
@@ -57,19 +71,18 @@ export function useSuggestions<T>({
   };
 
   const handleInput = () => {
+    const editor = editorRef?.current;
+    if (!editor) return;
+
+    setSelectedIndex(0);
     const [word, startIndex] = getCurrentWord();
 
     if (word.startsWith(triggerChar)) {
-      const editor = editorRef?.current;
-      if (!editor) return;
-
       const query = word.slice(triggerChar.length);
-      suggestionsRef.current = filterItemsRef.current(itemsRef.current, query);
-      setSelectedIndex(0);
+      onQueryChangeRef.current?.(query);
 
       const coords = getCaretCoordinates(editor, startIndex);
       const top = coords.top - editor.scrollTop;
-
       setPosition({ top, left: coords.left, height: coords.height });
     } else {
       hide();
@@ -77,7 +90,7 @@ export function useSuggestions<T>({
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (!positionRef.current || suggestionsRef.current.length === 0) return;
+    if (!isVisibleRef.current || suggestionsRef.current.length === 0) return;
 
     switch (event.key) {
       case 'ArrowDown':
@@ -131,7 +144,7 @@ export function useSuggestions<T>({
     position,
     suggestions: suggestionsRef.current,
     selectedIndex,
-    isVisible: position !== null && suggestionsRef.current.length > 0,
+    isVisible: isVisibleRef.current,
     handleItemSelect: handleAutocomplete,
   };
 }

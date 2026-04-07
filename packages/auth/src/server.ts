@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
-
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import type { DatabaseInstance } from '@repo/db/client';
+import { generateUniqueUsername } from '@repo/db/utils/users';
 
 export interface AuthOptions {
   baseURL: string;
@@ -49,10 +49,30 @@ export const createAuth = ({
         maxAge: 5 * 60,
       },
     },
+    user: {
+      additionalFields: {
+        username: {
+          type: 'string',
+          required: false, // generated server-side by databaseHooks, never sent by client
+          unique: true,
+          input: false,
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       autoSignIn: true,
       requireEmailVerification: false,
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (userData) => {
+            const username = await generateUniqueUsername(db, userData.name);
+            return { data: { ...userData, username } };
+          },
+        },
+      },
     },
     socialProviders: googleConfig
       ? {

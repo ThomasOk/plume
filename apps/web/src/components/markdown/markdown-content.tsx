@@ -5,8 +5,10 @@ import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import type { Element } from 'hast';
 import { CodeBlock } from './code-block';
+import { MentionToken } from './mention-token';
 import { TaskListItem } from './task-list-item';
-import { isTaskListItemNode } from '@/utils/markdown';
+import { isMentionNode, isTaskListItemNode } from '@/utils/markdown';
+import { remarkMention } from '@/utils/remark-mention';
 
 interface MarkdownContentProps {
   content: string;
@@ -27,6 +29,12 @@ const sanitizeSchema = {
       ['disabled', 'disabled'],
       ['checked', 'checked'],
     ],
+    // Allow mention spans produced by remarkMention — dataMention restricted by regex
+    span: [
+      ...(defaultSchema.attributes?.span ?? []),
+      'className',
+      ['dataMention', /^[a-z][a-z0-9_]{1,28}[a-z0-9]$/],
+    ],
   },
 };
 
@@ -34,7 +42,7 @@ export const MarkdownContent = ({ content }: MarkdownContentProps) => {
   return (
     <div className="prose prose-sm max-w-none break-words dark:prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:text-inherit prose-code:text-inherit">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkMention]}
         rehypePlugins={[
           rehypeRaw, // Parse raw HTML
           [rehypeSanitize, sanitizeSchema], // Sanitize for security (blocks XSS)
@@ -69,6 +77,18 @@ export const MarkdownContent = ({ content }: MarkdownContentProps) => {
                 {children}
               </CodeBlock>
             );
+          },
+          span: (
+            props: React.ComponentProps<'span'> & { node?: Element },
+          ) => {
+            const { node, children, ...rest } = props;
+
+            if (node && isMentionNode(node)) {
+              const username = String(node.properties?.dataMention ?? '');
+              return <MentionToken username={username} />;
+            }
+
+            return <span {...rest}>{children}</span>;
           },
         }}
       >

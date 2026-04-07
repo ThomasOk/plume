@@ -10,6 +10,7 @@ export const notificationStatusEnum = pgEnum('notification_status', [
 
 export const notificationTypeEnum = pgEnum('notification_type', [
   'MEMO_COMMENT',
+  'MEMO_MENTION',
 ]);
 
 export const notification = pgTable('notification', {

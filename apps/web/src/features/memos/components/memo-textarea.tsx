@@ -2,6 +2,7 @@ import { Textarea } from '@repo/ui/components/textarea';
 import type { RefObject } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
 import { TagSuggestions } from './tag-suggestions';
+import { MentionSuggestions } from './mention-suggestions';
 import { sounds } from '@/lib/sounds';
 
 interface MemoTextareaProps {
@@ -47,6 +48,7 @@ export const MemoTextarea = ({
         }}
       />
       <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
+      <MentionSuggestions editorRef={textareaRef} onInsert={onInsert} />
       {errorMessage && (
         <p className="text-sm text-destructive mt-1">{errorMessage}</p>
       )}

@@ -20,6 +20,7 @@ beforeEach(async () => {
 const testUser = {
   id: 'test-user-id',
   name: 'Test User',
+  username: 'test_user',
   email: 'test@example.com',
   emailVerified: true,
   image: null,
@@ -99,6 +100,7 @@ describe('memos.list', () => {
     const otherUser = {
       id: 'other-user-id',
       name: 'Other User',
+      username: 'other_user',
       email: 'otheruser@example.com',
       emailVerified: true,
       image: null,
@@ -220,6 +222,7 @@ describe('memos.update', () => {
     const otherUser = {
       id: 'other-user-id',
       name: 'Other User',
+      username: 'other_user',
       email: 'other@example.com',
       emailVerified: true,
       image: null,
@@ -267,6 +270,7 @@ describe('memos.delete', () => {
     const otherUser = {
       id: 'other-user-id',
       name: 'Other User',
+      username: 'other_user',
       email: 'other@example.com',
       emailVerified: true,
       image: null,

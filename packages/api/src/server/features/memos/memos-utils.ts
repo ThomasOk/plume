@@ -53,6 +53,19 @@ export const buildFilterConditions = (input: ListMemosInput) => {
  * @param content - The markdown content to extract tags from
  * @returns Array of unique tags (lowercase, without #)
  */
+/**
+ * Extracts unique @mentions from memo content.
+ * Returns an array of usernames (without the @ prefix).
+ *
+ * @example
+ * extractMentionsFromContent("Hey @alice and @bob, check this out! @Alice")
+ * // Returns: ["alice", "bob"]
+ */
+export const extractMentionsFromContent = (content: string): string[] => {
+  const mentionRegex = /@([a-z][a-z0-9_]{1,28}[a-z0-9])/g;
+  return [...new Set(Array.from(content.matchAll(mentionRegex), (m) => m[1]!))];
+};
+
 export const extractTagsFromContent = (content: string): string[] => {
   // Regex pattern for hashtags
   // - # : literal hashtag character

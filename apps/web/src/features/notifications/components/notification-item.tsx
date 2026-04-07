@@ -12,6 +12,8 @@ export const NotificationItem = ({ notification }: NotificationItemProps) => {
 
   const isUnread = notification.status === 'UNREAD';
   const memoId = notification.comment.parentId ?? notification.entityId;
+  const isComment = notification.type === 'MEMO_COMMENT';
+  const message = isComment ? 'commented on your memo' : 'mentioned you in a memo';
 
   const handleLinkClick = () => {
     if (isUnread) {
@@ -30,13 +32,15 @@ export const NotificationItem = ({ notification }: NotificationItemProps) => {
       <div className="flex-1 min-w-0 cursor-pointer" onClick={handleLinkClick}>
         <p className="text-sm">
           <span className="font-medium">{notification.sender.name}</span>
-          <span className="text-muted-foreground"> commented on your memo</span>
+          <span className="text-muted-foreground"> {message}</span>
         </p>
 
-        {/* Comment preview */}
-        <p className="mt-1 text-sm text-muted-foreground line-clamp-2 hover:text-foreground transition-colors">
-          {notification.comment.content}
-        </p>
+        {/* Preview — only shown for comments */}
+        {isComment && (
+          <p className="mt-1 text-sm text-muted-foreground line-clamp-2 hover:text-foreground transition-colors">
+            {notification.comment.content}
+          </p>
+        )}
 
         <p className="mt-1 text-xs text-muted-foreground">
           {new Date(notification.createdAt).toLocaleDateString(undefined, {

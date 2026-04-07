@@ -14,8 +14,8 @@ import type { StorageService } from '../../shared/storage';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
-import { createCommentNotification } from '../../shared/notifications';
-import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
+import { createCommentNotification, createMentionNotification } from '../../shared/notifications';
+import { extractTagsFromContent, extractMentionsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -170,6 +170,19 @@ export async function createMemo(db: DatabaseInstance, userId: string, input: Cr
     await createCommentNotification(db, userId, newMemo.id, parent.userId);
   }
 
+  const mentionUsernames = extractMentionsFromContent(input.content);
+  if (mentionUsernames.length > 0) {
+    const mentioned = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(inArray(user.username, mentionUsernames));
+    for (const u of mentioned) {
+      if (u.id !== userId) {
+        await createMentionNotification(db, userId, newMemo.id, u.id);
+      }
+    }
+  }
+
   return newMemo;
 }
 
@@ -212,7 +225,7 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
 
 export async function updateMemo(db: DatabaseInstance, userId: string, input: UpdateMemoInput) {
   const [existing] = await db
-    .select({ id: memo.id, userId: memo.userId })
+    .select({ id: memo.id, userId: memo.userId, content: memo.content })
     .from(memo)
     .where(eq(memo.id, input.id))
     .limit(1);
@@ -228,6 +241,22 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
     .returning();
 
   if (!updatedMemo) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to update memo' });
+
+  const prevMentions = new Set(extractMentionsFromContent(existing.content));
+  const newMentionUsernames = extractMentionsFromContent(input.content).filter(
+    (u) => !prevMentions.has(u),
+  );
+  if (newMentionUsernames.length > 0) {
+    const mentioned = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(inArray(user.username, newMentionUsernames));
+    for (const u of mentioned) {
+      if (u.id !== userId) {
+        await createMentionNotification(db, userId, updatedMemo.id, u.id);
+      }
+    }
+  }
 
   return updatedMemo;
 }
