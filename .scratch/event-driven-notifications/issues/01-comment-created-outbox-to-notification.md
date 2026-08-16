@@ -40,20 +40,20 @@ Schema (two Drizzle migrations, per CLAUDE.md flow):
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] Creating a Comment on another User's Memo writes exactly one `pending` outbox row and
+- [x] Creating a Comment on another User's Memo writes exactly one `pending` outbox row and
       one Comment row in the same transaction (both present, or both absent on failure).
-- [ ] Immediately after Comment creation, no Notification exists yet (the producer triggers
+- [x] Immediately after Comment creation, no Notification exists yet (the producer triggers
       nothing directly).
-- [ ] `drainOnce` turns a `pending` `comment.created` row into the correct Notification
+- [x] `drainOnce` turns a `pending` `comment.created` row into the correct Notification
       (right sender, receiver = parent Memo's Author, `entityId` = comment id) and marks the
       row `processed`.
-- [ ] Calling `drainOnce` again does not create a duplicate Notification (unique constraint
+- [x] Calling `drainOnce` again does not create a duplicate Notification (unique constraint
       on `notification.entityId` + insert-on-conflict).
-- [ ] A Comment on one's own Memo produces no Notification after drain (policy lives in the
+- [x] A Comment on one's own Memo produces no Notification after drain (policy lives in the
       handler; the event was still emitted).
-- [ ] The `notification.entityId` unique-constraint migration accounts for any pre-existing
+- [x] The `notification.entityId` unique-constraint migration accounts for any pre-existing
       duplicate rows (dedup if present) so it applies cleanly.
-- [ ] Tests follow the prior art in `memos.integration.test.ts` (real Postgres via
+- [x] Tests follow the prior art in `memos.integration.test.ts` (real Postgres via
       testcontainers) and never start the interval worker.
