@@ -8,7 +8,12 @@ ENV PATH="$PNPM_HOME:$PATH"
 ENV CI=1
 ENV NODE_ENV=production
 
+# package.json pins the pnpm version via "packageManager" — copy it in before
+# activating corepack so `corepack install` resolves that exact version instead
+# of falling back to whatever corepack considers latest.
+COPY package.json ./
 RUN corepack enable pnpm \
+    && corepack install \
     && pnpm install --global turbo@^2
 
 # =========================================================================== #
