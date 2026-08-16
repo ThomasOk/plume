@@ -39,6 +39,7 @@ coverage/
 .nyc_output/
 
 .agents/
+.claude/skills/
 skills-lock.json
 
 docs/personnal_docs
