@@ -19,5 +19,4 @@ export {
 } from '../server/features/memos/memos-schemas';
 
 // As you add more features, export their schemas here:
-// export { createPostSchema, updatePostSchema } from '../server/features/posts/schemas';
 // export { createUserSchema, updateUserSchema } from '../server/features/users/schemas';

@@ -13,11 +13,6 @@ out/
 .env*
 !.env.example
 
-# AI configuration and documentation
-CLAUDE.md
-ROADMAP.md
-docs/
-
 # IDE
 .vscode/
 .idea/
@@ -44,4 +39,7 @@ coverage/
 .nyc_output/
 
 .agents/
+.claude/skills/
 skills-lock.json
+
+docs/personnal_docs
