@@ -13,11 +13,6 @@ out/
 .env*
 !.env.example
 
-# AI configuration and documentation
-CLAUDE.md
-ROADMAP.md
-docs/
-
 # IDE
 .vscode/
 .idea/
@@ -45,3 +40,5 @@ coverage/
 
 .agents/
 skills-lock.json
+
+docs/personnal_docs
