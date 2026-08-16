@@ -13,8 +13,9 @@ import type {
 import type { StorageService } from '../../shared/storage';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
+import { COMMENT_CREATED } from '../../events/domain-events';
+import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
-import { createCommentNotification } from '../../shared/notifications';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
@@ -150,25 +151,36 @@ export async function createMemo(db: DatabaseInstance, userId: string, input: Cr
     parent = found;
   }
 
-  const [newMemo] = await db
-    .insert(memo)
-    .values({
-      id: nanoid(),
-      userId,
-      parentId: input.parentId ?? null,
-      content: input.content,
-      tags,
-      visibility: parent ? parent.visibility : input.visibility,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  // The comment insert and its outbox event commit together: both, or neither. The producer
+  // announces a fact (`comment.created`) and knows nothing about its consequences — no
+  // notification call here. It records unconditionally for any comment, even on one's own
+  // memo; the "don't notify yourself" policy now lives in the consumer, not the producer.
+  const newMemo = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(memo)
+      .values({
+        id: nanoid(),
+        userId,
+        parentId: input.parentId ?? null,
+        content: input.content,
+        tags,
+        visibility: parent ? parent.visibility : input.visibility,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-  if (!newMemo) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to save memo' });
+    if (!created) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to save memo' });
 
-  if (parent && parent.userId !== userId) {
-    await createCommentNotification(db, userId, newMemo.id, parent.userId);
-  }
+    if (parent) {
+      await recordEvent(tx, {
+        eventType: COMMENT_CREATED,
+        payload: { commentId: created.id, parentMemoId: parent.id, authorId: userId },
+      });
+    }
+
+    return created;
+  });
 
   return newMemo;
 }
