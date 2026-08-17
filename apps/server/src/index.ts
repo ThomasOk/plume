@@ -1,6 +1,13 @@
 import { serve } from '@hono/node-server';
 import { trpcServer } from '@hono/trpc-server';
-import { createApi } from '@repo/api/server';
+import {
+  createApi,
+  createEventBusWithHandlers,
+  createNoopEmailSender,
+  createResendEmailSender,
+  startOutboxWorker,
+  type EmailSender,
+} from '@repo/api/server';
 import { createAuth } from '@repo/auth/server';
 import { createDb } from '@repo/db/client';
 import { Hono } from 'hono';
@@ -33,6 +40,29 @@ const auth = createAuth({
       : undefined,
 });
 const api = createApi({ auth, db, storage });
+
+// Outbox pipeline, composed once at boot (never on import, so tests never start the worker).
+// Resend drives the email reaction when a key is configured; without one we fall back to a
+// no-op sender (see its adapter for why) and warn loudly here so the operator knows email is
+// off — the rest of the pipeline, notifications included, is unaffected.
+let emailSender: EmailSender;
+if (env.RESEND_API_KEY) {
+  emailSender = createResendEmailSender({
+    apiKey: env.RESEND_API_KEY,
+    from: env.RESEND_FROM_EMAIL,
+  });
+} else {
+  logger.warn(
+    'RESEND_API_KEY not set — comment emails are disabled; notifications are still persisted',
+  );
+  emailSender = createNoopEmailSender((message) => logger.debug(message));
+}
+const eventBus = createEventBusWithHandlers(db, emailSender);
+const outboxWorker = startOutboxWorker({
+  db,
+  bus: eventBus,
+  onError: (error) => logger.error({ err: error }, 'Outbox drain failed'),
+});
 
 const app = new Hono<{
   Variables: {
@@ -116,7 +146,16 @@ const server = serve(
   },
 );
 
-const shutdown = () => {
+// Railway sends SIGTERM on redeploy. Stop the outbox worker first — clearing its interval and
+// letting any in-flight drain finish so a delivery is never cut off mid-flight — then close
+// the HTTP server. Guarded so a second signal during shutdown is ignored rather than racing.
+let shuttingDown = false;
+const shutdown = async () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  await outboxWorker.stop();
+
   server.close((error) => {
     if (error) {
       logger.error({ err: error }, 'Error during shutdown');

@@ -35,5 +35,14 @@ export const createApi = ({
   };
 };
 
+// Outbox pipeline wiring, exported for the deployable server to compose at boot. Kept out of
+// `createApi` on purpose: importing the package must never start the polling worker, so tests
+// that import `@repo/api/server` stay free of a running interval.
+export { createEventBusWithHandlers } from './events/register-handlers';
+export { startOutboxWorker, type OutboxWorker } from './events/worker';
+export { createResendEmailSender } from './email/resend-email-sender';
+export { createNoopEmailSender } from './email/noop-email-sender';
+export type { EmailSender } from './email/email-sender';
+
 export type AppRouter = typeof appRouter;
 export type { AppLogger, StorageService };
