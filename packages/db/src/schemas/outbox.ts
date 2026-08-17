@@ -15,8 +15,9 @@ export const outbox = pgTable('outbox', {
   eventType: text('event_type').notNull(),
   payload: jsonb('payload').notNull(),
   status: outboxStatusEnum('status').notNull().default('pending'),
-  // Retry bookkeeping. Populated now but only exercised by the backoff/dead-letter
-  // ticket; the drain step increments `attempts` and records `lastError` on failure.
+  // Retry bookkeeping. On a failed delivery the drain increments `attempts`, records
+  // `lastError`, and pushes `nextAttemptAt` out by exponential backoff; after a bounded
+  // number of attempts the row is dead-lettered (`status = 'failed'`).
   attempts: integer('attempts').notNull().default(0),
   nextAttemptAt: timestamp('next_attempt_at').notNull(),
   lastError: text('last_error'),
