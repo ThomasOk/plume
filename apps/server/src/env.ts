@@ -30,6 +30,9 @@ export const envSchema = z.object({
   // the outbox worker (ticket 04) wires the real sender only when a key is present.
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_EMAIL: z.email().default('onboarding@resend.dev'),
+  // Display name shown as the sender in mail clients (Gmail shows this, not the address).
+  // Composed with RESEND_FROM_EMAIL into a `Name <email>` From header at boot.
+  RESEND_FROM_NAME: z.string().min(1).default('Plume'),
 });
 
 export const env = envSchema.parse(process.env);
