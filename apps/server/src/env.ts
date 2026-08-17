@@ -26,6 +26,10 @@ export const envSchema = z.object({
   SERVER_R2_BUCKET_NAME: z.string().min(1),
   SERVER_R2_PUBLIC_URL: z.url(),
   SERVER_R2_UPLOAD_SIZE_LIMIT_MB: z.string().default('30').transform(Number),
+  // Resend (comment-email reaction). Optional so the app boots without email configured;
+  // the outbox worker (ticket 04) wires the real sender only when a key is present.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.email().default('onboarding@resend.dev'),
 });
 
 export const env = envSchema.parse(process.env);

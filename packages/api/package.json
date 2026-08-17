@@ -33,6 +33,7 @@
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
     "nanoid": "catalog:",
+    "resend": "^6.20.0",
     "superjson": "catalog:",
     "url-join": "catalog:",
     "zod": "catalog:"
