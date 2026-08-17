@@ -48,7 +48,8 @@ export async function drainOnce({ db, bus }: DrainDeps): Promise<void> {
     .orderBy(asc(outbox.createdAt), asc(outbox.id));
 
   for (const row of rows) {
-    await bus.emit(row.eventType, row.payload);
+    // The row id is the event's delivery identity; handlers use it as an idempotency key.
+    await bus.emit(row.eventType, row.payload, { eventId: row.id });
     await db
       .update(outbox)
       .set({ status: 'processed', processedAt: new Date() })

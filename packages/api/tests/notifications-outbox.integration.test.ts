@@ -2,6 +2,7 @@ import { type DatabaseInstance, eq, memo, notification, outbox, user } from '@re
 import { drainOnce } from '../src/server/events/outbox';
 import { createEventBusWithHandlers } from '../src/server/events/register-handlers';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
+import { createFakeEmailSender } from './helpers/email';
 import { createAuthenticatedCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
@@ -113,7 +114,7 @@ describe('drainOnce consumer', () => {
     const caller = createAuthenticatedCaller(db, commenter.id);
     const comment = await caller.memos.create({ content: 'Nice!', parentId: parentMemo.id });
 
-    const bus = createEventBusWithHandlers(db);
+    const bus = createEventBusWithHandlers(db, createFakeEmailSender());
     await drainOnce({ db, bus });
 
     const notifications = await db.select().from(notification);
@@ -132,7 +133,7 @@ describe('drainOnce consumer', () => {
     const caller = createAuthenticatedCaller(db, commenter.id);
     await caller.memos.create({ content: 'Nice!', parentId: parentMemo.id });
 
-    const bus = createEventBusWithHandlers(db);
+    const bus = createEventBusWithHandlers(db, createFakeEmailSender());
     await drainOnce({ db, bus });
 
     // Force the row back to pending to genuinely re-dispatch the event (a crash/replay),
@@ -148,7 +149,7 @@ describe('drainOnce consumer', () => {
     const caller = createAuthenticatedCaller(db, author.id);
     await caller.memos.create({ content: 'replying to myself', parentId: parentMemo.id });
 
-    const bus = createEventBusWithHandlers(db);
+    const bus = createEventBusWithHandlers(db, createFakeEmailSender());
     await drainOnce({ db, bus });
 
     const notifications = await db.select().from(notification);

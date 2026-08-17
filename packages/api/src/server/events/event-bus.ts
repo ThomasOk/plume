@@ -1,7 +1,15 @@
 import { EventEmitter } from 'node:events';
 import type { DomainEventMap, DomainEventType } from './domain-events';
 
-type Handler = (payload: unknown) => Promise<void> | void;
+type Handler = (payload: unknown, meta: EventMeta) => Promise<void> | void;
+
+// Delivery metadata for one dispatch — the event envelope, kept separate from the domain
+// payload. `eventId` is the outbox row id: it identifies *this delivery*, not the fact, so
+// it belongs here and not in the thin payload. Handlers that must be idempotent under the
+// outbox's at-least-once replay use it as an idempotency key.
+export interface EventMeta {
+  eventId: string;
+}
 
 // The EventBus port isolates the dispatch mechanism. The only implementation today
 // wraps Node's EventEmitter (in-process); this interface is the seam where a broker
@@ -13,9 +21,9 @@ type Handler = (payload: unknown) => Promise<void> | void;
 export interface EventBus {
   on<K extends DomainEventType>(
     eventType: K,
-    handler: (payload: DomainEventMap[K]) => Promise<void> | void,
+    handler: (payload: DomainEventMap[K], meta: EventMeta) => Promise<void> | void,
   ): void;
-  emit(eventType: string, payload: unknown): Promise<void>;
+  emit(eventType: string, payload: unknown, meta: EventMeta): Promise<void>;
 }
 
 export function createInProcessEventBus(): EventBus {
@@ -30,9 +38,9 @@ export function createInProcessEventBus(): EventBus {
     // the registered listeners and await them, so the drain step can mark a row
     // `processed` only when every handler resolved, and leave it `pending` if any
     // rejected (at-least-once delivery, retried until all handlers succeed).
-    async emit(eventType, payload) {
+    async emit(eventType, payload, meta) {
       const listeners = emitter.listeners(eventType) as Handler[];
-      await Promise.all(listeners.map((listener) => listener(payload)));
+      await Promise.all(listeners.map((listener) => listener(payload, meta)));
     },
   };
 }

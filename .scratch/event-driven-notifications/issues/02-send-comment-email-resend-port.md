@@ -17,12 +17,12 @@ API").
 
 **Blocked by:** 01 — needs the `comment.created` event, the `EventBus`, and `drainOnce`.
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] After `drainOnce` processes a `comment.created` row, exactly one email is recorded by
+- [x] After `drainOnce` processes a `comment.created` row, exactly one email is recorded by
       the `FakeEmailSender`, addressed to the parent Memo's Author.
-- [ ] Calling `drainOnce` again results in still one email (idempotency key = outbox id).
-- [ ] Adding this handler required no change to `createMemo` (verified by the producer tests
+- [x] Calling `drainOnce` again results in still one email (idempotency key = outbox id).
+- [x] Adding this handler required no change to `createMemo` (verified by the producer tests
       from ticket 01 still passing unchanged).
-- [ ] Tests inject `FakeEmailSender` (mirroring the `mockStorage`/`mockLogger` style) and
+- [x] Tests inject `FakeEmailSender` (mirroring the `mockStorage`/`mockLogger` style) and
       never hit the network.
