@@ -49,7 +49,8 @@ let emailSender: EmailSender;
 if (env.RESEND_API_KEY) {
   emailSender = createResendEmailSender({
     apiKey: env.RESEND_API_KEY,
-    from: env.RESEND_FROM_EMAIL,
+    // `Name <email>` so recipients see a coherent sender ("Plume") rather than a bare address.
+    from: `${env.RESEND_FROM_NAME} <${env.RESEND_FROM_EMAIL}>`,
   });
 } else {
   logger.warn(
