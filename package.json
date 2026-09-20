@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "auth:schema:generate": "turbo run auth:schema:generate",
-    "postauth:schema:generate": "echo NOTE: you will also need to fix styles and db:push your new schema",
+    "postauth:schema:generate": "echo NOTE: fix styles, then run pnpm db:generate and pnpm db:migrate",
     "build": "turbo run build",
     "clean": "turbo run clean",
     "db:generate": "pnpm --filter @repo/db generate",
