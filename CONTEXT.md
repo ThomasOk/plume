@@ -13,8 +13,8 @@ _Avoid_: post, note (the codebase says "memo" everywhere; `post` is dead templat
 
 **Comment**:
 A reply to a memo — itself a memo with a parent. Comments are one level deep (you
-cannot comment on a comment) and have no visibility of their own; they share the parent
-memo's visibility.
+cannot comment on a comment) and have neither a visibility nor a space of their own; they
+share the parent memo's.
 _Avoid_: reply, thread, response.
 
 **Hashtag**:
@@ -28,9 +28,15 @@ separator; filtering by a parent tag includes all its descendants.
 _Avoid_: label, category, topic.
 
 **Visibility**:
-Whether a memo is `public` or `private`. A private memo is visible only to its author; a
-public memo appears on Explore. Defaults to private.
+Who can read a memo: `private` (its author alone), `space` (the members of its space), or
+`public` (everyone, on Explore). Defaults to private. A memo has a space if and only if
+its visibility is `space`.
 _Avoid_: shared, published.
+
+**Personal**:
+Said of a memo that belongs to no space. A personal memo is private or public; it is
+never visible to a space.
+_Avoid_: own, personal space.
 
 **Explore**:
 The public page listing every user's public memos. Readable without signing in.
@@ -56,10 +62,32 @@ The user who created a given memo. Use "author" for a memo's creator, "user" for
 account in general.
 _Avoid_: owner, creator, poster.
 
+**Space**:
+A container of memos shared by several users. A memo belongs to at most one space, and a
+space owns its memos: they stay when their author leaves it.
+_Avoid_: workspace, team, group, organization.
+
+**Member**:
+A user who belongs to a space. `member` is also the name of the ordinary role, the one
+that is not `admin` — an admin is a member too.
+_Avoid_: participant, collaborator.
+
+**Role**:
+What a member may do in a space: `admin` governs the space and its membership, `member`
+writes and governs only their own memos. Neither may edit another member's memo.
+_Avoid_: permission, right.
+
+**Invitation**:
+An offer to join a space, addressed to an email and accepted by following a link. It
+carries the role the invitee will receive, it expires, and it ceases to exist once
+accepted.
+_Avoid_: request, invite.
+
 **Draft**:
 A memo being composed, saved locally in the browser but not yet persisted to the server.
 _Avoid_: autosave.
 
 **Activity**:
-A user's memo-writing activity aggregated per day, shown on a calendar.
+Memo-writing activity aggregated per day, shown on a calendar. Its subject is whatever is
+in scope: your personal memos, or a space's memos from every member.
 _Avoid_: stats, heatmap.
