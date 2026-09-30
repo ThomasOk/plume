@@ -80,7 +80,7 @@ pnpm install
 # Copy environment files
 pnpm env:copy-example
 
-# Start PostgreSQL
+# Start PostgreSQL (publishes on host port 5432)
 docker compose up db -d
 
 # Apply database migrations
@@ -92,6 +92,10 @@ pnpm dev
 
 Web app: `http://localhost:8085`
 API server: `http://localhost:3035`
+
+If host port 5432 is already taken, set `DB_PORT` in a `.env` file at the repo root
+(e.g. `DB_PORT=5433`) and update the `.env` files that point at the database — no need
+to edit `compose.yaml`.
 
 ### Running with Docker Compose (production-like)
 
