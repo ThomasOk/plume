@@ -57,32 +57,35 @@ export const t = initTRPC.context<typeof createTRPCContext>().create({
 
 export const router = t.router;
 
+// Domain errors, as the client sees them. Anything not listed here is unexpected.
+const domainErrorCodes: [new (...args: never[]) => Error, TRPCError['code']][] = [
+  [MemoNotFoundError, 'NOT_FOUND'],
+  [InsufficientPermissionsError, 'FORBIDDEN'],
+  [AttachmentNotFoundError, 'NOT_FOUND'],
+  [NotificationNotFoundError, 'NOT_FOUND'],
+  [FileSizeLimitExceededError, 'BAD_REQUEST'],
+];
+
+// tRPC's `next()` never throws: a failure further down comes back as `{ ok: false }`, with
+// anything that was not a TRPCError wrapped into an INTERNAL_SERVER_ERROR whose `cause` is
+// the original. So the translation reads the result instead of catching.
 const errorMiddleware = t.middleware(async ({ ctx, next }) => {
-  try {
-    return await next();
-  } catch (error) {
-    if (error instanceof TRPCError) throw error;
-    if (error instanceof MemoNotFoundError) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
+  const result = await next();
+  if (result.ok) return result;
+
+  const { error } = result;
+  for (const [ErrorClass, code] of domainErrorCodes) {
+    if (error.cause instanceof ErrorClass) {
+      throw new TRPCError({ code, message: error.cause.message, cause: error.cause });
     }
-    if (error instanceof InsufficientPermissionsError) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
-    }
-    if (error instanceof AttachmentNotFoundError) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
-    }
-    if (error instanceof NotificationNotFoundError) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: error.message });
-    }
-    if (error instanceof FileSizeLimitExceededError) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
-    }
-    ctx.logger.error(
-      { requestId: ctx.requestId, err: error },
-      'Unexpected error',
-    );
-    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
   }
+  if (error.code !== 'INTERNAL_SERVER_ERROR') return result;
+
+  ctx.logger.error(
+    { requestId: ctx.requestId, err: error.cause ?? error },
+    'Unexpected error',
+  );
+  throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' });
 });
 
 const timingMiddleware = t.middleware(async ({ ctx, next, path }) => {
