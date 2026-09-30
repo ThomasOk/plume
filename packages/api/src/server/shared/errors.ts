@@ -32,3 +32,12 @@ export class FileSizeLimitExceededError extends Error {
     super(`File size exceeds the ${limitMb} MB limit`);
   }
 }
+
+// One error for "no such space" and "not a member of it": a distinct refusal would let a
+// caller probe identifiers to learn which spaces exist.
+export class SpaceNotFoundError extends Error {
+  readonly code = 'SPACE_NOT_FOUND';
+  constructor() {
+    super('Space not found');
+  }
+}

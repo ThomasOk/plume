@@ -21,6 +21,7 @@ import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as memosprivateLayoutRouteImport } from './routes/(memos)/(private)/layout'
 import { Route as memosprivateIndexRouteImport } from './routes/(memos)/(private)/index'
+import { Route as memosprivateSpacesSpaceIdRouteImport } from './routes/(memos)/(private)/spaces.$spaceId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -79,6 +80,12 @@ const memosprivateIndexRoute = memosprivateIndexRouteImport.update({
   path: '/',
   getParentRoute: () => memosprivateLayoutRoute,
 } as any)
+const memosprivateSpacesSpaceIdRoute =
+  memosprivateSpacesSpaceIdRouteImport.update({
+    id: '/spaces/$spaceId',
+    path: '/spaces/$spaceId',
+    getParentRoute: () => memosprivateLayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof memosprivateIndexRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
+  '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof memosprivateIndexRoute
@@ -101,6 +109,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
+  '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/(memos)/explore': typeof memosExploreRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/(memos)/(private)/': typeof memosprivateIndexRoute
+  '/(memos)/(private)/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/explore'
     | '/memos/$memoId'
+    | '/spaces/$spaceId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/explore'
     | '/memos/$memoId'
+    | '/spaces/$spaceId'
   id:
     | '__root__'
     | '/(auth)'
@@ -154,6 +166,7 @@ export interface FileRouteTypes {
     | '/(memos)/explore'
     | '/memos/$memoId'
     | '/(memos)/(private)/'
+    | '/(memos)/(private)/spaces/$spaceId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof memosprivateIndexRouteImport
       parentRoute: typeof memosprivateLayoutRoute
     }
+    '/(memos)/(private)/spaces/$spaceId': {
+      id: '/(memos)/(private)/spaces/$spaceId'
+      path: '/spaces/$spaceId'
+      fullPath: '/spaces/$spaceId'
+      preLoaderRoute: typeof memosprivateSpacesSpaceIdRouteImport
+      parentRoute: typeof memosprivateLayoutRoute
+    }
   }
 }
 
@@ -271,10 +291,12 @@ const authLayoutRouteWithChildren = authLayoutRoute._addFileChildren(
 
 interface memosprivateLayoutRouteChildren {
   memosprivateIndexRoute: typeof memosprivateIndexRoute
+  memosprivateSpacesSpaceIdRoute: typeof memosprivateSpacesSpaceIdRoute
 }
 
 const memosprivateLayoutRouteChildren: memosprivateLayoutRouteChildren = {
   memosprivateIndexRoute: memosprivateIndexRoute,
+  memosprivateSpacesSpaceIdRoute: memosprivateSpacesSpaceIdRoute,
 }
 
 const memosprivateLayoutRouteWithChildren =

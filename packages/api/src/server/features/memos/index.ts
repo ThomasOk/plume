@@ -10,6 +10,7 @@ import {
   stats,
   tags,
   publicTags,
+  space,
 } from './memos-procedures';
 
 export const memosRouter = router({
@@ -23,4 +24,5 @@ export const memosRouter = router({
   stats,
   tags,
   publicTags,
+  space,
 });

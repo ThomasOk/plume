@@ -1,5 +1,6 @@
 import { and, eq, isNull, or } from '@repo/db';
 import { memo } from '@repo/db/schema';
+import type { SpaceMembership } from '../spaces';
 import type { SQL } from '@repo/db';
 
 /**
@@ -11,6 +12,15 @@ export type MemoScope =
   | { kind: 'space'; spaceId: string };
 
 export const personalScope = (userId: string): MemoScope => ({ kind: 'personal', userId });
+
+/**
+ * A space scope is built from a membership, never from a bare identifier: the only way to
+ * hold one is to have gone through `spaceProcedure`, which resolved it.
+ */
+export const spaceScope = (membership: SpaceMembership): MemoScope => ({
+  kind: 'space',
+  spaceId: membership.spaceId,
+});
 
 /**
  * The one place a scope becomes SQL. No call site composes this by hand — the second

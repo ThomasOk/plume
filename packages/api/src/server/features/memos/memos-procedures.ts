@@ -1,5 +1,6 @@
-import { protectedProcedure, publicProcedure } from '../../trpc';
-import { personalScope } from './memo-scope';
+import { protectedProcedure, publicProcedure, router } from '../../trpc';
+import { spaceProcedure } from '../spaces';
+import { personalScope, spaceScope } from './memo-scope';
 import {
   createMemoSchema,
   updateMemoSchema,
@@ -73,3 +74,16 @@ export const tags = protectedProcedure
 
 export const publicTags = publicProcedure
   .query(({ ctx }) => getPublicTags(ctx.db));
+
+// The same reads, on a space. They sit on `spaceProcedure` rather than taking an optional
+// `spaceId` on the personal procedures: membership is enforced by where a procedure is
+// built, not by a branch each procedure must remember to write.
+export const space = router({
+  list: spaceProcedure
+    .input(listMemosSchema)
+    .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), input)),
+  stats: spaceProcedure
+    .query(({ ctx }) => getMemoStats(ctx.db, spaceScope(ctx.membership))),
+  tags: spaceProcedure
+    .query(({ ctx }) => getMemoTags(ctx.db, spaceScope(ctx.membership))),
+});

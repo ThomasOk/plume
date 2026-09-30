@@ -6,15 +6,17 @@ type MemoListItem = Memo & { author?: Author };
 
 interface MemoListProps {
   memos: MemoListItem[];
+  emptyMessage?: string;
 }
 
-export const MemoList = ({ memos }: MemoListProps) => {
+export const MemoList = ({
+  memos,
+  emptyMessage = 'No memos yet. Start creating one!',
+}: MemoListProps) => {
   if (memos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-muted-foreground">
-          No memos yet. Start creating one!
-        </p>
+        <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }

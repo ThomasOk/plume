@@ -4,12 +4,14 @@ import type { DatabaseInstance } from '@repo/db/client';
 import { attachmentsRouter } from './features/attachments';
 import { memosRouter } from './features/memos';
 import { notificationsRouter } from './features/notifications';
+import { spacesRouter } from './features/spaces';
 import { createTRPCContext as createTRPCContextInternal, router } from './trpc';
 
 export const appRouter = router({
   memos: memosRouter,
   attachments: attachmentsRouter,
   notifications: notificationsRouter,
+  spaces: spacesRouter,
 });
 
 export const createApi = ({

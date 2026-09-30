@@ -9,6 +9,7 @@ import {
   AttachmentNotFoundError,
   NotificationNotFoundError,
   FileSizeLimitExceededError,
+  SpaceNotFoundError,
 } from './shared/errors';
 export type { StorageService };
 
@@ -63,6 +64,7 @@ const domainErrorCodes: [new (...args: never[]) => Error, TRPCError['code']][] =
   [InsufficientPermissionsError, 'FORBIDDEN'],
   [AttachmentNotFoundError, 'NOT_FOUND'],
   [NotificationNotFoundError, 'NOT_FOUND'],
+  [SpaceNotFoundError, 'NOT_FOUND'],
   [FileSizeLimitExceededError, 'BAD_REQUEST'],
 ];
 

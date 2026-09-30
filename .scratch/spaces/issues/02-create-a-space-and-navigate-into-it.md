@@ -32,12 +32,12 @@ Navigation:
 
 **Status:** ready-for-agent
 
-- [ ] A User can create a Space with a title and is its `admin`
-- [ ] The Space and its first membership are created atomically
-- [ ] The Space list returns only Spaces the User is a Member of
-- [ ] A non-Member reading a Space gets the same answer as for a Space that does not exist
-- [ ] The Space is addressable by URL and survives a reload
-- [ ] The sidebar switcher moves between personal Memos and each Space
-- [ ] Inside a Space, the Memo list, Tag tree, Activity and count are empty and scoped to it
-- [ ] The personal views are unaffected
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] A User can create a Space with a title and is its `admin`
+- [x] The Space and its first membership are created atomically
+- [x] The Space list returns only Spaces the User is a Member of
+- [x] A non-Member reading a Space gets the same answer as for a Space that does not exist
+- [x] The Space is addressable by URL and survives a reload
+- [x] The sidebar switcher moves between personal Memos and each Space
+- [x] Inside a Space, the Memo list, Tag tree, Activity and count are empty and scoped to it
+- [x] The personal views are unaffected
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
