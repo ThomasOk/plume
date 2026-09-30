@@ -13,10 +13,10 @@ import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import {
   AttachmentNotFoundError,
-  InsufficientPermissionsError,
   FileSizeLimitExceededError,
   MemoNotFoundError,
 } from '../../shared/errors';
+import { readableMemoCondition, type MemoScope } from '../memos/memo-scope';
 
 type GetUploadUrlInput = z.infer<typeof getUploadUrlSchema>;
 type ConfirmUploadInput = z.infer<typeof confirmUploadSchema>;
@@ -143,22 +143,20 @@ export async function deleteAttachment(
 export async function listAttachmentsByMemo(
   db: DatabaseInstance,
   storage: StorageService,
-  sessionUserId: string | null,
+  scope: MemoScope | null,
   input: ListByMemoInput,
 ) {
+  // An attachment is readable exactly when its memo is, so the guard asks the scope
+  // rather than naming visibilities: testing `private` alone would leave a space memo's
+  // files open to anyone holding its id. An unreadable memo answers like a missing one,
+  // so the refusal cannot be used to confirm that an identifier names something.
   const [memoRow] = await db
-    .select({ userId: memo.userId, visibility: memo.visibility })
+    .select({ id: memo.id })
     .from(memo)
-    .where(eq(memo.id, input.memoId))
+    .where(and(eq(memo.id, input.memoId), readableMemoCondition(scope)))
     .limit(1);
 
   if (!memoRow) throw new MemoNotFoundError();
-
-  if (memoRow.visibility === 'private') {
-    if (!sessionUserId || sessionUserId !== memoRow.userId) {
-      throw new InsufficientPermissionsError();
-    }
-  }
 
   const rows = await db
     .select()

@@ -6,24 +6,33 @@ import {
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu';
 import { IoEarthOutline } from 'react-icons/io5';
-import { RiCheckLine, RiLockLine } from 'react-icons/ri';
+import { RiCheckLine, RiGroupLine, RiLockLine } from 'react-icons/ri';
+import type { Memo } from '@/lib/types';
+import type { IconType } from 'react-icons';
 import { sounds } from '@/lib/sounds';
 
 interface VisibilitySelectorProps {
-  value: 'public' | 'private';
-  onChange: (value: 'public' | 'private') => void;
+  value: Memo['visibility'];
+  onChange: (value: SelectableVisibility) => void;
 }
 
-const options = [
-  { value: 'private' as const, label: 'Private', icon: RiLockLine },
-  { value: 'public' as const, label: 'Public', icon: IoEarthOutline },
-];
+// A memo in a space is displayed, never chosen here: naming a space is a different
+// decision from picking between private and public, and it is not offered yet.
+const visibilities = {
+  private: { label: 'Private', icon: RiLockLine },
+  public: { label: 'Public', icon: IoEarthOutline },
+  space: { label: 'Space', icon: RiGroupLine },
+} satisfies Record<Memo['visibility'], { label: string; icon: IconType }>;
+
+const selectableVisibilities = ['private', 'public'] as const;
+
+export type SelectableVisibility = (typeof selectableVisibilities)[number];
 
 export const VisibilitySelector = ({
   value,
   onChange,
 }: VisibilitySelectorProps) => {
-  const current = options.find((o) => o.value === value)!;
+  const current = visibilities[value];
   const Icon = current.icon;
 
   return (
@@ -40,17 +49,17 @@ export const VisibilitySelector = ({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {options.map((option) => {
-          const OptionIcon = option.icon;
+        {selectableVisibilities.map((option) => {
+          const OptionIcon = visibilities[option].icon;
           return (
             <DropdownMenuItem
-              key={option.value}
+              key={option}
               className="gap-2 cursor-pointer"
-              onClick={() => { sounds.tick(); onChange(option.value); }}
+              onClick={() => { sounds.tick(); onChange(option); }}
             >
               <OptionIcon className="size-4" />
-              <span className="flex-1">{option.label}</span>
-              {value === option.value && (
+              <span className="flex-1">{visibilities[option].label}</span>
+              {value === option && (
                 <RiCheckLine
                   className="size-4
   text-primary"

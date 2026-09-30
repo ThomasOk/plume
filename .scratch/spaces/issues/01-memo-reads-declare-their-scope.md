@@ -48,13 +48,13 @@ Memos the moment ticket 03 ships.
 
 **Status:** ready-for-agent
 
-- [ ] The migration applies cleanly and is committed
-- [ ] The `CHECK` constraint rejects a Memo with a Space whose visibility is not `space`
-- [ ] The `CHECK` constraint rejects a Memo whose visibility is `space` with no Space
-- [ ] Every Memo read takes a scope; omitting it is a type error
-- [ ] The scope-to-SQL translation exists in exactly one place
-- [ ] A Memo inserted directly with a Space does **not** appear in the author's personal list
-- [ ] A Memo inserted directly with a Space does **not** contribute to the author's personal Tag tree, Activity or Memo count
-- [ ] The attachments read guard goes through the scope instead of testing `private`
-- [ ] The existing integration and unit suites pass unchanged
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] The migration applies cleanly and is committed
+- [x] The `CHECK` constraint rejects a Memo with a Space whose visibility is not `space`
+- [x] The `CHECK` constraint rejects a Memo whose visibility is `space` with no Space
+- [x] Every Memo read takes a scope; omitting it is a type error
+- [x] The scope-to-SQL translation exists in exactly one place
+- [x] A Memo inserted directly with a Space does **not** appear in the author's personal list
+- [x] A Memo inserted directly with a Space does **not** contribute to the author's personal Tag tree, Activity or Memo count
+- [x] The attachments read guard goes through the scope instead of testing `private`
+- [x] The existing integration and unit suites pass unchanged
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass

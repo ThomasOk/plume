@@ -57,6 +57,13 @@
       "when": 1786918053347,
       "tag": "0007_absurd_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790784126430,
+      "tag": "0008_spotty_cammi",
+      "breakpoints": true
     }
   ]
 }

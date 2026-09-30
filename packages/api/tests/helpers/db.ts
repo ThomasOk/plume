@@ -14,7 +14,9 @@ let container: StartedPostgreSqlContainer;
 let db: DatabaseInstance;
 
 export const startTestDatabase = async (): Promise<DatabaseInstance> => {
-  container = await new PostgreSqlContainer('postgres:16').start();
+  // Same major as compose.yaml pins and as local dev runs, so a constraint or a cast
+  // that behaves differently between majors cannot pass here and fail there.
+  container = await new PostgreSqlContainer('postgres:17').start();
   db = createDb({ databaseUrl: container.getConnectionUri() });
   await migrate(db, { migrationsFolder });
   return db;
