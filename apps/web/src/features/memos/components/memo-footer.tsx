@@ -3,6 +3,8 @@ import { Button } from '@repo/ui/components/button';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
 import { MdOutlineAttachFile } from 'react-icons/md';
+import type { SelectableVisibility } from './visibility-selector';
+import type { Memo } from '@/lib/types';
 import { VisibilitySelector } from './visibility-selector';
 import { sounds } from '@/lib/sounds';
 
@@ -105,8 +107,8 @@ interface MemoFooterProps {
   isPending: boolean;
   isValid: boolean;
   isComment?: boolean;
-  visibility: 'public' | 'private';
-  onVisibilityChange: (value: 'public' | 'private') => void;
+  visibility: Memo['visibility'];
+  onVisibilityChange: (value: SelectableVisibility) => void;
   onCancel?: () => void;
   onAttachFile?: () => void;
 }

@@ -1,4 +1,5 @@
 import { protectedProcedure, publicProcedure } from '../../trpc';
+import { personalScope } from '../memos/memo-scope';
 import {
   getUploadUrlSchema,
   confirmUploadSchema,
@@ -41,5 +42,10 @@ export const deleteAttachment = protectedProcedure
 export const listByMemo = publicProcedure
   .input(listByMemoSchema)
   .query(({ ctx, input }) =>
-    listAttachmentsByMemo(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input),
+    listAttachmentsByMemo(
+      ctx.db,
+      ctx.storage,
+      ctx.session ? personalScope(ctx.session.user.id) : null,
+      input,
+    ),
   );

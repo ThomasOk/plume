@@ -1,4 +1,5 @@
 import { protectedProcedure, publicProcedure } from '../../trpc';
+import { personalScope } from './memo-scope';
 import {
   createMemoSchema,
   updateMemoSchema,
@@ -22,11 +23,18 @@ import {
 
 export const getById = publicProcedure
   .input(getByIdSchema)
-  .query(({ ctx, input }) => getMemoById(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
+  .query(({ ctx, input }) =>
+    getMemoById(
+      ctx.db,
+      ctx.storage,
+      ctx.session ? personalScope(ctx.session.user.id) : null,
+      input,
+    ),
+  );
 
 export const list = protectedProcedure
   .input(listMemosSchema)
-  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, ctx.session.user.id, input));
+  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, personalScope(ctx.session.user.id), input));
 
 export const listPublic = publicProcedure
   .input(listMemosSchema)
@@ -34,11 +42,20 @@ export const listPublic = publicProcedure
 
 export const create = protectedProcedure
   .input(createMemoSchema)
-  .mutation(({ ctx, input }) => createMemo(ctx.db, ctx.session.user.id, input));
+  .mutation(({ ctx, input }) =>
+    createMemo(ctx.db, ctx.session.user.id, personalScope(ctx.session.user.id), input),
+  );
 
 export const listComments = publicProcedure
   .input(listCommentsSchema)
-  .query(({ ctx, input }) => listMemoComments(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
+  .query(({ ctx, input }) =>
+    listMemoComments(
+      ctx.db,
+      ctx.storage,
+      ctx.session ? personalScope(ctx.session.user.id) : null,
+      input,
+    ),
+  );
 
 export const update = protectedProcedure
   .input(updateMemoSchema)
@@ -49,10 +66,10 @@ export const deleteMemo = protectedProcedure
   .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.session.user.id, input));
 
 export const stats = protectedProcedure
-  .query(({ ctx }) => getMemoStats(ctx.db, ctx.session.user.id));
+  .query(({ ctx }) => getMemoStats(ctx.db, personalScope(ctx.session.user.id)));
 
 export const tags = protectedProcedure
-  .query(({ ctx }) => getMemoTags(ctx.db, ctx.session.user.id));
+  .query(({ ctx }) => getMemoTags(ctx.db, personalScope(ctx.session.user.id)));
 
 export const publicTags = publicProcedure
   .query(({ ctx }) => getPublicTags(ctx.db));
