@@ -1,4 +1,4 @@
-import { usePrivateMemoTags } from '../hooks';
+import { useMemoScope, useMemoTags } from '../hooks';
 import { useSuggestions } from '../hooks/use-suggestions';
 import { SuggestionsPopup } from './suggestions-popup';
 
@@ -11,7 +11,9 @@ export const TagSuggestions = ({
   editorRef,
   onInsert,
 }: TagSuggestionsProps) => {
-  const { data } = usePrivateMemoTags();
+  // Suggest the tags of the scope being written into.
+  const scope = useMemoScope();
+  const { data } = useMemoTags({ scope });
   const sortedTags = Object.entries(data ?? {}).sort((a, b) => b[1] - a[1]);
   const { position, suggestions, selectedIndex, isVisible, handleItemSelect } =
     useSuggestions({

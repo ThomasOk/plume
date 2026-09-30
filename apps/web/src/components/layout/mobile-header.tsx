@@ -13,6 +13,7 @@ import { RiMenuLine } from 'react-icons/ri';
 import { SidebarNav } from './sidebar-nav';
 import { SearchInput, TagList, useSidebarTags } from '@/features/memos';
 import { StatisticsView } from '@/features/memos/components/statistics-view';
+import { SpaceSwitcher } from '@/features/spaces';
 
 export const MobileHeader = () => {
   const [open, setOpen] = useState(false);
@@ -50,6 +51,7 @@ export const MobileHeader = () => {
             <SheetTitle className="sr-only">Filter</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-6 pt-2 px-6 overflow-y-auto">
+            <SpaceSwitcher />
             <SearchInput />
             <StatisticsView />
             <TagList tagCounts={data ?? {}} isLoading={isLoading} />

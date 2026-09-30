@@ -3,7 +3,7 @@ import { useSearch } from '@tanstack/react-router';
 import { format, addMonths, subMonths } from 'date-fns';
 import { useState } from 'react';
 import { MdOutlineChevronLeft, MdOutlineChevronRight } from 'react-icons/md';
-import { useMemosStats } from '../hooks';
+import { useMemoScope, useMemosStats } from '../hooks';
 import { MonthCalendar } from '@/components/calendar';
 import { getMonthFirstDay } from '@/components/calendar/utils';
 import { useDateFilterNavigation } from '@/hooks/use-date-filter-navigation';
@@ -16,7 +16,8 @@ export const StatisticsView = () => {
 
   const navigateToDateFilter = useDateFilterNavigation();
 
-  const { data: statsData } = useMemosStats();
+  const scope = useMemoScope();
+  const { data: statsData } = useMemosStats({ scope });
 
   const handlePrevMonth = () => {
     setMonth(format(subMonths(getMonthFirstDay(month), 1), 'yyyy-MM'));

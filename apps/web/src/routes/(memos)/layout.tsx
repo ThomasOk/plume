@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { SearchInput, TagList, useSidebarTags } from '@/features/memos';
 import { StatisticsView } from '@/features/memos/components/statistics-view';
+import { SpaceSwitcher } from '@/features/spaces';
 
 export const Route = createFileRoute('/(memos)')({
   component: MemosLayout,
@@ -12,6 +13,7 @@ function MemosLayout() {
   return (
     <div className="flex h-full">
       <aside className="hidden md:flex flex-col gap-4 w-[280px] border-r p-4 overflow-y-auto">
+        <SpaceSwitcher />
         <SearchInput />
         <StatisticsView />
         <TagList tagCounts={data ?? {}} isLoading={isLoading} />

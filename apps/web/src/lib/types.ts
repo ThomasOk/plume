@@ -28,3 +28,4 @@ export type Author = MemoWithAuthor['author'];
 export type Attachment = RouterOutputs['attachments']['list'][number];
 export type Comment = RouterOutputs['memos']['listComments'][number];
 export type Notification = RouterOutputs['notifications']['list'][number];
+export type Space = RouterOutputs['spaces']['list'][number];

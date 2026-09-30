@@ -18,5 +18,11 @@ export {
   MAX_MEMO_CHARACTERS,
 } from '../server/features/memos/memos-schemas';
 
+// Spaces feature schemas
+export {
+  createSpaceSchema,
+  MAX_SPACE_TITLE_CHARACTERS,
+} from '../server/features/spaces/spaces-schemas';
+
 // As you add more features, export their schemas here:
 // export { createUserSchema, updateUserSchema } from '../server/features/users/schemas';
