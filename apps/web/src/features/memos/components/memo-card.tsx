@@ -54,6 +54,7 @@ import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
+import { MoveMemoSubmenu } from './move-memo-submenu';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 import {
   AttachmentList,
@@ -321,6 +322,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                           <MdOutlineEdit className="size-4" />
                           Edit
                         </DropdownMenuItem>
+                        {!isComment && <MoveMemoSubmenu memo={memo} />}
                         <DropdownMenuItem
                           onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
                         >

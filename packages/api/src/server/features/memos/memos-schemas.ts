@@ -15,6 +15,19 @@ export const createSpaceMemoSchema = insertMemoSchema.pick({ content: true }).ex
   visibility: z.literal('space').default('space'),
 });
 
+// Moving a memo into a space: the space is the procedure's, so only the memo is named.
+export const moveSpaceMemoSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+});
+
+// Moving a memo out of its space makes it personal, and a personal memo is private or
+// public. The new audience is required, with no default: a memo never silently changes
+// who can read it.
+export const moveMemoSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+  visibility: z.enum(['private', 'public']),
+});
+
 export const listCommentsSchema = z.object({
   memoId: z.string().min(1, 'Memo ID is required'),
 });

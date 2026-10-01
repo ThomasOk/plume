@@ -5,6 +5,7 @@ import {
   create,
   update,
   deleteMemo,
+  move,
   listPublic,
   listComments,
   stats,
@@ -21,6 +22,7 @@ export const memosRouter = router({
   create,
   update,
   delete: deleteMemo, // delete is a reserved word
+  move,
   stats,
   tags,
   publicTags,

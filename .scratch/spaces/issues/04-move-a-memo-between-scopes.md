@@ -13,6 +13,11 @@ a state the `CHECK` constraint rejects.
   Attachments move with it — a Comment may never be more visible than what it answers.
 - Moving a Memo **out** of a Space requires choosing its new audience, private or public. A
   Memo never silently changes who can read it.
+- Moving a Memo is refused while it carries a Comment by another User, in either
+  direction. That Comment was written for the Memo's audience as it stood and, having no
+  audience of its own, would follow the Memo onto Explore, into a Space its author is not
+  in, or out of its author's reach, without them being asked. Decided while implementing;
+  recorded in ADR 0003.
 - Only the Memo's Author moves it. An admin may delete another Member's Memo (ticket 06)
   but never relocate or edit it: deleting is moderation, moving is a change to someone
   else's work under a preserved byline.
@@ -22,12 +27,12 @@ a state the `CHECK` constraint rejects.
 
 **Status:** ready-for-agent
 
-- [ ] The Author moves their personal Memo into a Space they belong to
-- [ ] The Author moves their Space Memo out, choosing private or public
-- [ ] Moving out without choosing an audience is refused
-- [ ] Moving into a Space the User is not a Member of is refused
-- [ ] A User cannot move another Member's Memo
-- [ ] A moved Memo's Comments follow it and stay consistent with the constraint
-- [ ] A moved Memo's Attachments follow its new audience
-- [ ] The Memo leaves the source scope's list, Tag tree, Activity and count, and joins the target's
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] The Author moves their personal Memo into a Space they belong to
+- [x] The Author moves their Space Memo out, choosing private or public
+- [x] Moving out without choosing an audience is refused
+- [x] Moving into a Space the User is not a Member of is refused
+- [x] A User cannot move another Member's Memo
+- [x] A moved Memo's Comments follow it and stay consistent with the constraint
+- [x] A moved Memo's Attachments follow its new audience
+- [x] The Memo leaves the source scope's list, Tag tree, Activity and count, and joins the target's
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
