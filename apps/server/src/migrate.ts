@@ -10,7 +10,7 @@ import { logger } from './lib/logger';
 // restart and replica, and a failing migration would crash-loop the server.
 //
 // The old version keeps serving while this runs, against the new schema: migrations must
-// stay backward compatible (add, then remove in a later deployment). See CLAUDE.md.
+// stay backward compatible (add, then remove in a later deployment). See ADR 0005.
 //
 // Only the database URL is read, not the whole server env: migrating needs nothing else.
 const databaseUrl = z.string().min(1).parse(process.env.SERVER_POSTGRES_URL);
