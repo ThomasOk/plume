@@ -7,6 +7,7 @@ import {
   TagFilterBadge,
   SearchFilterBadge,
 } from '@/features/memos';
+import { MemoForm } from '@/features/memos/components/memo-form';
 import { useSpace } from '@/features/spaces';
 import { memosSearchSchema } from '@/lib/schemas/search-params';
 import { isNotFound } from '@/lib/trpc-errors';
@@ -35,6 +36,8 @@ function RouteComponent() {
   return (
     <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
       <h1 className="text-xl font-semibold mb-4 truncate">{space.data?.title}</h1>
+      {/* Keyed by space: moving to another space starts a form addressed to that one. */}
+      <MemoForm key={spaceId} />
       <div className="flex gap-2 flex-wrap">
         <DateFilterBadge />
         <TagFilterBadge />

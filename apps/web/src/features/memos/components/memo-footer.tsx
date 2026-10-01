@@ -3,9 +3,7 @@ import { Button } from '@repo/ui/components/button';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
 import { MdOutlineAttachFile } from 'react-icons/md';
-import type { SelectableVisibility } from './visibility-selector';
-import type { Memo } from '@/lib/types';
-import { VisibilitySelector } from './visibility-selector';
+import type { ReactNode } from 'react';
 import { sounds } from '@/lib/sounds';
 
 const SHOW_THRESHOLD = 0.7;
@@ -106,9 +104,8 @@ interface MemoFooterProps {
   isOverLimit: boolean;
   isPending: boolean;
   isValid: boolean;
-  isComment?: boolean;
-  visibility: Memo['visibility'];
-  onVisibilityChange: (value: SelectableVisibility) => void;
+  /** Who the memo is for. Absent on a comment, which takes its parent's audience. */
+  audienceControl?: ReactNode;
   onCancel?: () => void;
   onAttachFile?: () => void;
 }
@@ -118,9 +115,7 @@ export const MemoFooter = ({
   isOverLimit,
   isPending,
   isValid,
-  isComment = false,
-  visibility,
-  onVisibilityChange,
+  audienceControl,
   onCancel,
   onAttachFile,
 }: MemoFooterProps) => {
@@ -142,7 +137,7 @@ export const MemoFooter = ({
       </div>
       <div className="flex items-center gap-2">
         <CharacterIndicator charCount={charCount} />
-        {!isComment && <VisibilitySelector value={visibility} onChange={onVisibilityChange} />}
+        {audienceControl}
         {onCancel && (
           <Button
             type="button"

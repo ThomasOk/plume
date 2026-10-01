@@ -49,7 +49,7 @@ function RouteComponent() {
             Something went wrong. Please try again.
           </p>
         )}
-        {memos && <MemoList memos={memos} />}
+        {memos && <MemoList memos={memos} hideAuthors />}
       </div>
     </div>
   );

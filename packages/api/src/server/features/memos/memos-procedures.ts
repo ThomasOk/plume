@@ -3,6 +3,7 @@ import { spaceProcedure } from '../spaces';
 import { personalScope, spaceScope } from './memo-scope';
 import {
   createMemoSchema,
+  createSpaceMemoSchema,
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
@@ -28,7 +29,7 @@ export const getById = publicProcedure
     getMemoById(
       ctx.db,
       ctx.storage,
-      ctx.session ? personalScope(ctx.session.user.id) : null,
+      ctx.session?.user.id ?? null,
       input,
     ),
   );
@@ -53,7 +54,7 @@ export const listComments = publicProcedure
     listMemoComments(
       ctx.db,
       ctx.storage,
-      ctx.session ? personalScope(ctx.session.user.id) : null,
+      ctx.session?.user.id ?? null,
       input,
     ),
   );
@@ -79,6 +80,11 @@ export const publicTags = publicProcedure
 // `spaceId` on the personal procedures: membership is enforced by where a procedure is
 // built, not by a branch each procedure must remember to write.
 export const space = router({
+  create: spaceProcedure
+    .input(createSpaceMemoSchema)
+    .mutation(({ ctx, input }) =>
+      createMemo(ctx.db, ctx.session.user.id, spaceScope(ctx.membership), input),
+    ),
   list: spaceProcedure
     .input(listMemosSchema)
     .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), input)),

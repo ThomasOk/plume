@@ -16,7 +16,7 @@ import {
   FileSizeLimitExceededError,
   MemoNotFoundError,
 } from '../../shared/errors';
-import { readableMemoCondition, type MemoScope } from '../memos/memo-scope';
+import { readableMemoCondition } from '../memos/memo-scope';
 
 type GetUploadUrlInput = z.infer<typeof getUploadUrlSchema>;
 type ConfirmUploadInput = z.infer<typeof confirmUploadSchema>;
@@ -71,6 +71,19 @@ export async function confirmUpload(
   userId: string,
   input: ConfirmUploadInput,
 ) {
+  // A file is attached to a memo by writing that memo, which only its author does. Without
+  // this, anyone holding a memo id could put a file into it — in a space, a file every
+  // member would then be served under someone else's memo. Any other memo answers like a
+  // missing one.
+  if (input.memoId) {
+    const [ownMemo] = await db
+      .select({ id: memo.id })
+      .from(memo)
+      .where(and(eq(memo.id, input.memoId), eq(memo.userId, userId)))
+      .limit(1);
+    if (!ownMemo) throw new MemoNotFoundError();
+  }
+
   const [updated] = await db
     .update(attachment)
     .set({
@@ -143,7 +156,7 @@ export async function deleteAttachment(
 export async function listAttachmentsByMemo(
   db: DatabaseInstance,
   storage: StorageService,
-  scope: MemoScope | null,
+  readerId: string | null,
   input: ListByMemoInput,
 ) {
   // An attachment is readable exactly when its memo is, so the guard asks the scope
@@ -153,7 +166,7 @@ export async function listAttachmentsByMemo(
   const [memoRow] = await db
     .select({ id: memo.id })
     .from(memo)
-    .where(and(eq(memo.id, input.memoId), readableMemoCondition(scope)))
+    .where(and(eq(memo.id, input.memoId), readableMemoCondition(readerId)))
     .limit(1);
 
   if (!memoRow) throw new MemoNotFoundError();

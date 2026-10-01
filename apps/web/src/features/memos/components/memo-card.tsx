@@ -50,6 +50,7 @@ import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
+import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
@@ -125,6 +126,19 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
   const deleteMemo = useDeleteMemo();
   const deleteComment = useDeleteComment(memo.parentId ?? '');
   const deleteAction = isComment ? deleteComment : deleteMemo;
+
+  // An edit leaves a memo where it is: a personal memo switches between private and
+  // public, a memo in a space shows its space. A comment takes its parent's audience.
+  const audienceControl = isComment ? undefined : visibility === 'space' ? (
+    <SpaceAudience />
+  ) : (
+    <AudienceSelector
+      value={{ kind: visibility }}
+      onChange={(audience) => {
+        if (audience.kind !== 'space') setValue('visibility', audience.kind);
+      }}
+    />
+  );
 
   const closeFocusMode = () => {
     setIsFocusMode(false);
@@ -351,9 +365,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   isOverLimit={isOverLimit}
                   isPending={updateMemo.isPending || isUploading}
                   isValid={isValid}
-                  isComment={isComment}
-                  visibility={visibility}
-                  onVisibilityChange={(val) => setValue('visibility', val)}
+                  audienceControl={audienceControl}
                   onCancel={exitEdit}
                   onAttachFile={triggerFileSelect}
                 />
@@ -444,10 +456,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                           isOverLimit={isOverLimit}
                           isPending={updateMemo.isPending || isUploading}
                           isValid={isValid}
-                          visibility={visibility}
-                          onVisibilityChange={(val) =>
-                            setValue('visibility', val)
-                          }
+                          audienceControl={audienceControl}
                           onCancel={exitEdit}
                           onAttachFile={triggerFileSelect}
                         />

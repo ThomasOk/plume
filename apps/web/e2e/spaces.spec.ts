@@ -31,3 +31,28 @@ test('answers an unknown space as not found', async ({ page }) => {
 
   await expect(page.getByText('Space not found.')).toBeVisible();
 });
+
+test('writes a memo from inside a space into that space, and not into personal memos', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+
+  const title = `Space ${Date.now()}`;
+  const switcher = page.getByRole('button', { name: 'Switch space' }).first();
+  await switcher.click();
+  await page.getByRole('menuitem', { name: 'New space…' }).click();
+  await page.getByLabel('Title').fill(title);
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+
+  // Inside the space, the audience is the space without being chosen.
+  await expect(page.getByRole('button', { name: `Audience: ${title}` })).toBeVisible();
+  const content = `Pasta night ${Date.now()}`;
+  await page.getByPlaceholder('Write your memo here...').fill(content);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByTestId('memo-card').filter({ hasText: content })).toBeVisible();
+
+  await switcher.click();
+  await page.getByRole('menuitem', { name: 'Personal' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('button', { name: 'Audience: Private' })).toBeVisible();
+  await expect(page.getByText(content)).toHaveCount(0);
+});

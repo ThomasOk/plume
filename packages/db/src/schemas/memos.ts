@@ -89,9 +89,9 @@ export const insertMemoSchema = createInsertSchema(memo, {
   tags: true,
   createdAt: true,
   updatedAt: true,
-  // A client never names a space by hand: placing a memo in one requires knowing the
-  // writer is a member of it, which no code resolves yet. A later path that checks
-  // membership will set it.
+  // A client never names a space in a memo's fields: placing a memo in one requires
+  // knowing the writer is a member of it, so the space comes from the space procedure
+  // that resolved the membership, never from the payload.
   spaceId: true,
 });
 
