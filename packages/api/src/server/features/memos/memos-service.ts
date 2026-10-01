@@ -26,9 +26,9 @@ type ListMemosInput = z.infer<typeof listMemosSchema>;
 type ListCommentsInput = z.infer<typeof listCommentsSchema>;
 type GetByIdInput = z.infer<typeof getByIdSchema>;
 
-type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility'>;
+type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'spaceId'>;
 
-export async function getMemoById(db: DatabaseInstance, storage: StorageService, scope: MemoScope | null, input: GetByIdInput) {
+export async function getMemoById(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: GetByIdInput) {
   const [row] = await db
     .select({
       id: memo.id,
@@ -44,7 +44,7 @@ export async function getMemoById(db: DatabaseInstance, storage: StorageService,
     })
     .from(memo)
     .leftJoin(user, eq(memo.userId, user.id))
-    .where(and(eq(memo.id, input.id), readableMemoCondition(scope)))
+    .where(and(eq(memo.id, input.id), readableMemoCondition(readerId)))
     .limit(1);
 
   // An unreadable memo answers exactly like a missing one, so an identifier cannot be
@@ -97,14 +97,23 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
       // Scope-free by construction: it counts the comments of a memo the scope has
       // already admitted, and a comment's audience is its parent's.
       commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
+      authorName: user.name,
+      authorImage: user.image,
     })
     .from(memo)
+    // The author is part of every list, not only a space's: in a space it is who wrote
+    // what, and one row shape for every scope keeps the views interchangeable.
+    .leftJoin(user, eq(memo.userId, user.id))
     .where(and(memoScopeCondition(scope), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(desc(memo.createdAt));
 
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memos.map((m) => m.id));
 
-  return memos.map((m) => ({ ...m, attachments: attachmentsByMemoId.get(m.id) ?? [] }));
+  return memos.map(({ authorName, authorImage, ...memoData }) => ({
+    ...memoData,
+    author: formatAuthor(authorName, authorImage),
+    attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+  }));
 }
 
 export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, input: ListMemosInput) {
@@ -138,22 +147,30 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
   }));
 }
 
-// A memo may be `space`-visible only together with the space it goes into, and
-// no write path can name one yet: nothing resolves whether the author is a member. Refusing
-// here turns what the database would reject as a constraint violation into a plain refusal.
+// The personal write paths name no space, so they cannot produce a `space` memo: writing
+// into a space goes through the space's own procedure, which has resolved the membership.
+// Refusing here turns what the database would reject as a constraint violation into a
+// plain refusal.
 const rejectSpaceVisibility = (visibility: CreateMemoInput['visibility']) => {
   if (visibility === 'space') {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'A memo cannot be written into a space yet',
+      message: 'A memo cannot be written into a space without naming the space',
     });
   }
 };
 
+// Where a new root memo goes is the scope it is written into: a space places it in that
+// space, the personal scope leaves it personal with the visibility the author chose.
+const placementIn = (scope: MemoScope, visibility: CreateMemoInput['visibility']) => {
+  if (scope.kind === 'space') return { visibility: 'space' as const, spaceId: scope.spaceId };
+  rejectSpaceVisibility(visibility);
+  return { visibility, spaceId: null };
+};
+
 // `authorId` and `scope` are two different facts, and a write needs both: who signs the
-// memo, and whose memos it may be a comment on. A space scope names no author.
+// memo, and which scope it is written into. A space scope names no author.
 export async function createMemo(db: DatabaseInstance, authorId: string, scope: MemoScope, input: CreateMemoInput) {
-  rejectSpaceVisibility(input.visibility);
 
   const now = new Date();
   const tags = extractTagsFromContent(input.content);
@@ -161,9 +178,9 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
   let parent: ParentMemo | undefined;
   if (input.parentId) {
     const [found] = await db
-      .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility })
+      .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility, spaceId: memo.spaceId })
       .from(memo)
-      .where(and(eq(memo.id, input.parentId), readableMemoCondition(scope)))
+      .where(and(eq(memo.id, input.parentId), readableMemoCondition(authorId)))
       .limit(1);
 
     // You may only comment on a memo you may read, and a memo you may not read answers
@@ -173,6 +190,13 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
 
     parent = found;
   }
+
+  // A comment has no audience of its own: it takes its parent's, space included. Copying
+  // the visibility alone would make the first comment on a space memo `space` with no
+  // space, which the equivalence constraint refuses.
+  const placement = parent
+    ? { visibility: parent.visibility, spaceId: parent.spaceId }
+    : placementIn(scope, input.visibility);
 
   // The comment insert and its outbox event commit together: both, or neither. The producer
   // announces a fact (`comment.created`) and knows nothing about its consequences — no
@@ -187,9 +211,7 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
         parentId: input.parentId ?? null,
         content: input.content,
         tags,
-        // A comment shares its parent's visibility. It will have to copy the parent's
-        // space too, or the first comment on a space memo breaks the equivalence.
-        visibility: parent ? parent.visibility : input.visibility,
+        ...placement,
         createdAt: now,
         updatedAt: now,
       })
@@ -210,11 +232,11 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
   return newMemo;
 }
 
-export async function listMemoComments(db: DatabaseInstance, storage: StorageService, scope: MemoScope | null, input: ListCommentsInput) {
+export async function listMemoComments(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListCommentsInput) {
   const [parent] = await db
     .select({ id: memo.id })
     .from(memo)
-    .where(and(eq(memo.id, input.memoId), isNull(memo.parentId), readableMemoCondition(scope)))
+    .where(and(eq(memo.id, input.memoId), isNull(memo.parentId), readableMemoCondition(readerId)))
     .limit(1);
 
   // Comments carry their parent's audience, so an unreadable parent answers like a
@@ -251,16 +273,23 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
 }
 
 export async function updateMemo(db: DatabaseInstance, userId: string, input: UpdateMemoInput) {
-  rejectSpaceVisibility(input.visibility);
-
   const [existing] = await db
-    .select({ id: memo.id, userId: memo.userId })
+    .select({ id: memo.id, userId: memo.userId, spaceId: memo.spaceId })
     .from(memo)
-    .where(eq(memo.id, input.id))
+    .where(and(eq(memo.id, input.id), readableMemoCondition(userId)))
     .limit(1);
 
+  // A memo the user cannot read answers like a missing one; one they can read but did not
+  // write is refused — nobody edits another's memo, in a space or out of it.
   if (!existing) throw new MemoNotFoundError();
   if (existing.userId !== userId) throw new InsufficientPermissionsError();
+
+  // An edit leaves a memo where it is: moving it into or out of a space is its own
+  // operation, not a side effect of changing the visibility.
+  if (existing.spaceId === null) rejectSpaceVisibility(input.visibility);
+  else if (input.visibility !== 'space') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A memo in a space cannot be taken out of it by an edit' });
+  }
 
   const tags = extractTagsFromContent(input.content);
   const [updatedMemo] = await db
@@ -278,7 +307,7 @@ export async function deleteMemo(db: DatabaseInstance, userId: string, input: De
   const [existing] = await db
     .select({ id: memo.id, userId: memo.userId })
     .from(memo)
-    .where(eq(memo.id, input.id))
+    .where(and(eq(memo.id, input.id), readableMemoCondition(userId)))
     .limit(1);
 
   if (!existing) throw new MemoNotFoundError();

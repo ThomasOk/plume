@@ -8,6 +8,13 @@ export const createMemoSchema = insertMemoSchema.extend({
   parentId: z.string().optional(),
 });
 
+// Writing into a space: its audience is the space, so the only visibility accepted is
+// `space`. Naming another is refused rather than overridden — a memo in a space cannot be
+// private or public (ADR 0003). A comment is not written here: it takes its parent's place.
+export const createSpaceMemoSchema = insertMemoSchema.pick({ content: true }).extend({
+  visibility: z.literal('space').default('space'),
+});
+
 export const listCommentsSchema = z.object({
   memoId: z.string().min(1, 'Memo ID is required'),
 });

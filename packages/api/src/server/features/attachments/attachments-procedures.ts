@@ -1,5 +1,4 @@
 import { protectedProcedure, publicProcedure } from '../../trpc';
-import { personalScope } from '../memos/memo-scope';
 import {
   getUploadUrlSchema,
   confirmUploadSchema,
@@ -45,7 +44,7 @@ export const listByMemo = publicProcedure
     listAttachmentsByMemo(
       ctx.db,
       ctx.storage,
-      ctx.session ? personalScope(ctx.session.user.id) : null,
+      ctx.session?.user.id ?? null,
       input,
     ),
   );

@@ -11,11 +11,16 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { useCreateComment } from '../hooks/use-create-comment';
 import { useCreateMemo } from '../hooks/use-create-memo';
+import { useCreateSpaceMemo } from '../hooks/use-create-space-memo';
 import { useDraft } from '../hooks/use-draft';
+import { useMemoScope } from '../hooks/use-memo-scope';
+import { AudienceSelector, type Audience } from './audience-selector';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { AttachmentList, useFileUpload } from '@/features/attachments';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+// By path rather than through the spaces barrel, which itself imports this feature.
+import { useSpaces } from '@/features/spaces/hooks/use-spaces';
 import { sounds } from '@/lib/sounds';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
@@ -41,9 +46,17 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
     resolver: zodResolver(createMemoSchema),
     defaultValues: {
       content: '',
-      visibility: 'private',
     },
   });
+
+  // Writing from inside a space writes into it: the current context is the answer, read
+  // from the URL, with no remembered "last used space". It is not part of the form, so a
+  // reset after saving keeps it.
+  const scope = useMemoScope();
+  const [audience, setAudience] = useState<Audience>(
+    scope.kind === 'space' ? { kind: 'space', spaceId: scope.spaceId } : { kind: 'private' },
+  );
+  const spaces = useSpaces({ enabled: !isComment });
 
   const { user } = useAuth();
 
@@ -55,6 +68,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
   const draftKey = isComment ? `comment-draft-${parentMemoId}` : 'memo-draft';
   const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, draftKey);
   const createMemo = useCreateMemo();
+  const createSpaceMemo = useCreateSpaceMemo();
   // useCreateComment must always be called (rules of hooks) — parentMemoId ?? '' is safe
   // because createComment is only used when isComment is true
   const createComment = useCreateComment(parentMemoId ?? '');
@@ -62,7 +76,6 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { ref: registerRef, ...rest } = register('content');
   const content = watch('content');
-  const visibility = watch('visibility') ?? 'private';
   const charCount = content.length;
   const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
 
@@ -110,9 +123,11 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
 
   const onSubmit = async (data: CreateMemoInput) => {
     try {
-      const mutation = isComment ? createComment : createMemo;
-      const payload = isComment ? { ...data, parentId: parentMemoId } : data;
-      const newMemo = await mutation.mutateAsync(payload);
+      const newMemo = isComment
+        ? await createComment.mutateAsync({ content: data.content, parentId: parentMemoId })
+        : audience.kind === 'space'
+          ? await createSpaceMemo.mutateAsync({ spaceId: audience.spaceId, content: data.content })
+          : await createMemo.mutateAsync({ content: data.content, visibility: audience.kind });
       await confirmAll(newMemo.id);
       clearDraft();
       clearAll();
@@ -123,6 +138,13 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
       toast.error(error instanceof Error ? error.message : 'Failed to save memo');
     }
   };
+
+  const isPending = createComment.isPending || createMemo.isPending || createSpaceMemo.isPending;
+
+  // A comment takes its parent's audience, so it offers no choice.
+  const audienceControl = isComment ? undefined : (
+    <AudienceSelector value={audience} onChange={setAudience} spaces={spaces.data} />
+  );
 
   const onInsert = (text: string, startIndex: number, length: number) => {
     const currentValue = textareaRef.current?.value ?? '';
@@ -155,7 +177,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                 textareaRef={textareaRef}
                 registerRef={registerRef}
                 fieldProps={rest}
-                isPending={createMemo.isPending}
+                isPending={isPending}
                 onSubmit={handleSubmit(onSubmit)}
                 onInsert={onInsert}
                 placeholder={isComment ? 'Write a comment...' : 'Write your memo here...'}
@@ -168,11 +190,9 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
               <MemoFooter
                 charCount={charCount}
                 isOverLimit={isOverLimit}
-                isPending={(isComment ? createComment : createMemo).isPending || isUploading}
+                isPending={isPending || isUploading}
                 isValid={isValid}
-                isComment={isComment}
-                visibility={visibility}
-                onVisibilityChange={(val) => setValue('visibility', val)}
+                audienceControl={audienceControl}
                 onAttachFile={triggerFileSelect}
               />
             </form>
@@ -240,7 +260,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                             textareaRef={textareaRef}
                             registerRef={registerRef}
                             fieldProps={rest}
-                            isPending={createMemo.isPending}
+                            isPending={isPending}
                             onSubmit={handleSubmit(onSubmit)}
                             onInsert={onInsert}
                             placeholder={isComment ? 'Write a comment...' : 'Write your memo here...'}
@@ -255,12 +275,9 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                         <MemoFooter
                           charCount={charCount}
                           isOverLimit={isOverLimit}
-                          isPending={(isComment ? createComment : createMemo).isPending || isUploading}
+                          isPending={isPending || isUploading}
                           isValid={isValid}
-                          visibility={visibility}
-                          onVisibilityChange={(val) =>
-                            setValue('visibility', val)
-                          }
+                          audienceControl={audienceControl}
                           onAttachFile={triggerFileSelect}
                         />
                       </form>

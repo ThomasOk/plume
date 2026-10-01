@@ -38,17 +38,19 @@ Two things that are **mandatory in this ticket, not follow-ups**:
 
 **Status:** ready-for-agent
 
-- [ ] The audience control is one flat list: private, public, then the User's Spaces
-- [ ] Writing from inside a Space puts the Memo in that Space by default
-- [ ] A Member reads every Memo of the Space, with its Author displayed
-- [ ] A non-Member gets the same answer as for a Memo that does not exist
-- [ ] A Space's Memos are absent from the author's personal views and from Explore
-- [ ] Creating a Memo with visibility `space` and no Space is refused
-- [ ] Creating a Memo in a Space with visibility `private` or `public` is refused
-- [ ] A Comment inherits its parent's Space and visibility
-- [ ] A non-Member cannot comment on a Space's Memo
-- [ ] A Comment on a Space's Memo notifies its Author, and only its Author
-- [ ] A Member can read an Attachment on a Space's Memo
-- [ ] A non-Member is refused that Attachment
-- [ ] The Attachments page still lists the signed-in User's own uploads
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] The audience control is one flat list: private, public, then the User's Spaces
+- [x] Writing from inside a Space puts the Memo in that Space by default
+- [x] A Member reads every Memo of the Space, with its Author displayed
+- [x] A non-Member gets the same answer as for a Memo that does not exist
+- [x] A Space's Memos are absent from the author's personal views and from Explore
+- [x] Creating a Memo with visibility `space` and no Space is refused
+- [x] Creating a Memo in a Space with visibility `private` or `public` is refused
+- [x] A Comment inherits its parent's Space and visibility
+- [x] A non-Member cannot comment on a Space's Memo
+- [x] A Comment on a Space's Memo notifies its Author, and only its Author
+- [x] A Member can read an Attachment on a Space's Memo
+- [x] A non-Member is refused that Attachment — through the API. The files themselves are
+  still served from public R2 URLs: unguessable, and handed out only by authorized reads,
+  but readable by anyone a URL reaches. Closing that takes presigned GETs (follow-up).
+- [x] The Attachments page still lists the signed-in User's own uploads
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass

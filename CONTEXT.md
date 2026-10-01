@@ -33,6 +33,12 @@ Who can read a memo: `private` (its author alone), `space` (the members of its s
 its visibility is `space`.
 _Avoid_: shared, published.
 
+**Audience**:
+The one choice a user makes when writing a memo: private, public, or one of the spaces
+they are a member of. It sets the memo's visibility and its space together, because the
+two are a single decision — choosing a space *is* choosing `space` visibility.
+_Avoid_: destination, target, share with.
+
 **Personal**:
 Said of a memo that belongs to no space. A personal memo is private or public; it is
 never visible to a space.

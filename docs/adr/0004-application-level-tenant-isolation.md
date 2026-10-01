@@ -41,3 +41,19 @@ The guarantee is a compile-time one: it catches the query written wrongly, not t
 that bypasses the application. That matches the risk this project actually has. It also
 means the protection is only as good as the types — a raw SQL escape hatch sidesteps it,
 so raw SQL over `memo` is the thing to watch in review.
+
+## Reads by identifier take a reader, not a scope
+
+A read that names one memo — opening it, listing its comments or attachments, commenting
+on it, editing or deleting it — does not know its scope beforehand: a link to a memo
+carries the memo, not the space it sits in. These reads take the **reader** instead, and
+`readableMemoCondition(readerId)` admits a memo that is public, in the reader's personal
+scope, or in a space the reader is a member of. It is still written once, in
+`memo-scope.ts`, and still answers a non-member exactly as it answers a missing memo.
+
+For these reads only, membership is resolved inside the query (a subquery on
+`space_member`) rather than by `spaceProcedure`. The alternative — addressing every memo
+as `/spaces/:id/memos/:memoId` so that `spaceProcedure` can run first — would break every
+existing link to a memo, notifications included, to move the same check into the URL.
+Reads of a *set* of memos (list, search, tags, activity, count) are unaffected and take a
+`MemoScope` as above.

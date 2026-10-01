@@ -1,5 +1,5 @@
-import { and, eq, isNull, or } from '@repo/db';
-import { memo } from '@repo/db/schema';
+import { and, eq, isNull, or, sql } from '@repo/db';
+import { memo, spaceMember } from '@repo/db/schema';
 import type { SpaceMembership } from '../spaces';
 import type { SQL } from '@repo/db';
 
@@ -40,14 +40,22 @@ export const memoScopeCondition = (scope: MemoScope): SQL => {
 };
 
 /**
- * Whether one identified memo may be read: it is public, or it falls inside the reader's
- * scope. `null` is a reader with no scope at all — an anonymous visitor, who sees only
- * what is public.
+ * Whether one identified memo may be read by a given reader: it is public, it is one of
+ * the reader's personal memos, or it is in a space the reader is a member of. `null` is
+ * an anonymous visitor, who sees only what is public.
+ *
+ * This takes a reader rather than a scope because a read by identifier does not know its
+ * scope beforehand: a link to a memo carries the memo, not the space it sits in. The
+ * membership that `spaceProcedure` resolves for a scoped read is resolved here inside the
+ * query, so it still answers a non-member exactly as it answers a missing memo.
  *
  * Guards that test `visibility === 'private'` instead let everything non-private through,
  * which a space memo now is.
  */
-export const readableMemoCondition = (scope: MemoScope | null): SQL => {
+export const readableMemoCondition = (readerId: string | null): SQL => {
   const isPublic = eq(memo.visibility, 'public');
-  return scope ? or(isPublic, memoScopeCondition(scope))! : isPublic;
+  if (!readerId) return isPublic;
+
+  const inReadersSpaces = sql`${memo.spaceId} IN (SELECT ${spaceMember.spaceId} FROM ${spaceMember} WHERE ${spaceMember.userId} = ${readerId})`;
+  return or(isPublic, memoScopeCondition(personalScope(readerId)), inReadersSpaces)!;
 };

@@ -55,10 +55,12 @@ describe('the errors a caller receives', () => {
   });
 
   it('reports an action on another user memo as forbidden', async () => {
+    // Public, so that it is readable: a memo the caller cannot read answers as not found.
     await db.insert(memo).values({
       id: 'memo-1',
       userId: 'author',
       content: 'a memo',
+      visibility: 'public',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
