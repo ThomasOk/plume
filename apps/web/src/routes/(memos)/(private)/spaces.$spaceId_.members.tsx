@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { may } from '@repo/api/schemas';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { InviteForm, PendingInvitations } from '@/features/invitations';
-import { useSpace } from '@/features/spaces';
+import { MemberList, useSpace } from '@/features/spaces';
 import { isNotFound } from '@/lib/trpc-errors';
 
 export const Route = createFileRoute('/(memos)/(private)/spaces/$spaceId_/members')({
@@ -10,9 +11,10 @@ export const Route = createFileRoute('/(memos)/(private)/spaces/$spaceId_/member
 function MembersPage() {
   const { spaceId } = Route.useParams();
   const space = useSpace(spaceId);
+  const navigate = useNavigate();
 
   // A non-admin is told the same as a non-member: there is nothing here for them.
-  if (isNotFound(space.error) || (space.data && space.data.role !== 'admin')) {
+  if (isNotFound(space.error) || (space.data && !may(space.data.role, 'manageMembership'))) {
     return (
       <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
         <p className="text-muted-foreground">Space not found.</p>
@@ -34,6 +36,13 @@ function MembersPage() {
       </div>
       {space.data && (
         <>
+          <section>
+            <MemberList
+              spaceId={spaceId}
+              spaceTitle={space.data.title}
+              onSelfDemoted={() => navigate({ to: '/spaces/$spaceId', params: { spaceId } })}
+            />
+          </section>
           <section className="space-y-3">
             <h2 className="font-medium">Invite someone</h2>
             <InviteForm spaceId={spaceId} />

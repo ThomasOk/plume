@@ -67,3 +67,20 @@ export class AlreadyMemberError extends Error {
     super(message);
   }
 }
+
+// The user named is not a member of the space — or never existed. One answer for both.
+export class MemberNotFoundError extends Error {
+  readonly code = 'MEMBER_NOT_FOUND';
+  constructor() {
+    super('Member not found');
+  }
+}
+
+// Refused on every path that would leave a space with nobody able to govern it: leaving,
+// being removed, being demoted.
+export class LastAdminError extends Error {
+  readonly code = 'LAST_ADMIN';
+  constructor() {
+    super('A space needs an admin. Make someone else an admin first.');
+  }
+}

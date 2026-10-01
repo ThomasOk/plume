@@ -1,5 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateMemoSchema, MAX_MEMO_CHARACTERS } from '@repo/api/schemas';
+import {
+  updateMemoSchema,
+  MAX_MEMO_CHARACTERS,
+  mayDeleteMemo,
+  mayEditMemo,
+} from '@repo/api/schemas';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +54,7 @@ import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
-import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
+import { useDeleteComment, useDeleteMemo, useMemoScope, useUpdateMemo } from '../hooks';
 import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
@@ -62,6 +67,8 @@ import {
   useFileUpload,
 } from '@/features/attachments';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+// The hook's own module, not the feature's index: `spaces` already imports from `memos`.
+import { useSpace } from '@/features/spaces/hooks/use-space';
 import { sounds } from '@/lib/sounds';
 
 interface MemoCardProps {
@@ -121,7 +128,16 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
   };
 
   const { user } = useAuth();
-  const isOwner = user?.id === memo.userId;
+  const isAuthor = user?.id === memo.userId;
+  // The space role counts only for a memo of the space being displayed; anywhere else, only
+  // the author acts on a memo. An admin may delete another member's memo, never edit it.
+  const scope = useMemoScope();
+  // The space page has already fetched it: the cards below it read it from the cache.
+  const space = useSpace(scope.kind === 'space' ? scope.spaceId : undefined);
+  const spaceRole = space.data?.role ?? null;
+  const actor = { isAuthor, role: memo.visibility === 'space' ? spaceRole : null };
+  const mayEdit = mayEditMemo(actor);
+  const mayDelete = mayDeleteMemo(actor);
   const updateMemo = useUpdateMemo();
   const isComment = !!memo.parentId;
   const deleteMemo = useDeleteMemo();
@@ -294,7 +310,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {!isEditing && (!isComment || isOwner) && (
+              {!isEditing && (!isComment || mayDelete) && (
                 <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -315,14 +331,17 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    {isOwner && (
+                    {mayDelete && (
                       <>
                         {!isComment && <DropdownMenuSeparator />}
-                        <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                          <MdOutlineEdit className="size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        {!isComment && <MoveMemoSubmenu memo={memo} />}
+                        {mayEdit && (
+                          <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                            <MdOutlineEdit className="size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {/* Only the author moves a memo: it changes who reads their words. */}
+                        {isAuthor && !isComment && <MoveMemoSubmenu memo={memo} />}
                         <DropdownMenuItem
                           onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
                         >
@@ -483,7 +502,8 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
               {isComment ? 'Are you sure you want to delete this comment?' : 'Are you sure you want to delete this memo?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your{' '}
+              This action cannot be undone. This will permanently delete{' '}
+              {isAuthor ? 'your' : `${author?.name ?? 'this member'}’s`}{' '}
               {isComment ? 'comment' : 'memo'}.
             </AlertDialogDescription>
           </AlertDialogHeader>

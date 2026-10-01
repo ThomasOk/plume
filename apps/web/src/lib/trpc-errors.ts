@@ -7,3 +7,8 @@ export const isNotFound = (error: unknown): boolean =>
 // the view loading for longer. Other errors keep React Query's default of three attempts.
 export const retryUnlessNotFound = (failureCount: number, error: unknown): boolean =>
   !isNotFound(error) && failureCount < 3;
+
+// The server's own words when it gave any — a domain refusal explains itself ("make someone
+// else an admin first") — and the fallback otherwise.
+export const errorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message ? error.message : fallback;

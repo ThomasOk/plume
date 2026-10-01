@@ -1,18 +1,26 @@
 import { and, asc, eq } from '@repo/db';
 import { space, spaceMember, type SpaceMember } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
-import type { createSpaceSchema } from './spaces-schemas';
+import type { createSpaceSchema, renameSpaceSchema } from './spaces-schemas';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
-import { SpaceNotFoundError } from '../../shared/errors';
+import { InsufficientPermissionsError, SpaceNotFoundError } from '../../shared/errors';
+import { may, type SpaceAction } from './space-policy';
 
 type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
+type RenameSpaceInput = z.infer<typeof renameSpaceSchema>;
 
 /**
  * The facts about a reader and a space, resolved once per request by `spaceProcedure`.
  * Holding one is the proof that the reader is a member.
  */
 export type SpaceMembership = Pick<SpaceMember, 'spaceId' | 'role'>;
+
+// Refuses an action the member's role does not allow. The membership itself was resolved by
+// `spaceProcedure`; this asks the role matrix about it.
+export function assertMay(membership: SpaceMembership, action: SpaceAction) {
+  if (!may(membership.role, action)) throw new InsufficientPermissionsError();
+}
 
 export async function findMembership(
   db: DatabaseInstance,
@@ -69,4 +77,31 @@ export async function getSpace(db: DatabaseInstance, membership: SpaceMembership
   if (!row) throw new SpaceNotFoundError();
 
   return { ...row, role: membership.role };
+}
+
+export async function renameSpace(
+  db: DatabaseInstance,
+  membership: SpaceMembership,
+  input: RenameSpaceInput,
+) {
+  assertMay(membership, 'manageSpace');
+
+  const [renamed] = await db
+    .update(space)
+    .set({ title: input.title, updatedAt: new Date() })
+    .where(eq(space.id, membership.spaceId))
+    .returning({ id: space.id, title: space.title });
+
+  // A race with a deletion answers like any other missing space.
+  if (!renamed) throw new SpaceNotFoundError();
+
+  return renamed;
+}
+
+// The database cascades the rest: memberships, invitations, memos, and the comments under
+// them. The space owns its contents, so they go with it.
+export async function deleteSpace(db: DatabaseInstance, membership: SpaceMembership) {
+  assertMay(membership, 'manageSpace');
+
+  await db.delete(space).where(eq(space.id, membership.spaceId));
 }

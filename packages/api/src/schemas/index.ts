@@ -21,8 +21,18 @@ export {
 // Spaces feature schemas
 export {
   createSpaceSchema,
+  renameSpaceSchema,
   MAX_SPACE_TITLE_CHARACTERS,
 } from '../server/features/spaces/spaces-schemas';
+
+// The space role matrix, so the interface offers exactly what the server allows.
+export {
+  keepsAnAdmin,
+  may,
+  mayDeleteMemo,
+  mayEditMemo,
+  type SpaceAction,
+} from '../server/features/spaces/space-policy';
 
 // Invitations feature schemas
 export { createInvitationSchema } from '../server/features/invitations/invitations-schemas';
