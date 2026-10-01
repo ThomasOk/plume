@@ -138,7 +138,13 @@ describe('reading a space', () => {
 
     const result = await caller.spaces.get({ spaceId: created.id });
 
-    expect(result).toEqual({ id: created.id, title: 'Cooking club', role: 'admin' });
+    expect(result).toEqual({
+      id: created.id,
+      title: 'Cooking club',
+      role: 'admin',
+      memberCount: 1,
+      adminCount: 1,
+    });
   });
 
   it('answers a non-member exactly as it answers a space that does not exist', async () => {

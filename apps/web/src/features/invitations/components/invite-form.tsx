@@ -40,7 +40,9 @@ export const InviteForm = ({ spaceId }: InviteFormProps) => {
     try {
       const invitation = await createInvitation.mutateAsync({ spaceId, ...values });
       form.reset();
-      toast.success(`Invitation sent to ${invitation.email}`);
+      // Not "sent": the email leaves later, when the outbox drains — and not at all without a
+      // provider configured. What is true now is that the invitation exists.
+      toast.success(`${invitation.email} invited`);
     } catch (error) {
       // "Already a member" is about the address the admin typed: say it next to the field.
       if (error instanceof TRPCClientError && error.data?.code === 'CONFLICT') {
