@@ -6,6 +6,7 @@ export { useCreateMemo } from './use-create-memo';
 export { useCreateSpaceMemo } from './use-create-space-memo';
 export { useUpdateMemo } from './use-update-memo';
 export { useDeleteMemo } from './use-delete-memo';
+export { useMoveMemo } from './use-move-memo';
 export { useMemosStats } from './use-memos-stats';
 export { useMemoTags } from './use-memo-tags';
 export { usePublicMemoTags } from './use-public-memo-tags';

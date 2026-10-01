@@ -1,4 +1,4 @@
-import { desc, eq, and, isNull, sql, inArray } from '@repo/db';
+import { desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
 import { memo, user, attachment } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
@@ -9,6 +9,8 @@ import type {
   listMemosSchema,
   listCommentsSchema,
   getByIdSchema,
+  moveSpaceMemoSchema,
+  moveMemoSchema,
 } from './memos-schemas';
 import type { StorageService } from '../../shared/storage';
 import type { DatabaseInstance } from '@repo/db/client';
@@ -25,6 +27,8 @@ type DeleteMemoInput = z.infer<typeof deleteMemoSchema>;
 type ListMemosInput = z.infer<typeof listMemosSchema>;
 type ListCommentsInput = z.infer<typeof listCommentsSchema>;
 type GetByIdInput = z.infer<typeof getByIdSchema>;
+// Into a space names only the memo; out of one names the new visibility as well.
+type MoveMemoInput = z.infer<typeof moveSpaceMemoSchema> | z.infer<typeof moveMemoSchema>;
 
 type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'spaceId'>;
 
@@ -147,26 +151,34 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
   }));
 }
 
-// The personal write paths name no space, so they cannot produce a `space` memo: writing
-// into a space goes through the space's own procedure, which has resolved the membership.
-// Refusing here turns what the database would reject as a constraint violation into a
-// plain refusal.
-const rejectSpaceVisibility = (visibility: CreateMemoInput['visibility']) => {
+// The one place a root memo's visibility is reconciled with where it sits (ADR 0003): in a
+// space, its visibility is `space` and nothing else; out of one, it is anything but. The
+// database refuses the other combinations as a constraint violation; refusing here turns
+// that into a plain answer. Creating, editing and moving all ask this, each naming the
+// space the memo ends up in — or none.
+const placementIn = (spaceId: string | null, visibility: CreateMemoInput['visibility']) => {
+  if (spaceId !== null) {
+    if (visibility !== undefined && visibility !== 'space') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A memo in a space is neither private nor public: move it out instead',
+      });
+    }
+    return { visibility: 'space' as const, spaceId };
+  }
+  // Writing into a space goes through the space's own procedure, which has resolved the
+  // membership; a path that names no space cannot produce a `space` memo.
   if (visibility === 'space') {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'A memo cannot be written into a space without naming the space',
     });
   }
-};
-
-// Where a new root memo goes is the scope it is written into: a space places it in that
-// space, the personal scope leaves it personal with the visibility the author chose.
-const placementIn = (scope: MemoScope, visibility: CreateMemoInput['visibility']) => {
-  if (scope.kind === 'space') return { visibility: 'space' as const, spaceId: scope.spaceId };
-  rejectSpaceVisibility(visibility);
   return { visibility, spaceId: null };
 };
+
+// The space a scope places a memo in, if any.
+const spaceIdOf = (scope: MemoScope) => (scope.kind === 'space' ? scope.spaceId : null);
 
 // `authorId` and `scope` are two different facts, and a write needs both: who signs the
 // memo, and which scope it is written into. A space scope names no author.
@@ -175,34 +187,37 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
   const now = new Date();
   const tags = extractTagsFromContent(input.content);
 
-  let parent: ParentMemo | undefined;
-  if (input.parentId) {
-    const [found] = await db
-      .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility, spaceId: memo.spaceId })
-      .from(memo)
-      .where(and(eq(memo.id, input.parentId), readableMemoCondition(authorId)))
-      .limit(1);
-
-    // You may only comment on a memo you may read, and a memo you may not read answers
-    // like one that does not exist.
-    if (!found) throw new MemoNotFoundError();
-    if (found.parentId !== null) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot comment on a comment' });
-
-    parent = found;
-  }
-
-  // A comment has no audience of its own: it takes its parent's, space included. Copying
-  // the visibility alone would make the first comment on a space memo `space` with no
-  // space, which the equivalence constraint refuses.
-  const placement = parent
-    ? { visibility: parent.visibility, spaceId: parent.spaceId }
-    : placementIn(scope, input.visibility);
-
   // The comment insert and its outbox event commit together: both, or neither. The producer
   // announces a fact (`comment.created`) and knows nothing about its consequences — no
   // notification call here. It records unconditionally for any comment, even on one's own
   // memo; the "don't notify yourself" policy now lives in the consumer, not the producer.
-  const newMemo = await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    let parent: ParentMemo | undefined;
+    if (input.parentId) {
+      // Locked until the comment is in: a move of the parent waits for it, then sees it,
+      // and a comment written after a move copies the parent's new place, not its old one.
+      const [found] = await tx
+        .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility, spaceId: memo.spaceId })
+        .from(memo)
+        .where(and(eq(memo.id, input.parentId), readableMemoCondition(authorId)))
+        .limit(1)
+        .for('share');
+
+      // You may only comment on a memo you may read, and a memo you may not read answers
+      // like one that does not exist.
+      if (!found) throw new MemoNotFoundError();
+      if (found.parentId !== null) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot comment on a comment' });
+
+      parent = found;
+    }
+
+    // A comment has no audience of its own: it takes its parent's, space included. Copying
+    // the visibility alone would make the first comment on a space memo `space` with no
+    // space, which the equivalence constraint refuses.
+    const placement = parent
+      ? { visibility: parent.visibility, spaceId: parent.spaceId }
+      : placementIn(spaceIdOf(scope), input.visibility);
+
     const [created] = await tx
       .insert(memo)
       .values({
@@ -228,8 +243,6 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
 
     return created;
   });
-
-  return newMemo;
 }
 
 export async function listMemoComments(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListCommentsInput) {
@@ -286,15 +299,12 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
 
   // An edit leaves a memo where it is: moving it into or out of a space is its own
   // operation, not a side effect of changing the visibility.
-  if (existing.spaceId === null) rejectSpaceVisibility(input.visibility);
-  else if (input.visibility !== 'space') {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A memo in a space cannot be taken out of it by an edit' });
-  }
+  const { visibility } = placementIn(existing.spaceId, input.visibility);
 
   const tags = extractTagsFromContent(input.content);
   const [updatedMemo] = await db
     .update(memo)
-    .set({ content: input.content, tags, visibility: input.visibility, updatedAt: new Date() })
+    .set({ content: input.content, tags, visibility, updatedAt: new Date() })
     .where(eq(memo.id, input.id))
     .returning();
 
@@ -316,6 +326,62 @@ export async function deleteMemo(db: DatabaseInstance, userId: string, input: De
   await db.delete(memo).where(eq(memo.id, input.id));
 
   return { success: true };
+}
+
+// Moving sets the visibility and the space together, on the memo and on its comments, in
+// one statement: the equivalence constraint is checked per row, and no row ever passes
+// through a state where one field has changed and the other has not (ADR 0003).
+//
+// It leaves `updatedAt` alone: a move changes who reads the memo, not what was written.
+export async function moveMemo(db: DatabaseInstance, authorId: string, scope: MemoScope, input: MoveMemoInput) {
+  return db.transaction(async (tx) => {
+    // Locked against a comment being written while the memo moves: either the comment
+    // lands first and is counted below, or it waits and copies the memo's new place.
+    const [existing] = await tx
+      .select({ id: memo.id, userId: memo.userId, parentId: memo.parentId, spaceId: memo.spaceId })
+      .from(memo)
+      .where(and(eq(memo.id, input.id), readableMemoCondition(authorId)))
+      .limit(1)
+      .for('update');
+
+    // Only the author moves a memo. An admin may delete another member's memo but never
+    // relocate it: deleting is moderation, moving changes someone else's work under their
+    // byline.
+    if (!existing) throw new MemoNotFoundError();
+    if (existing.userId !== authorId) throw new InsufficientPermissionsError();
+
+    if (existing.parentId !== null) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A comment moves with its memo, not on its own' });
+    }
+
+    const placement = placementIn(spaceIdOf(scope), 'visibility' in input ? input.visibility : undefined);
+
+    // A move goes somewhere else. Between private and public, a personal memo stays where it
+    // is, and that is an edit: one way to change a visibility, not two.
+    if (placement.spaceId === existing.spaceId) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'The memo is already there' });
+    }
+
+    // A comment has no audience of its own, so it moves with its memo. Someone else's
+    // comment was written for the memo's audience as it stood: moving it would put their
+    // words before readers they did not write for, or out of their own reach, without
+    // asking them — whichever way the memo goes (ADR 0003).
+    const [othersComment] = await tx
+      .select({ id: memo.id })
+      .from(memo)
+      .where(and(eq(memo.parentId, existing.id), ne(memo.userId, authorId)))
+      .limit(1);
+    if (othersComment) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'A memo others have commented on cannot be moved' });
+    }
+
+    await tx
+      .update(memo)
+      .set(placement)
+      .where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id)));
+
+    return { success: true };
+  });
 }
 
 export async function getMemoStats(db: DatabaseInstance, scope: MemoScope) {

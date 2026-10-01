@@ -9,6 +9,8 @@ import {
   listMemosSchema,
   listCommentsSchema,
   getByIdSchema,
+  moveSpaceMemoSchema,
+  moveMemoSchema,
 } from './memos-schemas';
 import {
   getMemoById,
@@ -21,6 +23,7 @@ import {
   getMemoStats,
   getMemoTags,
   getPublicTags,
+  moveMemo,
 } from './memos-service';
 
 export const getById = publicProcedure
@@ -67,6 +70,12 @@ export const deleteMemo = protectedProcedure
   .input(deleteMemoSchema)
   .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.session.user.id, input));
 
+export const move = protectedProcedure
+  .input(moveMemoSchema)
+  .mutation(({ ctx, input }) =>
+    moveMemo(ctx.db, ctx.session.user.id, personalScope(ctx.session.user.id), input),
+  );
+
 export const stats = protectedProcedure
   .query(({ ctx }) => getMemoStats(ctx.db, personalScope(ctx.session.user.id)));
 
@@ -84,6 +93,11 @@ export const space = router({
     .input(createSpaceMemoSchema)
     .mutation(({ ctx, input }) =>
       createMemo(ctx.db, ctx.session.user.id, spaceScope(ctx.membership), input),
+    ),
+  move: spaceProcedure
+    .input(moveSpaceMemoSchema)
+    .mutation(({ ctx, input }) =>
+      moveMemo(ctx.db, ctx.session.user.id, spaceScope(ctx.membership), input),
     ),
   list: spaceProcedure
     .input(listMemosSchema)

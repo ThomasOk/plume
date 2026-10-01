@@ -47,6 +47,14 @@ meaning would depend on another column being null.
 - **A space owns its memos.** Leaving a space, or being removed from it, leaves the memos
   behind; `memo.user_id` still names their author, who simply stops being a reader.
   Deleting a space deletes its memos, admins only.
+- **A memo someone else commented on stays where it is.** Its author may move it into or
+  out of a space only while every comment under it is theirs. A comment has no audience of
+  its own (ADR 0001), so it moves with its memo: out of a space, a member's words written
+  for the team would reach Explore or leave their own reach; into one, a public comment
+  would vanish from its author's sight. usememos avoids the question by giving each comment
+  its own placement, at the price of a thread that differs from reader to reader. Trigger
+  to revisit: authors asking to move commented memos, which would mean letting the
+  commenters consent, or giving comments an audience of their own.
 - **No account deletion.** Plume has none today — no code path triggers the
   `ON DELETE CASCADE` on `memo.user_id`. When one is built, deleting an account must not
   take a space's memos with it: the chosen mechanism is a **ghost user** (a reserved
