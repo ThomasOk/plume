@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   MemoList,
   MemoListSkeleton,
@@ -35,7 +35,19 @@ function RouteComponent() {
 
   return (
     <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
-      <h1 className="text-xl font-semibold mb-4 truncate">{space.data?.title}</h1>
+      <div className="flex items-baseline gap-4 mb-4">
+        <h1 className="text-xl font-semibold truncate flex-1">{space.data?.title}</h1>
+        {/* Absent, not disabled, for a member: governance is not offered to who cannot use it. */}
+        {space.data?.role === 'admin' && (
+          <Link
+            to="/spaces/$spaceId/members"
+            params={{ spaceId }}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Members
+          </Link>
+        )}
+      </div>
       {/* Keyed by space: moving to another space starts a form addressed to that one. */}
       <MemoForm key={spaceId} />
       <div className="flex gap-2 flex-wrap">

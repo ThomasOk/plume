@@ -41,3 +41,29 @@ export class SpaceNotFoundError extends Error {
     super('Space not found');
   }
 }
+
+// A link that was used, revoked, replaced by a newer invitation, or never issued. One answer
+// for all of them: the holder can do nothing different in any of these cases.
+export class InvitationNotFoundError extends Error {
+  readonly code = 'INVITATION_NOT_FOUND';
+  constructor() {
+    super('This invitation is no longer valid');
+  }
+}
+
+// Distinct from "not found" on purpose: the invitee should know to ask for a new link.
+export class InvitationExpiredError extends Error {
+  readonly code = 'INVITATION_EXPIRED';
+  constructor() {
+    super('This invitation has expired. Ask for a new one.');
+  }
+}
+
+// Refused at both ends of an invitation: inviting an address that is already a member, and
+// a member accepting a link.
+export class AlreadyMemberError extends Error {
+  readonly code = 'ALREADY_MEMBER';
+  constructor(message = 'This address is already a member of the space') {
+    super(message);
+  }
+}

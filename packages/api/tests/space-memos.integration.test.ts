@@ -4,7 +4,7 @@ import { drainOnce } from '../src/server/events/outbox';
 import { createEventBusWithHandlers } from '../src/server/events/register-handlers';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
 import { createFakeEmailSender } from './helpers/email';
-import { createAuthenticatedCaller, createTestCaller } from './helpers/trpc';
+import { TEST_INVITATION_LINKS, createAuthenticatedCaller, createTestCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
 
@@ -191,7 +191,7 @@ describe('the notification of a comment on a memo of a space', () => {
     await as(bob).memos.create({ content: 'I bring the wine', parentId: memoId });
     const emails = createFakeEmailSender();
 
-    await drainOnce({ db, bus: createEventBusWithHandlers(db, emails) });
+    await drainOnce({ db, bus: createEventBusWithHandlers(db, emails, TEST_INVITATION_LINKS) });
 
     const notifications = await db.select().from(notification);
     expect(notifications.map((n) => n.receiverId)).toEqual([alice.id]);

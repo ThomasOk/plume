@@ -196,7 +196,9 @@ type MemoScope =
 ### Invitations
 
 - The token is cryptographically random, stored **hashed**, single-use, and carries an
-  expiry. A leak of the table must not yield live Invitations.
+  expiry. A leak of the table must not yield live Invitations. It is derived — an HMAC of
+  the Invitation's random id under the server secret — so that the email subscriber can
+  rebuild the link from the id, and no plaintext token ever reaches the outbox.
 - **The token is the credential, not the email match.** Auth runs with email verification
   disabled, so accepting an Invitation by comparing the signed-in account's email to the
   invited address would let anyone claim a colleague's Invitation by signing up with their

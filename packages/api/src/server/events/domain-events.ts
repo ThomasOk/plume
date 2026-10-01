@@ -12,8 +12,18 @@ export interface CommentCreatedPayload {
   authorId: string;
 }
 
+export const INVITATION_CREATED = 'invitation.created';
+
+// The id alone: the email, the space and the link are read or derived by the handler. The
+// token in particular must never be here — the outbox keeps its rows, and a stored token is
+// a live link (see `invitation-token.ts`).
+export interface InvitationCreatedPayload {
+  invitationId: string;
+}
+
 export interface DomainEventMap {
   [COMMENT_CREATED]: CommentCreatedPayload;
+  [INVITATION_CREATED]: InvitationCreatedPayload;
 }
 
 export type DomainEventType = keyof DomainEventMap;

@@ -4,10 +4,21 @@ import { toast } from 'sonner';
 import { env } from '@/env';
 import { authClient } from '@/lib/authClient';
 
-export const useAuth = () => {
+interface UseAuthOptions {
+  // Where to land after signing in or up, instead of home. Must already be a safe path
+  // (see `redirectSearchSchema`): the routes validate it before it gets here.
+  redirectTo?: string;
+}
+
+export const useAuth = ({ redirectTo }: UseAuthOptions = {}) => {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const landAfterAuth = () => {
+    if (redirectTo) navigate({ href: redirectTo });
+    else navigate({ to: '/' });
+  };
 
   const user = session?.user ?? null;
   const isAuthenticated = !!user;
@@ -18,7 +29,7 @@ export const useAuth = () => {
       const { error } = await authClient.signIn.email(credentials, {
         onSuccess: () => {
           toast.success('Welcome back!');
-          navigate({ to: '/' });
+          landAfterAuth();
         },
       });
 
@@ -44,7 +55,7 @@ export const useAuth = () => {
       const { error } = await authClient.signUp.email(data, {
         onSuccess: () => {
           toast.success('Account created successfully!');
-          navigate({ to: '/' });
+          landAfterAuth();
         },
       });
 
@@ -77,7 +88,9 @@ export const useAuth = () => {
     try {
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: env.PUBLIC_WEB_URL,
+        callbackURL: redirectTo
+          ? new URL(redirectTo, env.PUBLIC_WEB_URL).toString()
+          : env.PUBLIC_WEB_URL,
       });
       return { success: true };
     } catch (error) {

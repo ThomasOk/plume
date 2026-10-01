@@ -9,6 +9,10 @@ plain values, with **no database access**. A policy function that needs a databa
 the signal that a fact was not resolved upstream. Tickets 02 to 05 only ever needed "is this
 User a Member", which the Space procedure already answers; from here the matrix has real
 content and belongs in one readable, testable place rather than spread across services.
+Ticket 05 already needed "only an admin invites", so `space-policy.ts` exists with that one
+rule (`mayManageMembership`); this ticket completes it. Ticket 05 also built the members page
+(`/spaces/:id/members`) with the invite form and the pending Invitations; the Member list
+joins it here.
 
 The matrix:
 

@@ -10,6 +10,9 @@ import {
   NotificationNotFoundError,
   FileSizeLimitExceededError,
   SpaceNotFoundError,
+  InvitationNotFoundError,
+  InvitationExpiredError,
+  AlreadyMemberError,
 } from './shared/errors';
 export type { StorageService };
 
@@ -26,6 +29,7 @@ export const createTRPCContext = async ({
   headers,
   requestId,
   logger,
+  invitationSecret,
 }: {
   auth: AuthInstance;
   db: DatabaseInstance;
@@ -33,12 +37,15 @@ export const createTRPCContext = async ({
   headers: Headers;
   requestId: string;
   logger: AppLogger;
+  invitationSecret: string;
 }): Promise<{
   db: DatabaseInstance;
   storage: StorageService;
   session: AuthInstance['$Infer']['Session'] | null;
   requestId: string;
   logger: AppLogger;
+  // Derives the token of an invitation link (see `invitation-token.ts`).
+  invitationSecret: string;
 }> => {
   const session = await auth.api.getSession({
     headers,
@@ -49,6 +56,7 @@ export const createTRPCContext = async ({
     session,
     requestId,
     logger,
+    invitationSecret,
   };
 };
 
@@ -66,6 +74,9 @@ const domainErrorCodes: [new (...args: never[]) => Error, TRPCError['code']][] =
   [NotificationNotFoundError, 'NOT_FOUND'],
   [SpaceNotFoundError, 'NOT_FOUND'],
   [FileSizeLimitExceededError, 'BAD_REQUEST'],
+  [InvitationNotFoundError, 'NOT_FOUND'],
+  [InvitationExpiredError, 'PRECONDITION_FAILED'],
+  [AlreadyMemberError, 'CONFLICT'],
 ];
 
 // tRPC's `next()` never throws: a failure further down comes back as `{ ok: false }`, with

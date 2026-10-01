@@ -16,12 +16,14 @@ import { Route as AttachmentsRouteImport } from './routes/attachments'
 import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
 import { Route as MemosMemoIdRouteImport } from './routes/memos.$memoId'
+import { Route as InvitationsTokenRouteImport } from './routes/invitations.$token'
 import { Route as memosExploreRouteImport } from './routes/(memos)/explore'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as memosprivateLayoutRouteImport } from './routes/(memos)/(private)/layout'
 import { Route as memosprivateIndexRouteImport } from './routes/(memos)/(private)/index'
 import { Route as memosprivateSpacesSpaceIdRouteImport } from './routes/(memos)/(private)/spaces.$spaceId'
+import { Route as memosprivateSpacesSpaceIdMembersRouteImport } from './routes/(memos)/(private)/spaces.$spaceId_.members'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -56,6 +58,11 @@ const MemosMemoIdRoute = MemosMemoIdRouteImport.update({
   path: '/memos/$memoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitationsTokenRoute = InvitationsTokenRouteImport.update({
+  id: '/invitations/$token',
+  path: '/invitations/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const memosExploreRoute = memosExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
@@ -86,6 +93,12 @@ const memosprivateSpacesSpaceIdRoute =
     path: '/spaces/$spaceId',
     getParentRoute: () => memosprivateLayoutRoute,
   } as any)
+const memosprivateSpacesSpaceIdMembersRoute =
+  memosprivateSpacesSpaceIdMembersRouteImport.update({
+    id: '/spaces/$spaceId_/members',
+    path: '/spaces/$spaceId/members',
+    getParentRoute: () => memosprivateLayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof memosprivateIndexRoute
@@ -96,8 +109,10 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
+  '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
+  '/spaces/$spaceId/members': typeof memosprivateSpacesSpaceIdMembersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof memosprivateIndexRoute
@@ -108,8 +123,10 @@ export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
+  '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
+  '/spaces/$spaceId/members': typeof memosprivateSpacesSpaceIdMembersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,9 +140,11 @@ export interface FileRoutesById {
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(memos)/explore': typeof memosExploreRoute
+  '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/(memos)/(private)/': typeof memosprivateIndexRoute
   '/(memos)/(private)/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
+  '/(memos)/(private)/spaces/$spaceId_/members': typeof memosprivateSpacesSpaceIdMembersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,8 +157,10 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/explore'
+    | '/invitations/$token'
     | '/memos/$memoId'
     | '/spaces/$spaceId'
+    | '/spaces/$spaceId/members'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,8 +171,10 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/explore'
+    | '/invitations/$token'
     | '/memos/$memoId'
     | '/spaces/$spaceId'
+    | '/spaces/$spaceId/members'
   id:
     | '__root__'
     | '/(auth)'
@@ -164,9 +187,11 @@ export interface FileRouteTypes {
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(memos)/explore'
+    | '/invitations/$token'
     | '/memos/$memoId'
     | '/(memos)/(private)/'
     | '/(memos)/(private)/spaces/$spaceId'
+    | '/(memos)/(private)/spaces/$spaceId_/members'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -176,6 +201,7 @@ export interface RootRouteChildren {
   CalendarDemoRoute: typeof CalendarDemoRoute
   NotificationsRoute: typeof NotificationsRoute
   SettingsRoute: typeof SettingsRoute
+  InvitationsTokenRoute: typeof InvitationsTokenRoute
   MemosMemoIdRoute: typeof MemosMemoIdRoute
 }
 
@@ -230,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemosMemoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invitations/$token': {
+      id: '/invitations/$token'
+      path: '/invitations/$token'
+      fullPath: '/invitations/$token'
+      preLoaderRoute: typeof InvitationsTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(memos)/explore': {
       id: '/(memos)/explore'
       path: '/explore'
@@ -272,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof memosprivateSpacesSpaceIdRouteImport
       parentRoute: typeof memosprivateLayoutRoute
     }
+    '/(memos)/(private)/spaces/$spaceId_/members': {
+      id: '/(memos)/(private)/spaces/$spaceId_/members'
+      path: '/spaces/$spaceId/members'
+      fullPath: '/spaces/$spaceId/members'
+      preLoaderRoute: typeof memosprivateSpacesSpaceIdMembersRouteImport
+      parentRoute: typeof memosprivateLayoutRoute
+    }
   }
 }
 
@@ -292,11 +332,13 @@ const authLayoutRouteWithChildren = authLayoutRoute._addFileChildren(
 interface memosprivateLayoutRouteChildren {
   memosprivateIndexRoute: typeof memosprivateIndexRoute
   memosprivateSpacesSpaceIdRoute: typeof memosprivateSpacesSpaceIdRoute
+  memosprivateSpacesSpaceIdMembersRoute: typeof memosprivateSpacesSpaceIdMembersRoute
 }
 
 const memosprivateLayoutRouteChildren: memosprivateLayoutRouteChildren = {
   memosprivateIndexRoute: memosprivateIndexRoute,
   memosprivateSpacesSpaceIdRoute: memosprivateSpacesSpaceIdRoute,
+  memosprivateSpacesSpaceIdMembersRoute: memosprivateSpacesSpaceIdMembersRoute,
 }
 
 const memosprivateLayoutRouteWithChildren =
@@ -323,6 +365,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarDemoRoute: CalendarDemoRoute,
   NotificationsRoute: NotificationsRoute,
   SettingsRoute: SettingsRoute,
+  InvitationsTokenRoute: InvitationsTokenRoute,
   MemosMemoIdRoute: MemosMemoIdRoute,
 }
 export const routeTree = rootRouteImport
