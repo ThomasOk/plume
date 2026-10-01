@@ -13,11 +13,27 @@ function MembersPage() {
   const space = useSpace(spaceId);
   const navigate = useNavigate();
 
-  // A non-admin is told the same as a non-member: there is nothing here for them.
-  if (isNotFound(space.error) || (space.data && !may(space.data.role, 'manageMembership'))) {
+  if (isNotFound(space.error)) {
     return (
       <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
         <p className="text-muted-foreground">Space not found.</p>
+      </div>
+    );
+  }
+
+  // A member is not answered like a non-member: they already know the space exists, so there
+  // is no oracle to avoid, and "not found" would contradict the space in their sidebar.
+  if (space.data && !may(space.data.role, 'manageMembership')) {
+    return (
+      <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl space-y-2">
+        <p className="text-muted-foreground">Only admins of {space.data.title} manage its members.</p>
+        <Link
+          to="/spaces/$spaceId"
+          params={{ spaceId }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back to {space.data.title}
+        </Link>
       </div>
     );
   }
