@@ -48,7 +48,7 @@ export const listPublic = publicProcedure
 export const create = protectedProcedure
   .input(createMemoSchema)
   .mutation(({ ctx, input }) =>
-    createMemo(ctx.db, ctx.session.user.id, personalScope(ctx.session.user.id), input),
+    createMemo(ctx.db, ctx.session.user.id, { kind: 'personal' }, input),
   );
 
 export const listComments = publicProcedure
@@ -73,7 +73,7 @@ export const deleteMemo = protectedProcedure
 export const move = protectedProcedure
   .input(moveMemoSchema)
   .mutation(({ ctx, input }) =>
-    moveMemo(ctx.db, ctx.session.user.id, personalScope(ctx.session.user.id), input),
+    moveMemo(ctx.db, ctx.session.user.id, { kind: 'personal' }, input),
   );
 
 export const stats = protectedProcedure
@@ -92,12 +92,12 @@ export const space = router({
   create: spaceProcedure
     .input(createSpaceMemoSchema)
     .mutation(({ ctx, input }) =>
-      createMemo(ctx.db, ctx.session.user.id, spaceScope(ctx.membership), input),
+      createMemo(ctx.db, ctx.session.user.id, { kind: 'space', membership: ctx.membership }, input),
     ),
   move: spaceProcedure
     .input(moveSpaceMemoSchema)
     .mutation(({ ctx, input }) =>
-      moveMemo(ctx.db, ctx.session.user.id, spaceScope(ctx.membership), input),
+      moveMemo(ctx.db, ctx.session.user.id, { kind: 'space', membership: ctx.membership }, input),
     ),
   list: spaceProcedure
     .input(listMemosSchema)

@@ -37,7 +37,8 @@ const inviteIntoNewSpace = async (page: Page, email: string) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByTestId('memo-card').filter({ hasText: content })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Members' }).click();
+  await page.getByRole('button', { name: 'Space actions' }).click();
+  await page.getByRole('menuitem', { name: 'Members' }).click();
   await page.getByLabel('Email').fill(email);
   await page.getByRole('button', { name: 'Invite' }).click();
   await expect(page.getByRole('list', { name: 'Pending invitations' })).toContainText(email);
@@ -72,8 +73,13 @@ test('an admin invites an address with no account; the invitee signs up and read
   await expect(inviteePage).toHaveURL(new RegExp(`/spaces/${spaceId}$`));
   await expect(inviteePage.getByRole('heading', { name: title })).toBeVisible();
   await expect(inviteePage.getByTestId('memo-card').filter({ hasText: content })).toBeVisible();
-  // A member is not offered governance.
-  await expect(inviteePage.getByRole('link', { name: 'Members' })).toHaveCount(0);
+  // A member is offered leaving, and no governance at all.
+  await inviteePage.getByRole('button', { name: 'Space actions' }).click();
+  await expect(inviteePage.getByRole('menuitem', { name: 'Leave space' })).toBeVisible();
+  for (const governance of ['Members', 'Rename', 'Delete space']) {
+    await expect(inviteePage.getByRole('menuitem', { name: governance })).toHaveCount(0);
+  }
+  await inviteePage.keyboard.press('Escape');
 
   // The link worked once.
   await inviteePage.goto(`/invitations/${token}`, { waitUntil: 'networkidle' });

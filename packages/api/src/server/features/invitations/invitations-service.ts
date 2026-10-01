@@ -2,18 +2,16 @@ import { and, asc, eq, sql } from '@repo/db';
 import { space, spaceInvitation, spaceMember, user } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
 import type { createInvitationSchema, revokeInvitationSchema } from './invitations-schemas';
-import type { SpaceMembership } from '../spaces';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import { INVITATION_CREATED } from '../../events/domain-events';
 import { recordEvent } from '../../events/outbox';
 import {
   AlreadyMemberError,
-  InsufficientPermissionsError,
   InvitationExpiredError,
   InvitationNotFoundError,
 } from '../../shared/errors';
-import { mayManageMembership } from '../spaces/space-policy';
+import { assertMay, type SpaceMembership } from '../spaces';
 import { deriveInvitationToken, hashInvitationToken } from './invitation-token';
 
 type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
@@ -22,10 +20,6 @@ type RevokeInvitationInput = z.infer<typeof revokeInvitationSchema>;
 export const INVITATION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 const isExpired = (invitation: { expiresAt: Date }) => invitation.expiresAt.getTime() <= Date.now();
-
-function assertMayManageMembership(membership: SpaceMembership) {
-  if (!mayManageMembership(membership.role)) throw new InsufficientPermissionsError();
-}
 
 // The invitation and its `invitation.created` event commit together, so the email is sent if
 // and only if the invitation exists. Re-inviting an address replaces its pending invitation
@@ -37,7 +31,7 @@ export async function createInvitation(
   membership: SpaceMembership,
   input: CreateInvitationInput,
 ) {
-  assertMayManageMembership(membership);
+  assertMay(membership, 'manageMembership');
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -89,7 +83,7 @@ export async function createInvitation(
 // Expired invitations are listed too, flagged, so an admin sees who never answered and can
 // invite them again.
 export async function listInvitations(db: DatabaseInstance, membership: SpaceMembership) {
-  assertMayManageMembership(membership);
+  assertMay(membership, 'manageMembership');
 
   const rows = await db
     .select({
@@ -111,7 +105,7 @@ export async function revokeInvitation(
   membership: SpaceMembership,
   { invitationId }: RevokeInvitationInput,
 ) {
-  assertMayManageMembership(membership);
+  assertMay(membership, 'manageMembership');
 
   // Scoped to the space the membership was resolved for: an admin of one space cannot reach
   // another's invitations by id.

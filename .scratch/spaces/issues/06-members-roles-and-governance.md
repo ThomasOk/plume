@@ -45,24 +45,41 @@ Lifecycle rules:
 - Governance actions are **absent** from a `member`'s interface, not present-and-failing. A
   User should not be offered what they cannot do.
 
+Decided while implementing, beyond the above:
+
+- The matrix is data — `may(role, action)` over one table — with `mayEditMemo` and
+  `mayDeleteMemo` deciding from `{ isAuthor, role }` and `keepsAnAdmin` holding the
+  invariant. The web client imports the same module, so the interface offers exactly what the
+  server allows.
+- Reading a Space is not asked of the matrix: it is what membership means, and
+  `spaceProcedure` enforces it. Writing is: the write paths take a destination carrying the
+  membership, and the service asks `writeMemo`, so a future Role that may not write is one
+  cell to flip.
+- Governance changes lock the Space row, then count admins and re-read the actor's Role.
+  Without the lock, two admins leaving or demoting each other at once would each see two
+  admins and both succeed.
+- Moderation covers Comments too: they are Memos. It is offered on the Space page only — the
+  page of one Memo does not know its Space — though the server allows it from either.
+- The Member list stays admin-only, as the members page already was.
+
 **Blocked by:** 05 — Invite someone to a Space by email.
 
 **Status:** ready-for-agent
 
-- [ ] The policy module holds the matrix as pure functions, with no database access
-- [ ] Every cell of the matrix is covered by a table-driven unit test
-- [ ] An admin sees the Member list with Roles and the pending Invitations
-- [ ] An admin promotes a `member` to `admin`
-- [ ] An admin demotes another `admin` to `member`
-- [ ] An admin removes a Member, whose Memos stay in the Space with their byline
-- [ ] A `member` cannot invite, remove, or change a Role
-- [ ] A `member` is not shown the governance actions at all
-- [ ] An admin deletes another Member's Memo
-- [ ] An admin is refused when editing another Member's Memo
-- [ ] Any Member can leave, and immediately loses read access
-- [ ] The last admin cannot leave
-- [ ] The last admin cannot demote themselves
-- [ ] An admin renames the Space
-- [ ] An admin deletes the Space behind a confirmation; its Memos and Comments go with it
-- [ ] A removed Member's personal views are unaffected
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] The policy module holds the matrix as pure functions, with no database access
+- [x] Every cell of the matrix is covered by a table-driven unit test
+- [x] An admin sees the Member list with Roles and the pending Invitations
+- [x] An admin promotes a `member` to `admin`
+- [x] An admin demotes another `admin` to `member`
+- [x] An admin removes a Member, whose Memos stay in the Space with their byline
+- [x] A `member` cannot invite, remove, or change a Role
+- [x] A `member` is not shown the governance actions at all
+- [x] An admin deletes another Member's Memo
+- [x] An admin is refused when editing another Member's Memo
+- [x] Any Member can leave, and immediately loses read access
+- [x] The last admin cannot leave
+- [x] The last admin cannot demote themselves
+- [x] An admin renames the Space
+- [x] An admin deletes the Space behind a confirmation; its Memos and Comments go with it
+- [x] A removed Member's personal views are unaffected
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass

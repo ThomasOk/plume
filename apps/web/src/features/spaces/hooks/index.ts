@@ -1,3 +1,9 @@
 export { useSpaces } from './use-spaces';
 export { useSpace } from './use-space';
 export { useCreateSpace } from './use-create-space';
+export { useSpaceMembers } from './use-space-members';
+export { useChangeMemberRole } from './use-change-member-role';
+export { useRemoveMember } from './use-remove-member';
+export { useRenameSpace } from './use-rename-space';
+export { useLeaveSpace } from './use-leave-space';
+export { useDeleteSpace } from './use-delete-space';

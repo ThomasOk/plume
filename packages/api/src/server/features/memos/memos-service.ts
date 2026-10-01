@@ -1,5 +1,5 @@
 import { desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
-import { memo, user, attachment } from '@repo/db/schema';
+import { memo, user, attachment, spaceMember } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
 import type {
@@ -18,6 +18,7 @@ import type { z } from 'zod';
 import { COMMENT_CREATED } from '../../events/domain-events';
 import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
+import { assertMay, mayDeleteMemo, mayEditMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 
@@ -177,12 +178,23 @@ const placementIn = (spaceId: string | null, visibility: CreateMemoInput['visibi
   return { visibility, spaceId: null };
 };
 
-// The space a scope places a memo in, if any.
-const spaceIdOf = (scope: MemoScope) => (scope.kind === 'space' ? scope.spaceId : null);
+/**
+ * Where a write puts a memo: among the author's personal memos, or into a space. A space is
+ * named by the membership `spaceProcedure` resolved, never by a bare identifier, so the
+ * write can ask the role matrix whether that member may write there.
+ */
+export type MemoDestination = { kind: 'personal' } | { kind: 'space'; membership: SpaceMembership };
 
-// `authorId` and `scope` are two different facts, and a write needs both: who signs the
-// memo, and which scope it is written into. A space scope names no author.
-export async function createMemo(db: DatabaseInstance, authorId: string, scope: MemoScope, input: CreateMemoInput) {
+// The space a write puts a memo in, if any — once the member's role allows writing there.
+const spaceIdOf = (destination: MemoDestination) => {
+  if (destination.kind === 'personal') return null;
+  assertMay(destination.membership, 'writeMemo');
+  return destination.membership.spaceId;
+};
+
+// `authorId` and `destination` are two different facts, and a write needs both: who signs
+// the memo, and where it goes. A space names no author.
+export async function createMemo(db: DatabaseInstance, authorId: string, destination: MemoDestination, input: CreateMemoInput) {
 
   const now = new Date();
   const tags = extractTagsFromContent(input.content);
@@ -216,7 +228,7 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
     // space, which the equivalence constraint refuses.
     const placement = parent
       ? { visibility: parent.visibility, spaceId: parent.spaceId }
-      : placementIn(spaceIdOf(scope), input.visibility);
+      : placementIn(spaceIdOf(destination), input.visibility);
 
     const [created] = await tx
       .insert(memo)
@@ -285,17 +297,36 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
   }));
 }
 
-export async function updateMemo(db: DatabaseInstance, userId: string, input: UpdateMemoInput) {
-  const [existing] = await db
-    .select({ id: memo.id, userId: memo.userId, spaceId: memo.spaceId })
+/**
+ * One memo a user is about to act on, with the facts the space policy decides from: whether
+ * they wrote it, and their role in its space. The role is resolved in the same query, as
+ * readability is (ADR 0004): a link to a memo carries the memo, not its space.
+ *
+ * A memo the user cannot read answers like a missing one.
+ */
+async function findMemoForActor(db: DatabaseInstance, userId: string, id: string) {
+  const [row] = await db
+    .select({ id: memo.id, userId: memo.userId, spaceId: memo.spaceId, role: spaceMember.role })
     .from(memo)
-    .where(and(eq(memo.id, input.id), readableMemoCondition(userId)))
+    .leftJoin(
+      spaceMember,
+      and(eq(spaceMember.spaceId, memo.spaceId), eq(spaceMember.userId, userId)),
+    )
+    .where(and(eq(memo.id, id), readableMemoCondition(userId)))
     .limit(1);
 
-  // A memo the user cannot read answers like a missing one; one they can read but did not
-  // write is refused — nobody edits another's memo, in a space or out of it.
-  if (!existing) throw new MemoNotFoundError();
-  if (existing.userId !== userId) throw new InsufficientPermissionsError();
+  if (!row) throw new MemoNotFoundError();
+
+  const { role, ...existing } = row;
+  return { ...existing, actor: { isAuthor: row.userId === userId, role } };
+}
+
+export async function updateMemo(db: DatabaseInstance, userId: string, input: UpdateMemoInput) {
+  const existing = await findMemoForActor(db, userId, input.id);
+
+  // Nobody edits another's memo, in a space or out of it, admin included: the memo would
+  // keep its author's byline over words they did not write.
+  if (!mayEditMemo(existing.actor)) throw new InsufficientPermissionsError();
 
   // An edit leaves a memo where it is: moving it into or out of a space is its own
   // operation, not a side effect of changing the visibility.
@@ -314,14 +345,10 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
 }
 
 export async function deleteMemo(db: DatabaseInstance, userId: string, input: DeleteMemoInput) {
-  const [existing] = await db
-    .select({ id: memo.id, userId: memo.userId })
-    .from(memo)
-    .where(and(eq(memo.id, input.id), readableMemoCondition(userId)))
-    .limit(1);
+  const existing = await findMemoForActor(db, userId, input.id);
 
-  if (!existing) throw new MemoNotFoundError();
-  if (existing.userId !== userId) throw new InsufficientPermissionsError();
+  // An admin may delete another member's memo or comment in their space: that is moderation.
+  if (!mayDeleteMemo(existing.actor)) throw new InsufficientPermissionsError();
 
   await db.delete(memo).where(eq(memo.id, input.id));
 
@@ -333,7 +360,7 @@ export async function deleteMemo(db: DatabaseInstance, userId: string, input: De
 // through a state where one field has changed and the other has not (ADR 0003).
 //
 // It leaves `updatedAt` alone: a move changes who reads the memo, not what was written.
-export async function moveMemo(db: DatabaseInstance, authorId: string, scope: MemoScope, input: MoveMemoInput) {
+export async function moveMemo(db: DatabaseInstance, authorId: string, destination: MemoDestination, input: MoveMemoInput) {
   return db.transaction(async (tx) => {
     // Locked against a comment being written while the memo moves: either the comment
     // lands first and is counted below, or it waits and copies the memo's new place.
@@ -354,7 +381,7 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, scope: Me
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'A comment moves with its memo, not on its own' });
     }
 
-    const placement = placementIn(spaceIdOf(scope), 'visibility' in input ? input.visibility : undefined);
+    const placement = placementIn(spaceIdOf(destination), 'visibility' in input ? input.visibility : undefined);
 
     // A move goes somewhere else. Between private and public, a personal memo stays where it
     // is, and that is an edit: one way to change a visibility, not two.

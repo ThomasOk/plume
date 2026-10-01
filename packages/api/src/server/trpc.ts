@@ -13,6 +13,8 @@ import {
   InvitationNotFoundError,
   InvitationExpiredError,
   AlreadyMemberError,
+  MemberNotFoundError,
+  LastAdminError,
 } from './shared/errors';
 export type { StorageService };
 
@@ -77,6 +79,8 @@ const domainErrorCodes: [new (...args: never[]) => Error, TRPCError['code']][] =
   [InvitationNotFoundError, 'NOT_FOUND'],
   [InvitationExpiredError, 'PRECONDITION_FAILED'],
   [AlreadyMemberError, 'CONFLICT'],
+  [MemberNotFoundError, 'NOT_FOUND'],
+  [LastAdminError, 'CONFLICT'],
 ];
 
 // tRPC's `next()` never throws: a failure further down comes back as `{ ok: false }`, with

@@ -16,3 +16,14 @@ export const createSpaceSchema = z.object({
 export const spaceInputSchema = z.object({
   spaceId: z.string().min(1, 'Space ID is required'),
 });
+
+export const renameSpaceSchema = createSpaceSchema;
+
+// A member of the space a procedure was resolved for, named by their user id.
+export const memberInputSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
+});
+
+export const changeRoleSchema = memberInputSchema.extend({
+  role: z.enum(['admin', 'member']),
+});
