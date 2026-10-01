@@ -80,6 +80,10 @@ test('an admin invites an address with no account; the invitee signs up and read
     await expect(inviteePage.getByRole('menuitem', { name: governance })).toHaveCount(0);
   }
   await inviteePage.keyboard.press('Escape');
+  // Reaching the members page anyway, a member is told why, not that the space is missing.
+  await inviteePage.goto(`/spaces/${spaceId}/members`, { waitUntil: 'networkidle' });
+  await expect(inviteePage.getByText(`Only admins of ${title} manage its members.`)).toBeVisible();
+  await expect(inviteePage.getByText('Space not found.')).toHaveCount(0);
 
   // The link worked once.
   await inviteePage.goto(`/invitations/${token}`, { waitUntil: 'networkidle' });
