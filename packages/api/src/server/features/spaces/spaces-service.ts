@@ -1,4 +1,4 @@
-import { and, asc, eq } from '@repo/db';
+import { and, asc, count, eq, sql } from '@repo/db';
 import { space, spaceMember, type SpaceMember } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
 import type { createSpaceSchema, renameSpaceSchema } from './spaces-schemas';
@@ -76,7 +76,23 @@ export async function getSpace(db: DatabaseInstance, membership: SpaceMembership
   // deletion answers like any other missing space.
   if (!row) throw new SpaceNotFoundError();
 
-  return { ...row, role: membership.role };
+  // The headcount lets the interface tell the last admin, before they try, that leaving needs
+  // another admin first — or, alone in the space, that deleting it is the way out. The server
+  // still guards leaving itself (`keepsAnAdmin`); this only spares a refusal.
+  const [headcount] = await db
+    .select({
+      memberCount: count(),
+      adminCount: count(sql`case when ${spaceMember.role} = 'admin' then 1 end`),
+    })
+    .from(spaceMember)
+    .where(eq(spaceMember.spaceId, membership.spaceId));
+
+  return {
+    ...row,
+    role: membership.role,
+    memberCount: headcount?.memberCount ?? 0,
+    adminCount: headcount?.adminCount ?? 0,
+  };
 }
 
 export async function renameSpace(

@@ -29,4 +29,6 @@ export type Attachment = RouterOutputs['attachments']['list'][number];
 export type Comment = RouterOutputs['memos']['listComments'][number];
 export type Notification = RouterOutputs['notifications']['list'][number];
 export type Space = RouterOutputs['spaces']['list'][number];
+// One space as read from inside it: a `Space`, plus its headcount.
+export type SpaceDetails = RouterOutputs['spaces']['get'];
 export type SpaceMember = RouterOutputs['spaces']['members']['list'][number];

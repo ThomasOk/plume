@@ -212,6 +212,20 @@ describe('leaving a space', () => {
   });
 });
 
+describe('the headcount a member reads', () => {
+  it('counts the members and the admins, so the interface can warn the last admin', async () => {
+    expect(await as(bob).spaces.get({ spaceId: club.id })).toEqual(
+      expect.objectContaining({ memberCount: 3, adminCount: 1 }),
+    );
+
+    await as(alice).spaces.members.changeRole({ spaceId: club.id, userId: bob.id, role: 'admin' });
+
+    expect(await as(bob).spaces.get({ spaceId: club.id })).toEqual(
+      expect.objectContaining({ memberCount: 3, adminCount: 2 }),
+    );
+  });
+});
+
 describe('renaming a space', () => {
   it('lets an admin give it a new title, which every member sees', async () => {
     await as(alice).spaces.rename({ spaceId: club.id, title: '  Baking club  ' });

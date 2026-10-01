@@ -1,5 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { may, MAX_SPACE_TITLE_CHARACTERS, renameSpaceSchema } from '@repo/api/schemas';
+import {
+  keepsAnAdmin,
+  may,
+  MAX_SPACE_TITLE_CHARACTERS,
+  renameSpaceSchema,
+} from '@repo/api/schemas';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +44,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { MdMoreHoriz } from 'react-icons/md';
 import { toast } from 'sonner';
-import type { Space } from '@/lib/types';
+import type { SpaceDetails } from '@/lib/types';
 import type z from 'zod';
 import { useDeleteSpace } from '../hooks/use-delete-space';
 import { useLeaveSpace } from '../hooks/use-leave-space';
@@ -50,12 +55,16 @@ import { errorMessage } from '@/lib/trpc-errors';
 type RenameSpaceInput = z.infer<typeof renameSpaceSchema>;
 
 interface SpaceActionsMenuProps {
-  space: Space;
+  space: SpaceDetails;
   /** Called once the user has left the space, or deleted it: it is no longer theirs to show. */
   onGone: () => void;
 }
 
 type OpenDialog = 'rename' | 'delete' | 'leave' | null;
+
+// What leaving means for this member: they may go, or the space would be left without an
+// admin — with someone to promote, or with nobody else at all.
+type LeavingOutcome = 'allowed' | 'needsAnotherAdmin' | 'alone';
 
 /**
  * What a member may do to a space as a whole. The governance actions are absent, not
@@ -69,12 +78,24 @@ export const SpaceActionsMenu = ({ space, onGone }: SpaceActionsMenuProps) => {
   const mayManageMembership = may(space.role, 'manageMembership');
   const mayManageSpace = may(space.role, 'manageSpace');
 
+  // "Leave space" stays offered to the last admin, unlike the governance actions a role may
+  // never take: this is a state with a way out, and hiding the item would hide the way out.
+  // The dialog names it instead of letting the server refuse.
+  const leaving: LeavingOutcome = keepsAnAdmin({
+    targetRole: space.role,
+    adminCount: space.adminCount,
+  })
+    ? 'allowed'
+    : space.memberCount > 1
+      ? 'needsAnotherAdmin'
+      : 'alone';
+
   const onLeave = async () => {
     try {
       await leave.mutateAsync({ spaceId: space.id });
       onGone();
     } catch (error) {
-      // The last admin is refused with a reason they can act on: show it.
+      // The headcount may be stale (another admin just left): the server's reason still shows.
       toast.error(errorMessage(error, 'Failed to leave the space'));
     }
   };
@@ -83,25 +104,40 @@ export const SpaceActionsMenu = ({ space, onGone }: SpaceActionsMenuProps) => {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Space actions">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Space actions"
+          >
             <MdMoreHoriz className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {mayManageMembership && (
             <DropdownMenuItem asChild>
-              <Link to="/spaces/$spaceId/members" params={{ spaceId: space.id }}>
+              <Link
+                to="/spaces/$spaceId/members"
+                params={{ spaceId: space.id }}
+              >
                 Members
               </Link>
             </DropdownMenuItem>
           )}
           {mayManageSpace && (
-            <DropdownMenuItem onClick={() => setOpen('rename')}>Rename</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOpen('rename')}>
+              Rename
+            </DropdownMenuItem>
           )}
           {(mayManageMembership || mayManageSpace) && <DropdownMenuSeparator />}
-          <DropdownMenuItem onClick={() => setOpen('leave')}>Leave space</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpen('leave')}>
+            Leave space
+          </DropdownMenuItem>
           {mayManageSpace && (
-            <DropdownMenuItem variant="destructive" onClick={() => setOpen('delete')}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setOpen('delete')}
+            >
               Delete space
             </DropdownMenuItem>
           )}
@@ -110,7 +146,11 @@ export const SpaceActionsMenu = ({ space, onGone }: SpaceActionsMenuProps) => {
 
       {mayManageSpace && (
         <>
-          <RenameSpaceDialog space={space} open={open === 'rename'} onClose={close} />
+          <RenameSpaceDialog
+            space={space}
+            open={open === 'rename'}
+            onClose={close}
+          />
           <DeleteSpaceDialog
             space={space}
             open={open === 'delete'}
@@ -120,19 +160,71 @@ export const SpaceActionsMenu = ({ space, onGone }: SpaceActionsMenuProps) => {
         </>
       )}
 
-      <AlertDialog open={open === 'leave'} onOpenChange={(next) => !next && close()}>
+      <AlertDialog
+        open={open === 'leave'}
+        onOpenChange={(next) => !next && close()}
+      >
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Leave {space.title}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You will no longer read this space. The memos you wrote stay in it, under your
-              name.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onLeave}>Leave</AlertDialogAction>
-          </AlertDialogFooter>
+          {leaving === 'allowed' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave {space.title}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will no longer read this space. The memos you wrote stay
+                  in it, under your name.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onLeave}>Leave</AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+          {leaving === 'needsAnotherAdmin' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  You are the only admin of {space.title}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  A space needs an admin. Make another member an admin, then you
+                  can leave.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button asChild>
+                  <Link
+                    to="/spaces/$spaceId/members"
+                    params={{ spaceId: space.id }}
+                  >
+                    Manage members
+                  </Link>
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+          {leaving === 'alone' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  You are the only member of {space.title}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Leaving would leave it with no one. If you no longer need it,
+                  delete it instead.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                {/* A plain button: an AlertDialogAction would close this dialog after the
+                    click, and that close would cancel the switch to the delete dialog. */}
+                <Button variant="destructive" onClick={() => setOpen('delete')}>
+                  Delete space
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </>
@@ -207,7 +299,10 @@ const DeleteSpaceDialog = ({
 }: SpaceDialogProps & { onDeleted: () => void }) => {
   const deleteSpace = useDeleteSpace();
   // The space's Activity, summed: the number of memos about to go. Fetched only when asked.
-  const stats = useMemosStats({ scope: { kind: 'space', spaceId: space.id }, enabled: open });
+  const stats = useMemosStats({
+    scope: { kind: 'space', spaceId: space.id },
+    enabled: open,
+  });
   // Without it — still loading, or failed — the dialog names the memos without a number.
   const memoCount = stats.data
     ? Object.values(stats.data).reduce((sum, count) => sum + count, 0)
@@ -232,7 +327,8 @@ const DeleteSpaceDialog = ({
             {memoCount === undefined
               ? ', its memos and their comments'
               : `, its ${memoCount} ${memoCount === 1 ? 'memo' : 'memos'} and their comments`}
-            , whoever wrote them. Every member loses access. This cannot be undone.
+            , whoever wrote them. Every member loses access. This cannot be
+            undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
