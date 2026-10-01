@@ -151,26 +151,34 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
   }));
 }
 
-// The personal write paths name no space, so they cannot produce a `space` memo: writing
-// into a space goes through the space's own procedure, which has resolved the membership.
-// Refusing here turns what the database would reject as a constraint violation into a
-// plain refusal.
-const rejectSpaceVisibility = (visibility: CreateMemoInput['visibility']) => {
+// The one place a root memo's visibility is reconciled with where it sits (ADR 0003): in a
+// space, its visibility is `space` and nothing else; out of one, it is anything but. The
+// database refuses the other combinations as a constraint violation; refusing here turns
+// that into a plain answer. Creating, editing and moving all ask this, each naming the
+// space the memo ends up in — or none.
+const placementIn = (spaceId: string | null, visibility: CreateMemoInput['visibility']) => {
+  if (spaceId !== null) {
+    if (visibility !== undefined && visibility !== 'space') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A memo in a space is neither private nor public: move it out instead',
+      });
+    }
+    return { visibility: 'space' as const, spaceId };
+  }
+  // Writing into a space goes through the space's own procedure, which has resolved the
+  // membership; a path that names no space cannot produce a `space` memo.
   if (visibility === 'space') {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'A memo cannot be written into a space without naming the space',
     });
   }
-};
-
-// Where a root memo goes — written, or moved — is the scope named: a space places it in
-// that space, the personal scope leaves it personal with the visibility the author chose.
-const placementIn = (scope: MemoScope, visibility: CreateMemoInput['visibility']) => {
-  if (scope.kind === 'space') return { visibility: 'space' as const, spaceId: scope.spaceId };
-  rejectSpaceVisibility(visibility);
   return { visibility, spaceId: null };
 };
+
+// The space a scope places a memo in, if any.
+const spaceIdOf = (scope: MemoScope) => (scope.kind === 'space' ? scope.spaceId : null);
 
 // `authorId` and `scope` are two different facts, and a write needs both: who signs the
 // memo, and which scope it is written into. A space scope names no author.
@@ -208,7 +216,7 @@ export async function createMemo(db: DatabaseInstance, authorId: string, scope: 
     // space, which the equivalence constraint refuses.
     const placement = parent
       ? { visibility: parent.visibility, spaceId: parent.spaceId }
-      : placementIn(scope, input.visibility);
+      : placementIn(spaceIdOf(scope), input.visibility);
 
     const [created] = await tx
       .insert(memo)
@@ -291,15 +299,12 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
 
   // An edit leaves a memo where it is: moving it into or out of a space is its own
   // operation, not a side effect of changing the visibility.
-  if (existing.spaceId === null) rejectSpaceVisibility(input.visibility);
-  else if (input.visibility !== 'space') {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A memo in a space cannot be taken out of it by an edit' });
-  }
+  const { visibility } = placementIn(existing.spaceId, input.visibility);
 
   const tags = extractTagsFromContent(input.content);
   const [updatedMemo] = await db
     .update(memo)
-    .set({ content: input.content, tags, visibility: input.visibility, updatedAt: new Date() })
+    .set({ content: input.content, tags, visibility, updatedAt: new Date() })
     .where(eq(memo.id, input.id))
     .returning();
 
@@ -349,7 +354,7 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, scope: Me
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'A comment moves with its memo, not on its own' });
     }
 
-    const placement = placementIn(scope, 'visibility' in input ? input.visibility : undefined);
+    const placement = placementIn(spaceIdOf(scope), 'visibility' in input ? input.visibility : undefined);
 
     // A move goes somewhere else. Between private and public, a personal memo stays where it
     // is, and that is an edit: one way to change a visibility, not two.
