@@ -2,6 +2,7 @@ import type { AppLogger, StorageService } from './trpc';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
 import { attachmentsRouter } from './features/attachments';
+import { invitationsRouter } from './features/invitations';
 import { memosRouter } from './features/memos';
 import { notificationsRouter } from './features/notifications';
 import { spacesRouter } from './features/spaces';
@@ -12,16 +13,19 @@ export const appRouter = router({
   attachments: attachmentsRouter,
   notifications: notificationsRouter,
   spaces: spacesRouter,
+  invitations: invitationsRouter,
 });
 
 export const createApi = ({
   auth,
   db,
   storage,
+  invitationSecret,
 }: {
   auth: AuthInstance;
   db: DatabaseInstance;
   storage: StorageService;
+  invitationSecret: string;
 }) => {
   return {
     trpcRouter: appRouter,
@@ -33,7 +37,15 @@ export const createApi = ({
       headers: Headers;
       requestId: string;
       logger: AppLogger;
-    }) => createTRPCContextInternal({ auth, db, storage, headers, requestId, logger }),
+    }) => createTRPCContextInternal({
+        auth,
+        db,
+        storage,
+        headers,
+        requestId,
+        logger,
+        invitationSecret,
+      }),
   };
 };
 
@@ -45,6 +57,10 @@ export { startOutboxWorker, type OutboxWorker } from './events/worker';
 export { createResendEmailSender } from './email/resend-email-sender';
 export { createNoopEmailSender } from './email/noop-email-sender';
 export type { EmailSender } from './email/email-sender';
+export {
+  deriveInvitationToken,
+  type InvitationLinkConfig,
+} from './features/invitations/invitation-token';
 
 export type AppRouter = typeof appRouter;
 export type { AppLogger, StorageService };

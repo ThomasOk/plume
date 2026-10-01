@@ -24,5 +24,8 @@ export {
   MAX_SPACE_TITLE_CHARACTERS,
 } from '../server/features/spaces/spaces-schemas';
 
+// Invitations feature schemas
+export { createInvitationSchema } from '../server/features/invitations/invitations-schemas';
+
 // As you add more features, export their schemas here:
 // export { createUserSchema, updateUserSchema } from '../server/features/users/schemas';

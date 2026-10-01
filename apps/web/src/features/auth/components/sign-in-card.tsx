@@ -21,8 +21,13 @@ const formSchema = z.object({
   password: z.string().min(1, 'Required'),
 });
 
-export const SignInCard = () => {
-  const { signInWithGoogle, login, isGoogleLoading } = useAuth();
+interface SignInCardProps {
+  // A safe path to land on once authenticated; carried over to the other auth page.
+  redirect?: string;
+}
+
+export const SignInCard = ({ redirect }: SignInCardProps) => {
+  const { signInWithGoogle, login, isGoogleLoading } = useAuth({ redirectTo: redirect });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -117,7 +122,7 @@ export const SignInCard = () => {
       <div className="flex items-center justify-center">
         <p>
           Don&apos;t have an account ?
-          <Link to="/sign-up">
+          <Link to="/sign-up" search={{ redirect }}>
             <span className="text-primary">&nbsp; Sign Up</span>
           </Link>
         </p>

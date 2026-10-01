@@ -3,7 +3,7 @@ import { drainOnce } from '../src/server/events/outbox';
 import { createEventBusWithHandlers } from '../src/server/events/register-handlers';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
 import { createFakeEmailSender } from './helpers/email';
-import { createAuthenticatedCaller } from './helpers/trpc';
+import { TEST_INVITATION_LINKS, createAuthenticatedCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
 
@@ -62,7 +62,7 @@ describe('sendCommentEmail handler (via drainOnce)', () => {
     await caller.memos.create({ content: 'Nice memo!', parentId: parentMemo.id });
 
     const emailSender = createFakeEmailSender();
-    const bus = createEventBusWithHandlers(db, emailSender);
+    const bus = createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS);
     await drainOnce({ db, bus });
 
     expect(emailSender.sent).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('sendCommentEmail handler (via drainOnce)', () => {
     await caller.memos.create({ content: 'Nice memo!', parentId: parentMemo.id });
 
     const emailSender = createFakeEmailSender();
-    const bus = createEventBusWithHandlers(db, emailSender);
+    const bus = createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS);
     await drainOnce({ db, bus });
 
     // Force the row back to pending to genuinely re-dispatch the event (a crash/replay),
@@ -94,7 +94,7 @@ describe('sendCommentEmail handler (via drainOnce)', () => {
     await caller.memos.create({ content: 'replying to myself', parentId: parentMemo.id });
 
     const emailSender = createFakeEmailSender();
-    const bus = createEventBusWithHandlers(db, emailSender);
+    const bus = createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS);
     await drainOnce({ db, bus });
 
     expect(emailSender.sent).toHaveLength(0);
@@ -109,7 +109,7 @@ describe('sendCommentEmail handler (via drainOnce)', () => {
     const comment = await caller.memos.create({ content: 'Nice!', parentId: parentMemo.id });
 
     const emailSender = createFakeEmailSender();
-    const bus = createEventBusWithHandlers(db, emailSender);
+    const bus = createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS);
     await drainOnce({ db, bus });
 
     const notifications = await db.select().from(notification).where(eq(notification.entityId, comment.id));

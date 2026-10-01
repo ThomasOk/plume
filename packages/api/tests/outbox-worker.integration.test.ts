@@ -3,7 +3,7 @@ import { createEventBusWithHandlers } from '../src/server/events/register-handle
 import { startOutboxWorker } from '../src/server/events/worker';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
 import { createFakeEmailSender } from './helpers/email';
-import { createAuthenticatedCaller } from './helpers/trpc';
+import { TEST_INVITATION_LINKS, createAuthenticatedCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
 
@@ -73,7 +73,7 @@ describe('startOutboxWorker (booted, real DB)', () => {
   });
 
   it('drains a new comment into a notification within a poll interval, with no manual drain', async () => {
-    const bus = createEventBusWithHandlers(db, createFakeEmailSender());
+    const bus = createEventBusWithHandlers(db, createFakeEmailSender(), TEST_INVITATION_LINKS);
     const worker = startOutboxWorker({ db, bus, intervalMs: 20 });
 
     try {

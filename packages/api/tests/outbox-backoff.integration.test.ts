@@ -5,7 +5,7 @@ import { MAX_ATTEMPTS, drainOnce, recordEvent } from '../src/server/events/outbo
 import { createEventBusWithHandlers } from '../src/server/events/register-handlers';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
 import { createFakeEmailSender, type FakeEmailSender } from './helpers/email';
-import { createAuthenticatedCaller } from './helpers/trpc';
+import { TEST_INVITATION_LINKS, createAuthenticatedCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
 
@@ -138,7 +138,7 @@ describe('drainOnce backoff and dead-letter', () => {
     // Real handlers, but the email port fails on its first call and succeeds after. The
     // persist handler already ran on the failed attempt, so the retry must not duplicate it.
     const emailSender = createFlakyEmailSender(1);
-    const bus = createEventBusWithHandlers(db, emailSender);
+    const bus = createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS);
 
     await drainOnce({ db, bus });
     let [row] = await db.select().from(outbox);

@@ -39,7 +39,10 @@ const auth = createAuth({
         }
       : undefined,
 });
-const api = createApi({ auth, db, storage });
+// Invitation links are signed with the auth secret (see `invitation-token.ts` in the api
+// package); the same value reaches the producer, through the API, and the email subscriber.
+const invitationLinks = { webUrl: env.PUBLIC_WEB_URL, secret: env.SERVER_AUTH_SECRET };
+const api = createApi({ auth, db, storage, invitationSecret: invitationLinks.secret });
 
 // Outbox pipeline, composed once at boot (never on import, so tests never start the worker).
 // Resend drives the email reaction when a key is configured; without one we fall back to a
@@ -54,11 +57,11 @@ if (env.RESEND_API_KEY) {
   });
 } else {
   logger.warn(
-    'RESEND_API_KEY not set — comment emails are disabled; notifications are still persisted',
+    'RESEND_API_KEY not set — comment and invitation emails are disabled; notifications are still persisted',
   );
   emailSender = createNoopEmailSender((message) => logger.debug(message));
 }
-const eventBus = createEventBusWithHandlers(db, emailSender);
+const eventBus = createEventBusWithHandlers(db, emailSender, invitationLinks);
 const outboxWorker = startOutboxWorker({
   db,
   bus: eventBus,
