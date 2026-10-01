@@ -23,7 +23,10 @@ silently overriding it.
 - **Schema changes** — edit `packages/db/src/schemas/` → `pnpm db:generate` → commit the
   generated migration → `pnpm db:migrate`. `db:push` is for local experimentation only.
   For the auth schema, run `pnpm auth:schema:generate` first, fix styles, then generate
-  and migrate.
+  and migrate. Production applies committed migrations itself, before each deploy
+  (ADR 0005) — never migrate it by hand. That step runs while the previous version still
+  serves, so a migration must not break the running code: drop or rename a column in a
+  later deploy than the one that stops using it.
 - **Integration tests** start their own Postgres through Testcontainers, so the Docker
   daemon must be running. There is no test database to set up by hand.
 
