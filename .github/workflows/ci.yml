@@ -32,6 +32,10 @@ jobs:
 
       - run: pnpm test
 
+      # Nothing else compiles the apps before they deploy: Railway and Vercel build them
+      # only after the merge, so a bundling error would surface in production first.
+      - run: pnpm build
+
   e2e:
     runs-on: ubuntu-latest
     needs: check

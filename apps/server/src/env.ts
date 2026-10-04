@@ -35,4 +35,10 @@ export const envSchema = z.object({
   RESEND_FROM_NAME: z.string().min(1).default('Plume'),
 });
 
-export const env = envSchema.parse(process.env);
+// Hosting platforms (Railway) inject `PORT` and probe it for the healthcheck. Falling back
+// to it keeps a single source of truth: a `SERVER_PORT` that drifted from `PORT` would leave
+// the server listening where the healthcheck never looks, and every deploy would fail.
+export const env = envSchema.parse({
+  ...process.env,
+  SERVER_PORT: process.env.SERVER_PORT ?? process.env.PORT,
+});
