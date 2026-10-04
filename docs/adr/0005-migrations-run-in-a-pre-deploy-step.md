@@ -29,5 +29,6 @@ code reads — must be split across two deployments: stop using it, deploy, then
   than once per deployment, and a failing migration crash-loops the server instead of
   leaving the previous version up.
 - **Migrate from CI before deploying** — rejected: CI would need production database
-  credentials, and Railway deploys on merge independently of CI, so the two could race.
+  credentials. (Railway now waits for CI before deploying, so the race this option also
+  risked is gone; the credentials alone still rule it out.)
 - **Keep migrating by hand** — rejected: it is what failed.
