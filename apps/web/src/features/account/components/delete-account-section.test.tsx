@@ -142,4 +142,25 @@ describe('DeleteAccountSection', () => {
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Incorrect password');
   });
+
+  // Until they are known, whether to ask for a password is not: a user with one would be
+  // refused for leaving out a field that was never shown.
+  it('keeps the deletion disabled while the sign-in methods are loading', async () => {
+    vi.mocked(useLinkedAccounts).mockReturnValue({ data: undefined, isPending: true } as any);
+    const { user, dialog } = await openConfirmation();
+
+    await user.type(within(dialog).getByLabelText(/Type your email/), EMAIL);
+
+    expect(within(dialog).getByRole('button', { name: 'Delete my account' })).toBeDisabled();
+  });
+
+  it('says so when the sign-in methods cannot be loaded', async () => {
+    vi.mocked(useLinkedAccounts).mockReturnValue({ data: undefined, isError: true } as any);
+    const { user, dialog } = await openConfirmation();
+
+    await user.type(within(dialog).getByLabelText(/Type your email/), EMAIL);
+
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Your sign-in methods could not be loaded.');
+    expect(within(dialog).getByRole('button', { name: 'Delete my account' })).toBeDisabled();
+  });
 });

@@ -43,13 +43,15 @@ export const DeleteAccountSection = ({ email }: DeleteAccountSectionProps) => (
 );
 
 const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
-  const { data: accounts } = useLinkedAccounts();
+  const { data: accounts, isError: accountsFailed } = useLinkedAccounts();
   const deleteAccount = useDeleteAccount();
   const [typedEmail, setTypedEmail] = useState('');
   const [password, setPassword] = useState('');
   const [refusal, setRefusal] = useState<DeletionRefusal | null>(null);
 
-  const hasPassword = accounts?.some((account) => account.providerId === 'credential') ?? false;
+  // Unknown until the linked accounts load, and the deletion waits for it: a user with a
+  // password would otherwise be refused for leaving out a field that was never shown.
+  const hasPassword = accounts?.some((account) => account.providerId === 'credential');
   // Exactly as written, though the server compares without case: typing it out is the point.
   const confirmed = typedEmail === email;
 
@@ -116,11 +118,17 @@ const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
         </div>
       )}
 
+      {accountsFailed && (
+        <p role="alert" className="text-sm text-destructive">
+          Your sign-in methods could not be loaded.
+        </p>
+      )}
+
       {refusal && <RefusalMessage refusal={refusal} onSignInAgain={deleteAccount.signInAgain} />}
 
       <AlertDialogFooter>
         <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
-        <Button type="submit" variant="destructive" disabled={!confirmed || deleteAccount.isPending}>
+        <Button type="submit" variant="destructive" disabled={!confirmed || hasPassword === undefined || deleteAccount.isPending}>
           Delete my account
         </Button>
       </AlertDialogFooter>

@@ -1,18 +1,18 @@
-import { alias, and, asc, count, eq, FORMER_USER_ID, inArray, isNotNull, ne, or, sql } from '@repo/db';
 import { verifyPassword } from '@repo/auth/credential';
+import { alias, and, asc, count, eq, FORMER_USER_ID, inArray, isNotNull, ne, or, sql } from '@repo/db';
 import { account, attachment, memo, space, spaceMember, user } from '@repo/db/schema';
 import type { deleteAccountSchema } from './account-schemas';
+import type { AppLogger } from '../../trpc';
+import type { DatabaseInstance } from '@repo/db/client';
+import type { z } from 'zod';
 import {
   ConfirmationEmailMismatchError,
   IncorrectPasswordError,
   LastAdminOfSpacesError,
   ReauthenticationRequiredError,
 } from '../../shared/errors';
-import type { StorageService } from '../../shared/storage';
+import { removeDeletedObjects, type StorageService } from '../../shared/storage';
 import { keepsAnAdmin } from '../spaces/space-policy';
-import type { AppLogger } from '../../trpc';
-import type { DatabaseInstance } from '@repo/db/client';
-import type { z } from 'zod';
 
 type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
 
@@ -109,7 +109,7 @@ export async function deleteAccount(
     await tx.delete(space).where(inArray(space.id, aloneIn));
 
     // What outlives the account: the user's memos in a space, which the space owns, and their
-    // comments under someone else's memo, which belong to that thread (ADR 0003). A comment
+    // comments under someone else's memo, which belong under that memo (ADR 0003). A comment
     // carries its memo's space, so a comment on their own space memo is caught by the first.
     const parent = alias(memo, 'parent');
     const outliving = tx
@@ -151,16 +151,9 @@ export async function deleteAccount(
     return [...fromDeletedSpaces, ...removed].map(({ storageKey }) => storageKey);
   });
 
-  // Best-effort, once the deletion has committed, as for a deleted memo: an object left in
-  // storage is a smaller harm than an account that cannot be deleted while storage is down.
-  const removals = await Promise.allSettled(storageKeys.map((key) => storage.deleteObject(key)));
-  removals.forEach((removal, i) => {
-    if (removal.status === 'rejected') {
-      logger.error(
-        { err: removal.reason, userId, storageKey: storageKeys[i] },
-        'Failed to remove a deleted account\'s attachment from storage',
-      );
-    }
+  await removeDeletedObjects(storage, logger, storageKeys, {
+    userId,
+    message: 'Failed to remove a deleted account\'s attachment from storage',
   });
 
   return { success: true };
