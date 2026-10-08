@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { format } from 'date-fns';
+import { RiGroupLine } from 'react-icons/ri';
 import { useMemoById } from '@/features/memos';
 import { CommentSection } from '@/features/memos/components/comment-section';
 import { MemoCard } from '@/features/memos/components/memo-card';
 import { MemoContext } from '@/features/memos/contexts/memo-context';
+import { useSpace } from '@/features/spaces';
 
 export const Route = createFileRoute('/memos/$memoId')({
   component: MemoDetailPage,
@@ -12,6 +14,8 @@ export const Route = createFileRoute('/memos/$memoId')({
 function MemoDetailPage() {
   const { memoId } = Route.useParams();
   const { data: memo, isLoading, error } = useMemoById(memoId);
+  // A link to a memo carries the memo, not its space: the memo names it.
+  const space = useSpace(memo?.spaceId ?? undefined);
 
   if (isLoading) {
     return (
@@ -47,6 +51,22 @@ function MemoDetailPage() {
 
         {/* Sidebar — metadata */}
         <aside className="hidden md:flex flex-col gap-5 w-52 shrink-0">
+          {memo.spaceId && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                Space
+              </p>
+              <Link
+                to="/spaces/$spaceId"
+                params={{ spaceId: memo.spaceId }}
+                className="inline-flex items-center gap-1.5 text-sm hover:underline min-w-0"
+              >
+                <RiGroupLine className="size-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{space.data?.title ?? 'Space'}</span>
+              </Link>
+            </div>
+          )}
+
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
               Created at

@@ -38,12 +38,20 @@ their Space too, for an admin's moderation of Comments to match the Space's page
 
 **Status:** ready-for-agent
 
-- [ ] Reading one Memo of a Space returns its Space; a personal Memo returns none
-- [ ] A non-Member reading a Memo of a Space still gets the same answer as for a missing Memo
-- [ ] On a Memo's own page, an admin is offered to delete another Member's Memo of the Space
-- [ ] On a Memo's own page, a `member` is still offered no action on another Member's Memo
-- [ ] Editing a Memo of a Space on its own page shows the Space's title
-- [ ] In read mode, the page names the Memo's Space and links to it
-- [ ] Editing a Memo of a Space on its own page suggests the Space's Tags
-- [ ] Nothing changes on a Space's page or in the personal scope
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+- [x] Reading one Memo of a Space returns its Space; a personal Memo returns none
+- [x] A non-Member reading a Memo of a Space still gets the same answer as for a missing Memo
+- [x] On a Memo's own page, an admin is offered to delete another Member's Memo of the Space
+- [x] On a Memo's own page, a `member` is still offered no action on another Member's Memo
+- [x] Editing a Memo of a Space on its own page shows the Space's title
+- [x] In read mode, the page names the Memo's Space and links to it
+- [x] Editing a Memo of a Space on its own page suggests the Space's Tags
+- [x] Nothing changes on a Space's page or in the personal scope
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+
+## Comments
+
+**2026-10-08** — Answered while implementing: yes, the Comments listed on a Memo's page
+need their Space too. A Comment carries its parent's Space, and the API already resolved
+the actor's Role from it, so an admin could delete another Member's Comment through the
+API but was not offered it on that page. Every read of Memos now returns the Space, so the
+card has one source for it wherever a Memo or Comment is shown.

@@ -62,6 +62,13 @@ test('writes a memo from inside a space into that space, and not into personal m
   await expect(page.getByRole('button', { name: /^Audience/ })).toHaveCount(0);
   await editingCard.getByRole('button', { name: 'Cancel' }).click();
 
+  // On its own page, the memo still names its space, and leads back to it.
+  await card.getByRole('button', { name: 'Memo actions' }).click();
+  await page.getByRole('menuitem', { name: 'Open' }).click();
+  await expect(page).toHaveURL(/\/memos\//);
+  await page.getByRole('link', { name: title }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+
   await switcher.click();
   await page.getByRole('menuitem', { name: 'Personal' }).click();
   await expect(page).toHaveURL(/\/$/);

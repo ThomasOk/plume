@@ -1,6 +1,7 @@
 import { Textarea } from '@repo/ui/components/textarea';
 import type { RefObject } from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
+import type { MemoViewScope } from '../types';
 import { TagSuggestions } from './tag-suggestions';
 import { sounds } from '@/lib/sounds';
 
@@ -14,6 +15,8 @@ interface MemoTextareaProps {
   autoFocus?: boolean;
   placeholder?: string;
   errorMessage?: string;
+  /** Whose tags to suggest; the scope on screen unless the memo lives elsewhere. */
+  scope?: MemoViewScope;
 }
 
 export const MemoTextarea = ({
@@ -26,6 +29,7 @@ export const MemoTextarea = ({
   autoFocus = false,
   placeholder,
   errorMessage,
+  scope,
 }: MemoTextareaProps) => {
   return (
     <div className="relative">
@@ -46,7 +50,7 @@ export const MemoTextarea = ({
           }
         }}
       />
-      <TagSuggestions editorRef={textareaRef} onInsert={onInsert} />
+      <TagSuggestions editorRef={textareaRef} onInsert={onInsert} scope={scope} />
       {errorMessage && (
         <p className="text-sm text-destructive mt-1">{errorMessage}</p>
       )}
