@@ -2,8 +2,14 @@ import { cpSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  // `migrate` is Railway's pre-deploy command (see src/migrate.ts).
-  entry: ['./src/index.ts', './src/migrate.ts'],
+  // `migrate` is Railway's pre-deploy command (see src/migrate.ts). The operator commands
+  // ship too, so the role can be granted from a shell on the production service (ADR 0007).
+  entry: [
+    './src/index.ts',
+    './src/migrate.ts',
+    './src/grant-operator.ts',
+    './src/revoke-operator.ts',
+  ],
   format: 'esm',
   noExternal: [/.*/],
   platform: 'node',
