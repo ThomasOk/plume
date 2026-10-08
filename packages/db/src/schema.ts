@@ -4,3 +4,4 @@ export * from './schemas/attachments';
 export * from './schemas/notifications';
 export * from './schemas/outbox';
 export * from './schemas/spaces';
+export * from './schemas/preferences';
