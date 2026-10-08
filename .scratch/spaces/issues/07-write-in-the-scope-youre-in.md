@@ -49,4 +49,4 @@ offers the Space.
 **2026-10-08** — Follow-up, not in this ticket: on a Memo's own page, outside its Space's
 page, the label reads "Space" rather than the Space's title, because reading one Memo does
 not return its Space. That page already lacks the reader's Role for the same reason; both
-are solved by exposing the Memo's Space when a Memo is read.
+are solved by exposing the Memo's Space when a Memo is read. Picked up by ticket 08.

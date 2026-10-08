@@ -73,6 +73,7 @@ describe('writing a memo into a space', () => {
         id: written.id,
         content: 'Pasta night',
         visibility: 'space',
+        spaceId: club.id,
         author: expect.objectContaining({ name: 'Alice' }),
       }),
     ]);
@@ -127,6 +128,18 @@ describe('reading one memo of a space', () => {
     );
   });
 
+  it('names its space, so a link to the memo still says where it lives', async () => {
+    const read = await as(bob).memos.getById({ id: memoId });
+
+    expect(read.spaceId).toBe(club.id);
+  });
+
+  it('names no space for a personal memo', async () => {
+    const personal = await as(alice).memos.create({ content: 'Shopping list', visibility: 'private' });
+
+    expect((await as(alice).memos.getById({ id: personal.id })).spaceId).toBeNull();
+  });
+
   it('answers a non-member exactly as for a memo that does not exist', async () => {
     const forExisting = await refusal(as(outsider).memos.getById({ id: memoId }));
     const forMissing = await refusal(as(outsider).memos.getById({ id: 'no-such-memo' }));
@@ -158,6 +171,7 @@ describe('commenting on a memo of a space', () => {
       expect.objectContaining({
         content: 'I bring the wine',
         author: expect.objectContaining({ name: 'Bob' }),
+        spaceId: club.id,
       }),
     ]);
   });

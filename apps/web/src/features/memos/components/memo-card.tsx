@@ -54,7 +54,8 @@ import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
-import { useDeleteComment, useDeleteMemo, useMemoScope, useUpdateMemo } from '../hooks';
+import type { MemoViewScope } from '../types';
+import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
 import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
@@ -129,13 +130,16 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
 
   const { user } = useAuth();
   const isAuthor = user?.id === memo.userId;
-  // The space role counts only for a memo of the space being displayed; anywhere else, only
-  // the author acts on a memo. An admin may delete another member's memo, never edit it.
-  const scope = useMemoScope();
-  // The space page has already fetched it: the cards below it read it from the cache.
-  const space = useSpace(scope.kind === 'space' ? scope.spaceId : undefined);
-  const spaceRole = space.data?.role ?? null;
-  const actor = { isAuthor, role: memo.visibility === 'space' ? spaceRole : null };
+  // The memo names its space, so the card knows it wherever the memo is shown — in its
+  // space's list or on its own page. The role there decides what the user may do: an admin
+  // may delete another member's memo, never edit it. On the space's page, the query is
+  // already in the cache.
+  const space = useSpace(memo.spaceId ?? undefined);
+  const actor = { isAuthor, role: space.data?.role ?? null };
+  // Editing suggests the tags of the scope the memo lives in, not of the page showing it.
+  const memoScope: MemoViewScope = memo.spaceId
+    ? { kind: 'space', spaceId: memo.spaceId }
+    : { kind: 'personal' };
   const mayEdit = mayEditMemo(actor);
   const mayDelete = mayDeleteMemo(actor);
   const updateMemo = useUpdateMemo();
@@ -373,6 +377,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   onSubmit={handleSubmit(onSubmit)}
                   onInsert={onInsert}
                   autoFocus={!isFocusMode}
+                  scope={memoScope}
                 />
                 <AttachmentList
                   localFiles={localFiles}
@@ -463,6 +468,7 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                             onSubmit={handleSubmit(onSubmit)}
                             onInsert={onInsert}
                             autoFocus
+                            scope={memoScope}
                           />
                         </div>
                         <AttachmentList
