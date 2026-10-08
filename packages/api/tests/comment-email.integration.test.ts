@@ -1,4 +1,4 @@
-import { type DatabaseInstance, eq, memo, notification, outbox, user } from '@repo/db';
+import { FORMER_USER_ID, type DatabaseInstance, eq, memo, ne, notification, outbox, user } from '@repo/db';
 import { drainOnce } from '../src/server/events/outbox';
 import { createEventBusWithHandlers } from '../src/server/events/register-handlers';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
@@ -19,7 +19,9 @@ beforeEach(async () => {
   await db.delete(notification);
   await db.delete(outbox);
   await db.delete(memo);
-  await db.delete(user);
+  // The Former user is a migration's row, not a fixture: spare it so the tests that need it
+  // find it.
+  await db.delete(user).where(ne(user.id, FORMER_USER_ID));
 });
 
 const author = {
@@ -164,5 +166,30 @@ describe('the comment email and the author\'s preference', () => {
     const [email] = await drain();
     const href = /href="([^"]+)"/.exec(email!.html)?.[1];
     expect(href).toBe('https://plume.example.com/settings/notifications');
+  });
+});
+
+describe('a comment under a memo whose author is the Former user', () => {
+  const formerUsersMemo = { ...parentMemo, userId: FORMER_USER_ID };
+
+  beforeEach(async () => {
+    await db.insert(user).values(commenter);
+    await db.insert(memo).values(formerUsersMemo);
+  });
+
+  it('notifies and emails no one', async () => {
+    const caller = createAuthenticatedCaller(db, commenter.id);
+    const { id } = await caller.memos.create({ content: 'Anyone there?', parentId: formerUsersMemo.id });
+
+    const emailSender = createFakeEmailSender();
+    await drainOnce({ db, bus: createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS) });
+
+    expect(emailSender.sent).toHaveLength(0);
+    const notifications = await db.select().from(notification).where(eq(notification.entityId, id));
+    expect(notifications).toHaveLength(0);
+
+    // Handled as a no-op by both reactions, not failed and left to retry.
+    const [row] = await db.select().from(outbox);
+    expect(row!.status).toBe('processed');
   });
 });

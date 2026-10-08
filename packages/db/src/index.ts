@@ -4,3 +4,4 @@ export { desc, asc, eq, and, or, lte, sql, inArray } from 'drizzle-orm';
 
 export * from './client';
 export * from './schema';
+export * from './former-user';

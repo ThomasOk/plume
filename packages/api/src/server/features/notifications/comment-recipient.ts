@@ -1,4 +1,4 @@
-import { eq, memo, user } from '@repo/db';
+import { FORMER_USER_ID, eq, memo, user } from '@repo/db';
 import type { CommentCreatedPayload } from '../../events/domain-events';
 import type { DatabaseInstance } from '@repo/db/client';
 
@@ -31,6 +31,9 @@ export async function resolveCommentRecipient(
 
   // Policy: never notify or email someone about a comment on their own memo.
   if (recipient.id === authorId) return null;
+
+  // Policy: the Former user is no one, and its address is read by no one.
+  if (recipient.id === FORMER_USER_ID) return null;
 
   return recipient;
 }
