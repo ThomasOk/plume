@@ -1,4 +1,6 @@
+import { inferAdditionalFields } from 'better-auth/client/plugins';
 import { createAuthClient as createBetterAuthClient } from 'better-auth/react';
+import type { AuthInstance } from './server';
 
 export interface AuthClientOptions {
   apiBaseUrl: string;
@@ -12,13 +14,10 @@ export const createAuthClient = ({ apiBaseUrl }: AuthClientOptions) =>
       credentials: 'include',
     },
 
-    /**
-     * Only uncomment the line below if you are using plugins, so that
-     * your types can be correctly inferred.
-     * Ensure that you are using the client-side version of the plugin,
-     * e.g. `adminClient` instead of `admin`.
-     */
-    // plugins: []
+    // Types the session's user with the server's additional fields (`isOperator`), read from
+    // the server's own configuration so the two cannot drift. Type-only: nothing of the
+    // server reaches the bundle.
+    plugins: [inferAdditionalFields<AuthInstance>()],
   });
 
 export type AuthClient = ReturnType<typeof createAuthClient>;

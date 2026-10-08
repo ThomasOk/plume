@@ -24,6 +24,20 @@ export const getBaseOptions = (db: DatabaseInstance) => ({
     provider: 'pg',
   }),
 
+  user: {
+    additionalFields: {
+      // Granted and revoked out of band, by a command run against the database (ADR 0007).
+      // `input: false` is the security-critical line: without it, sign-up would accept the
+      // field and anyone could register as an operator.
+      isOperator: {
+        type: 'boolean' as const,
+        required: true,
+        defaultValue: false,
+        input: false,
+      },
+    },
+  },
+
   /**
    * Only uncomment the line below if you are using plugins, so that
    * your types can be correctly inferred:

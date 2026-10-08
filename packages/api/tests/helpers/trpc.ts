@@ -51,6 +51,7 @@ export const createAuthenticatedCaller = (
         createdAt: now,
         updatedAt: now,
         image: null,
+        isOperator: false,
       },
       session: {
         id: 'test-session-id',

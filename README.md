@@ -109,6 +109,25 @@ docker compose --profile drizzle run drizzle
 
 Web app: `http://localhost:8085`
 
+### Making a user an operator
+
+An operator curates what belongs to no scope, such as Explore. The role is granted and
+revoked only by these commands, which take a **user identifier** (never an email) and print
+the account they change. Both are idempotent and fail on an unknown identifier.
+
+```bash
+# Locally
+pnpm --filter server operator:grant <user-id>
+pnpm --filter server operator:revoke <user-id>
+
+# In production, from a shell on the server service (railway ssh)
+node /app/dist/grant-operator.js <user-id>
+node /app/dist/revoke-operator.js <user-id>
+```
+
+A change reaches a signed-in user within five minutes (the session cookie cache). See
+[ADR 0007](docs/adr/0007-the-operator-is-a-flag-on-the-user-granted-out-of-band.md).
+
 ---
 
 ## Tests
