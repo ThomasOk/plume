@@ -2,6 +2,7 @@ import type { InvitationLinkConfig } from '../../src/server/features/invitations
 import type { AppLogger, StorageService } from '../../src/server/trpc';
 import type { DatabaseInstance } from '@repo/db';
 import { appRouter } from '../../src/server/index';
+import { createFakeStorage } from './storage';
 
 const mockLogger: AppLogger = {
   info: () => {},
@@ -9,14 +10,7 @@ const mockLogger: AppLogger = {
   debug: () => {},
 };
 
-const mockStorage: StorageService = {
-  generateUploadUrl: async (key, _mimeType, filename) => ({
-    url: `https://mock-r2.example.com/${key}`,
-    contentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
-  }),
-  getPublicUrl: (key) => `https://mock-r2.example.com/${key}`,
-  deleteObject: async () => {},
-};
+const mockStorage: StorageService = createFakeStorage();
 
 // The secret invitation tokens are derived with. Tests derive the link token from it the way
 // the email subscriber does.
@@ -32,16 +26,17 @@ export const createTestCaller = (db: DatabaseInstance) => {
 };
 
 // `isOperator` forges the role the session would carry once granted (ADR 0007); that the
-// session tells the truth about it is proven on the Better Auth seam.
+// session tells the truth about it is proven on the Better Auth seam. `storage` lets a test
+// observe which files a call removed (see `createFakeStorage`).
 export const createAuthenticatedCaller = (
   db: DatabaseInstance,
   userId = 'test-user-id',
-  { isOperator = false }: { isOperator?: boolean } = {},
+  { isOperator = false, storage = mockStorage }: { isOperator?: boolean; storage?: StorageService } = {},
 ) => {
   const now = new Date();
   return appRouter.createCaller({
     db,
-    storage: mockStorage,
+    storage,
     requestId: 'test',
     logger: mockLogger,
     invitationSecret: TEST_INVITATION_SECRET,

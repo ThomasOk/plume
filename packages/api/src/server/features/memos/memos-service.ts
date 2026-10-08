@@ -15,6 +15,7 @@ import type {
   featureMemoSchema,
 } from './memos-schemas';
 import type { StorageService } from '../../shared/storage';
+import type { AppLogger } from '../../trpc';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import { COMMENT_CREATED } from '../../events/domain-events';
@@ -387,13 +388,46 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
   return updatedMemo;
 }
 
-export async function deleteMemo(db: DatabaseInstance, userId: string, input: DeleteMemoInput) {
+export async function deleteMemo(
+  db: DatabaseInstance,
+  storage: StorageService,
+  logger: AppLogger,
+  userId: string,
+  input: DeleteMemoInput,
+) {
   const existing = await findMemoForActor(db, userId, input.id);
 
   // An admin may delete another member's memo or comment in their space: that is moderation.
   if (!mayDeleteMemo(existing.actor)) throw new InsufficientPermissionsError();
 
-  await db.delete(memo).where(eq(memo.id, input.id));
+  // The cascade removes the attachment records of the memo and of its comments, not their
+  // files: read the keys first, in the same transaction as the deletion.
+  const files = await db.transaction(async (tx) => {
+    const thread = tx
+      .select({ id: memo.id })
+      .from(memo)
+      .where(or(eq(memo.id, input.id), eq(memo.parentId, input.id)));
+    const rows = await tx
+      .select({ storageKey: attachment.storageKey })
+      .from(attachment)
+      .where(inArray(attachment.memoId, thread));
+
+    await tx.delete(memo).where(eq(memo.id, input.id));
+    return rows;
+  });
+
+  // Best-effort, once the deletion has committed: the memo is the source of truth, and a
+  // file left in storage is a smaller harm than a memo that cannot be deleted. Every file is
+  // attempted, whichever fails.
+  const removals = await Promise.allSettled(files.map(({ storageKey }) => storage.deleteObject(storageKey)));
+  removals.forEach((removal, i) => {
+    if (removal.status === 'rejected') {
+      logger.error(
+        { err: removal.reason, memoId: input.id, storageKey: files[i]!.storageKey },
+        'Failed to remove a deleted memo\'s file from storage',
+      );
+    }
+  });
 
   return { success: true };
 }

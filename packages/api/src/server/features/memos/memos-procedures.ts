@@ -74,7 +74,7 @@ export const update = protectedProcedure
 
 export const deleteMemo = protectedProcedure
   .input(deleteMemoSchema)
-  .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.session.user.id, input));
+  .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.storage, ctx.logger, ctx.session.user.id, input));
 
 export const move = protectedProcedure
   .input(moveMemoSchema)
