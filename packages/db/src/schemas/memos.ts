@@ -48,6 +48,10 @@ export const memo = pgTable(
     spaceId: text('space_id').references(() => space.id, {
       onDelete: 'cascade',
     }),
+    // Null = not pinned. When it was pinned, not merely whether, so the latest pin comes
+    // first among the pinned (ADR 0006). Set and cleared only by pinning, unpinning and
+    // moving: never by an edit.
+    pinnedAt: timestamp('pinned_at'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
@@ -87,6 +91,8 @@ export const insertMemoSchema = createInsertSchema(memo, {
   id: true,
   userId: true,
   tags: true,
+  // A pin is its own operation, decided by whoever governs the memo's scope (ADR 0006).
+  pinnedAt: true,
   createdAt: true,
   updatedAt: true,
   // A client never names a space in a memo's fields: placing a memo in one requires

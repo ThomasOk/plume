@@ -13,4 +13,4 @@ export const spacesRouter = router({
 
 export { spaceProcedure } from './space-procedure';
 export { assertMay, type SpaceMembership } from './spaces-service';
-export { mayDeleteMemo, mayEditMemo } from './space-policy';
+export { mayDeleteMemo, mayEditMemo, mayPinMemo } from './space-policy';

@@ -51,6 +51,14 @@ Said of a memo that belongs to no space. A personal memo is private or public; i
 never visible to a space.
 _Avoid_: own, personal space.
 
+**Pin**:
+A mark that puts a memo first in its scope, seen by every reader of the memo. In a space,
+admins pin; in the personal scope, the author does. Pinning is curation, not an edit: an
+admin may pin another member's memo. A pin belongs to the scope it was set in, so a move
+unpins the memo, and Explore — which is no one's scope — ignores pins. Comments cannot be
+pinned.
+_Avoid_: favorite, bookmark, star, sticky.
+
 **Explore**:
 The public page listing every user's public memos. Readable without signing in.
 _Avoid_: feed, timeline, public page.

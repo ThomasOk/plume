@@ -9,12 +9,15 @@ interface MemoListProps {
   emptyMessage?: string;
   /** Leave the byline out where every memo has the same author: the user's own. */
   hideAuthors?: boolean;
+  /** Leave pins out where the list is no one's scope: Explore. */
+  ignorePins?: boolean;
 }
 
 export const MemoList = ({
   memos,
   emptyMessage = 'No memos yet. Start creating one!',
   hideAuthors = false,
+  ignorePins = false,
 }: MemoListProps) => {
   if (memos.length === 0) {
     return (
@@ -35,7 +38,7 @@ export const MemoList = ({
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }}
           >
-            <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} />
+            <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} ignorePins={ignorePins} />
           </motion.div>
         ))}
       </AnimatePresence>

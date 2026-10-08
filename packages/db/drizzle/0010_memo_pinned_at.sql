@@ -1,0 +1,1 @@
+ALTER TABLE "memo" ADD COLUMN "pinned_at" timestamp;

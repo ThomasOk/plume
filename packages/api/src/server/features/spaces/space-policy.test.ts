@@ -1,5 +1,5 @@
 import type { SpaceRole } from '@repo/db/schema';
-import { keepsAnAdmin, may, mayDeleteMemo, mayEditMemo, type SpaceAction } from './space-policy';
+import { keepsAnAdmin, may, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceAction } from './space-policy';
 
 // One row per cell of the role matrix, so the table can be read against the spec.
 describe('the role matrix', () => {
@@ -18,6 +18,9 @@ describe('the role matrix', () => {
     // Deleting it is moderation.
     ['deleteOthersMemo', 'admin', true],
     ['deleteOthersMemo', 'member', false],
+    // Pinning is curation of the space, whoever wrote the memo.
+    ['pinMemo', 'admin', true],
+    ['pinMemo', 'member', false],
     ['manageMembership', 'admin', true],
     ['manageMembership', 'member', false],
     ['manageSpace', 'admin', true],
@@ -40,16 +43,17 @@ describe('a member losing their place or their role', () => {
 });
 
 describe('acting on one memo', () => {
-  it.each<[string, { isAuthor: boolean; role: SpaceRole | null }, boolean, boolean]>([
-    // [who, facts, may edit, may delete]
-    ['its author, outside any space', { isAuthor: true, role: null }, true, true],
-    ['another user, outside any space', { isAuthor: false, role: null }, false, false],
-    ['its author, a member', { isAuthor: true, role: 'member' }, true, true],
-    ['its author, an admin', { isAuthor: true, role: 'admin' }, true, true],
-    ['another member', { isAuthor: false, role: 'member' }, false, false],
-    ['an admin', { isAuthor: false, role: 'admin' }, false, true],
-  ])('%s — edit: %s, delete: %s', (_who, facts, edit, del) => {
+  it.each<[string, { isAuthor: boolean; role: SpaceRole | null }, boolean, boolean, boolean]>([
+    // [who, facts, may edit, may delete, may pin]
+    ['its author, outside any space', { isAuthor: true, role: null }, true, true, true],
+    ['another user, outside any space', { isAuthor: false, role: null }, false, false, false],
+    ['its author, a member', { isAuthor: true, role: 'member' }, true, true, false],
+    ['its author, an admin', { isAuthor: true, role: 'admin' }, true, true, true],
+    ['another member', { isAuthor: false, role: 'member' }, false, false, false],
+    ['an admin', { isAuthor: false, role: 'admin' }, false, true, true],
+  ])('%s — edit: %s, delete: %s, pin: %s', (_who, facts, edit, del, pin) => {
     expect(mayEditMemo(facts)).toBe(edit);
     expect(mayDeleteMemo(facts)).toBe(del);
+    expect(mayPinMemo(facts)).toBe(pin);
   });
 });

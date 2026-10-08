@@ -4,6 +4,7 @@ import {
   MAX_MEMO_CHARACTERS,
   mayDeleteMemo,
   mayEditMemo,
+  mayPinMemo,
 } from '@repo/api/schemas';
 import {
   AlertDialog,
@@ -49,13 +50,15 @@ import {
   MdOutlineEdit,
   MdOutlineOpenInFull,
   MdOutlineOpenInNew,
+  MdOutlinePushPin,
+  MdPushPin,
 } from 'react-icons/md';
 import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import type { MemoViewScope } from '../types';
-import { useDeleteComment, useDeleteMemo, useUpdateMemo } from '../hooks';
+import { useDeleteComment, useDeleteMemo, usePinMemo, useUnpinMemo, useUpdateMemo } from '../hooks';
 import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
@@ -76,10 +79,15 @@ interface MemoCardProps {
   memo: Memo | Comment;
   author?: Author;
   hideCommentPreview?: boolean;
+  /**
+   * Leave pins out, mark and action alike, where the list is no one's scope: Explore mixes
+   * every author's memos, and a pin there would mean nothing to its reader (ADR 0006).
+   */
+  ignorePins?: boolean;
 }
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
-export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardProps) => {
+export const MemoCard = ({ memo, author, hideCommentPreview = false, ignorePins = false }: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const savedAttachments = memo.attachments;
   const deleteAttachment = useDeleteAttachment();
@@ -147,6 +155,26 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
   const deleteMemo = useDeleteMemo();
   const deleteComment = useDeleteComment(memo.parentId ?? '');
   const deleteAction = isComment ? deleteComment : deleteMemo;
+
+  // A pin is decided by whoever governs the memo's scope — an admin in a space, the author
+  // out of one — and a comment has no scope of its own to be pinned in.
+  const isPinned = memo.pinnedAt !== null;
+  const mayPin = !isComment && !ignorePins && mayPinMemo(actor);
+  const pinMemo = usePinMemo();
+  const unpinMemo = useUnpinMemo();
+  // Each call names the state it wants, so a double click cannot toggle the pin back. The
+  // memo changes place in the list, out of sight perhaps: the toast says it happened.
+  const togglePin = () => {
+    sounds.tick();
+    const [mutation, done] = isPinned ? [unpinMemo, 'Memo unpinned'] : [pinMemo, 'Memo pinned'];
+    mutation.mutate(
+      { id: memo.id },
+      {
+        onSuccess: () => toast.success(done),
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
 
   // An edit leaves a memo where it is: a personal memo switches between private and
   // public, a memo in a space shows its space. A comment takes its parent's audience.
@@ -301,6 +329,18 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                   <MdOutlineOpenInFull className="size-4" />
                 </button>
               )}
+              {isPinned && !ignorePins && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center" role="img" aria-label="Pinned">
+                        <MdPushPin className="size-4 text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Pinned</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {memo.visibility === 'public' && (
                 <TooltipProvider>
                   <Tooltip>
@@ -333,6 +373,18 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
                           Open
                         </Link>
                       </DropdownMenuItem>
+                    )}
+                    {mayPin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={pinMemo.isPending || unpinMemo.isPending}
+                          onClick={togglePin}
+                        >
+                          <MdOutlinePushPin className="size-4" />
+                          {isPinned ? 'Unpin' : 'Pin'}
+                        </DropdownMenuItem>
+                      </>
                     )}
                     {mayDelete && (
                       <>

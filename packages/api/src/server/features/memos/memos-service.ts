@@ -11,6 +11,7 @@ import type {
   getByIdSchema,
   moveSpaceMemoSchema,
   moveMemoSchema,
+  pinMemoSchema,
 } from './memos-schemas';
 import type { StorageService } from '../../shared/storage';
 import type { DatabaseInstance } from '@repo/db/client';
@@ -18,7 +19,7 @@ import type { z } from 'zod';
 import { COMMENT_CREATED } from '../../events/domain-events';
 import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
-import { assertMay, mayDeleteMemo, mayEditMemo, type SpaceMembership } from '../spaces';
+import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 
@@ -30,6 +31,12 @@ type ListCommentsInput = z.infer<typeof listCommentsSchema>;
 type GetByIdInput = z.infer<typeof getByIdSchema>;
 // Into a space names only the memo; out of one names the new visibility as well.
 type MoveMemoInput = z.infer<typeof moveSpaceMemoSchema> | z.infer<typeof moveMemoSchema>;
+type PinMemoInput = z.infer<typeof pinMemoSchema>;
+
+// The order of every list of a scope, filtered or not: the pinned first, the latest pin on
+// top, then the rest newest first (ADR 0006). Postgres puts nulls first in a descending
+// order, hence the explicit `NULLS LAST`.
+const pinnedFirst = [sql`${memo.pinnedAt} DESC NULLS LAST`, desc(memo.createdAt)];
 
 type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'spaceId'>;
 
@@ -43,6 +50,7 @@ export async function getMemoById(db: DatabaseInstance, storage: StorageService,
       tags: memo.tags,
       visibility: memo.visibility,
       spaceId: memo.spaceId,
+      pinnedAt: memo.pinnedAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       authorName: user.name,
@@ -99,6 +107,7 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
       tags: memo.tags,
       visibility: memo.visibility,
       spaceId: memo.spaceId,
+      pinnedAt: memo.pinnedAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       // Scope-free by construction: it counts the comments of a memo the scope has
@@ -112,7 +121,7 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
     // what, and one row shape for every scope keeps the views interchangeable.
     .leftJoin(user, eq(memo.userId, user.id))
     .where(and(memoScopeCondition(scope), isNull(memo.parentId), ...buildFilterConditions(input)))
-    .orderBy(desc(memo.createdAt));
+    .orderBy(...pinnedFirst);
 
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memos.map((m) => m.id));
 
@@ -133,6 +142,7 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
       tags: memo.tags,
       visibility: memo.visibility,
       spaceId: memo.spaceId,
+      pinnedAt: memo.pinnedAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       // Scope-free by construction: it counts the comments of a memo the scope has
@@ -143,6 +153,8 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
     })
     .from(memo)
     .leftJoin(user, eq(memo.userId, user.id))
+    // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin
+    // there would let any author take the top of the public page (ADR 0006).
     .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(desc(memo.createdAt));
 
@@ -282,6 +294,7 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
       tags: memo.tags,
       visibility: memo.visibility,
       spaceId: memo.spaceId,
+      pinnedAt: memo.pinnedAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       authorName: user.name,
@@ -310,7 +323,7 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
  */
 async function findMemoForActor(db: DatabaseInstance, userId: string, id: string) {
   const [row] = await db
-    .select({ id: memo.id, userId: memo.userId, spaceId: memo.spaceId, role: spaceMember.role })
+    .select({ id: memo.id, userId: memo.userId, parentId: memo.parentId, spaceId: memo.spaceId, role: spaceMember.role })
     .from(memo)
     .leftJoin(
       spaceMember,
@@ -359,11 +372,50 @@ export async function deleteMemo(db: DatabaseInstance, userId: string, input: De
   return { success: true };
 }
 
+// The memo a user is about to pin or unpin, once they may. A pin is the decision of whoever
+// governs the memo's scope — its author out of a space, an admin in one — and a comment,
+// which has no scope of its own, is never pinned (ADR 0006).
+async function findMemoToPin(db: DatabaseInstance, userId: string, id: string) {
+  const existing = await findMemoForActor(db, userId, id);
+
+  if (!mayPinMemo(existing.actor)) throw new InsufficientPermissionsError();
+  if (existing.parentId !== null) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A comment cannot be pinned' });
+  }
+
+  return existing;
+}
+
+// Pinning and unpinning each name the state they want rather than toggling, so a retry or a
+// double click lands where the first call did. Pinning a pinned memo keeps its date: a memo
+// never climbs back to the top on its own. Neither touches `updatedAt`, since a pin changes
+// where the memo stands, not what was written.
+export async function pinMemo(db: DatabaseInstance, userId: string, input: PinMemoInput) {
+  const existing = await findMemoToPin(db, userId, input.id);
+
+  await db
+    .update(memo)
+    .set({ pinnedAt: new Date() })
+    .where(and(eq(memo.id, existing.id), isNull(memo.pinnedAt)));
+
+  return { success: true };
+}
+
+export async function unpinMemo(db: DatabaseInstance, userId: string, input: PinMemoInput) {
+  const existing = await findMemoToPin(db, userId, input.id);
+
+  await db.update(memo).set({ pinnedAt: null }).where(eq(memo.id, existing.id));
+
+  return { success: true };
+}
+
 // Moving sets the visibility and the space together, on the memo and on its comments, in
 // one statement: the equivalence constraint is checked per row, and no row ever passes
 // through a state where one field has changed and the other has not (ADR 0003).
 //
-// It leaves `updatedAt` alone: a move changes who reads the memo, not what was written.
+// It leaves `updatedAt` alone: a move changes who reads the memo, not what was written. It
+// unpins the memo: a pin belongs to the scope it was set in, by whoever governs it, and would
+// otherwise land in a scope where nobody decided it (ADR 0006).
 export async function moveMemo(db: DatabaseInstance, authorId: string, destination: MemoDestination, input: MoveMemoInput) {
   return db.transaction(async (tx) => {
     // Locked against a comment being written while the memo moves: either the comment
@@ -408,7 +460,7 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, destinati
 
     await tx
       .update(memo)
-      .set(placement)
+      .set({ ...placement, pinnedAt: null })
       .where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id)));
 
     return { success: true };

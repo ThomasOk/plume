@@ -11,6 +11,7 @@ import {
   getByIdSchema,
   moveSpaceMemoSchema,
   moveMemoSchema,
+  pinMemoSchema,
 } from './memos-schemas';
 import {
   getMemoById,
@@ -24,6 +25,8 @@ import {
   getMemoTags,
   getPublicTags,
   moveMemo,
+  pinMemo,
+  unpinMemo,
 } from './memos-service';
 
 export const getById = publicProcedure
@@ -75,6 +78,16 @@ export const move = protectedProcedure
   .mutation(({ ctx, input }) =>
     moveMemo(ctx.db, ctx.session.user.id, { kind: 'personal' }, input),
   );
+
+// On the personal procedures for a memo of a space too, as editing and deleting are: a memo
+// tells its own scope, and the role there is resolved with it (ADR 0004).
+export const pin = protectedProcedure
+  .input(pinMemoSchema)
+  .mutation(({ ctx, input }) => pinMemo(ctx.db, ctx.session.user.id, input));
+
+export const unpin = protectedProcedure
+  .input(pinMemoSchema)
+  .mutation(({ ctx, input }) => unpinMemo(ctx.db, ctx.session.user.id, input));
 
 export const stats = protectedProcedure
   .query(({ ctx }) => getMemoStats(ctx.db, personalScope(ctx.session.user.id)));

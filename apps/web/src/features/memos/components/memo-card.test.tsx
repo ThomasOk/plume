@@ -8,6 +8,8 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSpace } from '@/features/spaces/hooks/use-space';
 import { renderWithRouter } from '@/tests/render-with-router';
 
+const { pin, unpin } = vi.hoisted(() => ({ pin: vi.fn(), unpin: vi.fn() }));
+
 // The card is rendered outside any space's URL, as on a memo's own page: whatever it knows
 // about the space, it knows from the memo.
 vi.mock('../hooks', async (importOriginal) => ({
@@ -15,6 +17,8 @@ vi.mock('../hooks', async (importOriginal) => ({
   useUpdateMemo: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteMemo: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePinMemo: () => ({ mutate: pin, isPending: false }),
+  useUnpinMemo: () => ({ mutate: unpin, isPending: false }),
   useMemoTags: vi.fn(),
 }));
 vi.mock('../hooks/use-move-memo', () => ({
@@ -41,7 +45,7 @@ vi.mock('@/features/attachments', () => ({
 const ALICE = 'alice';
 const BOB = 'bob';
 
-const spaceMemo = (authorId: string): Memo => ({
+const spaceMemo = (authorId: string, pinnedAt: Date | null = null): Memo => ({
   id: 'memo-1',
   userId: authorId,
   parentId: null,
@@ -49,6 +53,7 @@ const spaceMemo = (authorId: string): Memo => ({
   tags: [],
   visibility: 'space',
   spaceId: 'club',
+  pinnedAt,
   createdAt: new Date(),
   updatedAt: new Date(),
   commentCount: 0,
@@ -120,5 +125,47 @@ describe('MemoCard, a memo of a space shown outside its space', () => {
 
     expect(await screen.findByText('# club/menu')).toBeInTheDocument();
     expect(screen.queryByText('# personal/diary')).not.toBeInTheDocument();
+  });
+});
+
+describe('MemoCard, pinning a memo of a space', () => {
+  it('lets an admin pin another member’s memo, naming only the memo', async () => {
+    signedInAs(BOB, 'admin');
+    await renderWithRouter(<MemoCard memo={spaceMemo(ALICE)} />);
+
+    const user = await openActions();
+    await user.click(screen.getByRole('menuitem', { name: 'Pin' }));
+
+    expect(pin).toHaveBeenCalledWith({ id: 'memo-1' }, expect.anything());
+  });
+
+  it('offers a member no pin, on their own memo too', async () => {
+    signedInAs(ALICE, 'member');
+    await renderWithRouter(<MemoCard memo={spaceMemo(ALICE, new Date())} />);
+
+    await openActions();
+
+    expect(screen.queryByRole('menuitem', { name: 'Pin' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Unpin' })).not.toBeInTheDocument();
+  });
+
+  it('marks a pinned memo, and offers an admin to unpin it', async () => {
+    signedInAs(BOB, 'admin');
+    await renderWithRouter(<MemoCard memo={spaceMemo(ALICE, new Date())} />);
+
+    expect(screen.getByRole('img', { name: 'Pinned' })).toBeInTheDocument();
+    const user = await openActions();
+    await user.click(screen.getByRole('menuitem', { name: 'Unpin' }));
+
+    expect(unpin).toHaveBeenCalledWith({ id: 'memo-1' }, expect.anything());
+  });
+
+  it('leaves pins out, mark and action alike, where they are ignored', async () => {
+    signedInAs(BOB, 'admin');
+    await renderWithRouter(<MemoCard memo={spaceMemo(ALICE, new Date())} ignorePins />);
+
+    expect(screen.queryByRole('img', { name: 'Pinned' })).not.toBeInTheDocument();
+    await openActions();
+    expect(screen.queryByRole('menuitem', { name: 'Unpin' })).not.toBeInTheDocument();
   });
 });

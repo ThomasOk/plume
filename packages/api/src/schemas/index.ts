@@ -31,6 +31,7 @@ export {
   may,
   mayDeleteMemo,
   mayEditMemo,
+  mayPinMemo,
   type SpaceAction,
 } from '../server/features/spaces/space-policy';
 

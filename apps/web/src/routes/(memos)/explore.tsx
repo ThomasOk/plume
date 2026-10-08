@@ -65,7 +65,7 @@ function ExplorePage() {
       {error && (
         <p className="text-destructive">Something went wrong. Please try again.</p>
       )}
-      {memos && <MemoList memos={memos} />}
+      {memos && <MemoList memos={memos} ignorePins />}
     </div>
   );
 }

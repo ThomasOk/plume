@@ -6,6 +6,8 @@ import {
   update,
   deleteMemo,
   move,
+  pin,
+  unpin,
   listPublic,
   listComments,
   stats,
@@ -23,6 +25,8 @@ export const memosRouter = router({
   update,
   delete: deleteMemo, // delete is a reserved word
   move,
+  pin,
+  unpin,
   stats,
   tags,
   publicTags,
