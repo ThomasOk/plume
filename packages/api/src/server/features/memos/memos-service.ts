@@ -15,6 +15,7 @@ import type {
   featureMemoSchema,
 } from './memos-schemas';
 import type { StorageService } from '../../shared/storage';
+import type { AppLogger } from '../../trpc';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import { COMMENT_CREATED } from '../../events/domain-events';
@@ -387,13 +388,49 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
   return updatedMemo;
 }
 
-export async function deleteMemo(db: DatabaseInstance, userId: string, input: DeleteMemoInput) {
+export async function deleteMemo(
+  db: DatabaseInstance,
+  storage: StorageService,
+  logger: AppLogger,
+  userId: string,
+  input: DeleteMemoInput,
+) {
   const existing = await findMemoForActor(db, userId, input.id);
 
   // An admin may delete another member's memo or comment in their space: that is moderation.
   if (!mayDeleteMemo(existing.actor)) throw new InsufficientPermissionsError();
 
-  await db.delete(memo).where(eq(memo.id, input.id));
+  // The cascade would remove the attachment records of the memo and of its comments, not the
+  // objects in storage, so they are deleted first, returning their keys. Locking the thread
+  // first makes an attachment confirmed onto it meanwhile wait for this deletion and then
+  // fail, instead of slipping in between and leaving its object behind.
+  const storageKeys = await db.transaction(async (tx) => {
+    const thread = await tx
+      .select({ id: memo.id })
+      .from(memo)
+      .where(or(eq(memo.id, input.id), eq(memo.parentId, input.id)))
+      .for('update');
+    const removed = await tx
+      .delete(attachment)
+      .where(inArray(attachment.memoId, thread.map(({ id }) => id)))
+      .returning({ storageKey: attachment.storageKey });
+
+    await tx.delete(memo).where(eq(memo.id, input.id));
+    return removed.map(({ storageKey }) => storageKey);
+  });
+
+  // Best-effort, once the deletion has committed: the memo is the source of truth, and an
+  // attachment left in storage is a smaller harm than a memo that cannot be deleted. Every
+  // attachment is attempted, whichever fails.
+  const removals = await Promise.allSettled(storageKeys.map((key) => storage.deleteObject(key)));
+  removals.forEach((removal, i) => {
+    if (removal.status === 'rejected') {
+      logger.error(
+        { err: removal.reason, memoId: input.id, storageKey: storageKeys[i] },
+        'Failed to remove a deleted memo\'s attachment from storage',
+      );
+    }
+  });
 
   return { success: true };
 }
