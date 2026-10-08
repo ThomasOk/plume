@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { deletionRefusal, type DeletionRefusal } from '../deletion-refusal';
 import { useDeleteAccount } from '../hooks/use-delete-account';
 import { useLinkedAccounts } from '../hooks/use-linked-accounts';
+import { useSpaces } from '@/features/spaces';
 
 interface DeleteAccountSectionProps {
   email: string;
@@ -45,6 +46,7 @@ export const DeleteAccountSection = ({ email }: DeleteAccountSectionProps) => (
 const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
   const { data: accounts, isError: accountsFailed } = useLinkedAccounts();
   const deleteAccount = useDeleteAccount();
+  const { data: spaces } = useSpaces();
   const [typedEmail, setTypedEmail] = useState('');
   const [password, setPassword] = useState('');
   const [refusal, setRefusal] = useState<DeletionRefusal | null>(null);
@@ -80,7 +82,7 @@ const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
                 Your memos in a space, and your comments under other people&rsquo;s memos, stay.
                 They are shown as written by &ldquo;Deleted user&rdquo;.
               </li>
-              <li>A space where you are the only member is deleted, with its memos.</li>
+              <SpacesDeletedWith spaces={spaces} />
               <li>You are signed out on every device.</li>
             </ul>
             <p>
@@ -133,6 +135,27 @@ const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
         </Button>
       </AlertDialogFooter>
     </form>
+  );
+};
+
+// A space with no other member goes with the account. Named when the user's spaces are known,
+// so a forgotten one does not disappear unnoticed; said in general until then.
+const SpacesDeletedWith = ({
+  spaces,
+}: {
+  spaces: { id: string; title: string; memberCount: number }[] | undefined;
+}) => {
+  if (!spaces) return <li>A space where you are the only member is deleted, with its memos.</li>;
+
+  const alone = spaces.filter(({ memberCount }) => memberCount === 1);
+  if (alone.length === 0) return null;
+
+  return (
+    <li>
+      {alone.length === 1 ? 'This space, where you are the only member, is' : 'These spaces, where you are the only member, are'}{' '}
+      deleted with your account, with their memos:{' '}
+      <span className="font-medium text-foreground">{alone.map(({ title }) => title).join(', ')}</span>.
+    </li>
   );
 };
 

@@ -29,7 +29,7 @@ type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
 interface CreateSpaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (space: Space) => void;
+  onCreated: (space: Pick<Space, 'id' | 'title' | 'role'>) => void;
 }
 
 export const CreateSpaceDialog = ({ open, onOpenChange, onCreated }: CreateSpaceDialogProps) => {

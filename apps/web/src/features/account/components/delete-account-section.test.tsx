@@ -5,10 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useDeleteAccount } from '../hooks/use-delete-account';
 import { useLinkedAccounts } from '../hooks/use-linked-accounts';
 import { DeleteAccountSection } from './delete-account-section';
+import { useSpaces } from '@/features/spaces';
 import { renderWithRouter } from '@/tests/render-with-router';
 
 vi.mock('../hooks/use-linked-accounts');
 vi.mock('../hooks/use-delete-account');
+vi.mock('@/features/spaces', () => ({ useSpaces: vi.fn() }));
 
 const mockDeleteAccount = vi.fn();
 const mockSignInAgain = vi.fn();
@@ -32,6 +34,7 @@ const refusedWith = (
   } as any);
 
 beforeEach(() => {
+  vi.mocked(useSpaces).mockReturnValue({ data: [] } as any);
   mockDeleteAccount.mockReset();
   mockSignInAgain.mockReset();
   vi.mocked(useDeleteAccount).mockReturnValue({
@@ -162,5 +165,20 @@ describe('DeleteAccountSection', () => {
 
     expect(within(dialog).getByRole('alert')).toHaveTextContent('Your sign-in methods could not be loaded.');
     expect(within(dialog).getByRole('button', { name: 'Delete my account' })).toBeDisabled();
+  });
+
+  it('names the spaces that are deleted with the account, those the user is alone in', async () => {
+    linkAccounts('credential');
+    vi.mocked(useSpaces).mockReturnValue({
+      data: [
+        { id: 'club', title: 'Cooking club', role: 'admin', memberCount: 3 },
+        { id: 'diary', title: 'Diary', role: 'admin', memberCount: 1 },
+      ],
+    } as any);
+    const { dialog } = await openConfirmation();
+
+    const warning = within(dialog).getByText(/deleted with your account, with their memos/);
+    expect(warning).toHaveTextContent('Diary');
+    expect(warning).not.toHaveTextContent('Cooking club');
   });
 });

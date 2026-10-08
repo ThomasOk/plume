@@ -58,7 +58,13 @@ export async function createSpace(db: DatabaseInstance, userId: string, input: C
 
 export async function listSpaces(db: DatabaseInstance, userId: string) {
   return db
-    .select({ id: space.id, title: space.title, role: spaceMember.role })
+    .select({
+      id: space.id,
+      title: space.title,
+      role: spaceMember.role,
+      // Tells the user which spaces would go with their account: those they are alone in.
+      memberCount: sql<number>`(SELECT COUNT(*)::int FROM space_member AS members WHERE members.space_id = ${space.id})`,
+    })
     .from(spaceMember)
     .innerJoin(space, eq(spaceMember.spaceId, space.id))
     .where(eq(spaceMember.userId, userId))
