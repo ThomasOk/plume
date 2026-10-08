@@ -194,14 +194,14 @@ const publicMemo = ({ featuredAt = null, visibility = 'public' }: { featuredAt?:
   attachments: [],
 } as unknown as Memo);
 
-const signedInAsOperator = (isOperator: boolean) => {
+const signedIn = ({ isOperator }: { isOperator: boolean }) => {
   vi.mocked(useAuth).mockReturnValue({ user: { id: BOB, isOperator } } as any);
   vi.mocked(useSpace).mockReturnValue({ data: undefined } as any);
 };
 
 describe('MemoCard, featuring a memo on Explore', () => {
   it('lets an operator feature another user’s public memo, naming only the memo', async () => {
-    signedInAsOperator(true);
+    signedIn({ isOperator: true });
     await renderWithRouter(<MemoCard memo={publicMemo()} />);
 
     const user = await openActions();
@@ -211,7 +211,7 @@ describe('MemoCard, featuring a memo on Explore', () => {
   });
 
   it('offers an operator to unfeature a featured memo', async () => {
-    signedInAsOperator(true);
+    signedIn({ isOperator: true });
     await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
 
     const user = await openActions();
@@ -221,7 +221,7 @@ describe('MemoCard, featuring a memo on Explore', () => {
   });
 
   it('offers anyone else neither', async () => {
-    signedInAsOperator(false);
+    signedIn({ isOperator: false });
     await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
 
     await openActions();
@@ -231,7 +231,7 @@ describe('MemoCard, featuring a memo on Explore', () => {
   });
 
   it('offers an operator nothing on a memo that is not public', async () => {
-    signedInAsOperator(true);
+    signedIn({ isOperator: true });
     await renderWithRouter(<MemoCard memo={publicMemo({ visibility: 'private' })} />);
 
     await openActions();
@@ -239,15 +239,27 @@ describe('MemoCard, featuring a memo on Explore', () => {
     expect(screen.queryByRole('menuitem', { name: 'Feature' })).not.toBeInTheDocument();
   });
 
+  it('offers an operator nothing on a comment, which does not stand on its own on Explore', async () => {
+    signedIn({ isOperator: true });
+    const comment = { ...publicMemo(), parentId: 'parent-1', userId: BOB } as unknown as Memo;
+    await renderWithRouter(<MemoCard memo={comment} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Memo actions' }));
+    await screen.findByRole('menuitem', { name: 'Delete' });
+
+    expect(screen.queryByRole('menuitem', { name: 'Feature' })).not.toBeInTheDocument();
+  });
+
   it('marks a featured memo where Explore’s rules apply', async () => {
-    signedInAsOperator(false);
+    signedIn({ isOperator: false });
     await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} markFeatured />);
 
     expect(screen.getByRole('img', { name: 'Featured' })).toBeInTheDocument();
   });
 
   it('leaves the mark out of a scope’s list, where featuring decides nothing', async () => {
-    signedInAsOperator(false);
+    signedIn({ isOperator: false });
     await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
 
     expect(screen.queryByRole('img', { name: 'Featured' })).not.toBeInTheDocument();

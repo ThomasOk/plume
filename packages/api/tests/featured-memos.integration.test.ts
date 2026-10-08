@@ -74,7 +74,7 @@ const writeInOrder = async (write: (content: string) => Promise<{ id: string }>,
 const publicMemosOf = (author: typeof alice, ...contents: string[]) =>
   writeInOrder((content) => as(author).memos.create({ content, visibility: 'public' }), ...contents);
 
-const featuredAtOf = async (id: string) => {
+const datesOf = async (id: string) => {
   const [row] = await db.select({ featuredAt: memo.featuredAt, updatedAt: memo.updatedAt }).from(memo).where(eq(memo.id, id));
   return row!;
 };
@@ -101,14 +101,14 @@ describe('who may feature a memo', () => {
 
     await as(olivia).memos.feature({ id: own! });
 
-    expect((await featuredAtOf(own!)).featuredAt).toBeInstanceOf(Date);
+    expect((await datesOf(own!)).featuredAt).toBeInstanceOf(Date);
   });
 
   it('is refused to anyone else, the memo’s author included', async () => {
     const [id] = await publicMemosOf(alice, 'Pasta night');
 
     expect((await refusal(as(alice).memos.feature({ id: id! }))).code).toBe('FORBIDDEN');
-    expect((await featuredAtOf(id!)).featuredAt).toBeNull();
+    expect((await datesOf(id!)).featuredAt).toBeNull();
   });
 });
 
@@ -141,11 +141,11 @@ describe('featuring and unfeaturing again', () => {
     const [id] = await publicMemosOf(alice, 'Pasta night');
 
     await as(olivia).memos.feature({ id: id! });
-    const { featuredAt } = await featuredAtOf(id!);
+    const { featuredAt } = await datesOf(id!);
     await new Promise((resolve) => setTimeout(resolve, 5));
     await as(olivia).memos.feature({ id: id! });
 
-    expect((await featuredAtOf(id!)).featuredAt).toEqual(featuredAt);
+    expect((await datesOf(id!)).featuredAt).toEqual(featuredAt);
   });
 
   it('unfeatures a memo, which takes its place by date again, and unfeaturing it twice changes nothing more', async () => {
@@ -156,7 +156,7 @@ describe('featuring and unfeaturing again', () => {
     await as(olivia).memos.unfeature({ id: older! });
 
     expect(ids(await as(bob).memos.listPublic({}))).toEqual([newer, older]);
-    expect((await featuredAtOf(older!)).featuredAt).toBeNull();
+    expect((await datesOf(older!)).featuredAt).toBeNull();
   });
 
   it('refuses unfeaturing to anyone but an operator', async () => {
@@ -164,16 +164,16 @@ describe('featuring and unfeaturing again', () => {
     await as(olivia).memos.feature({ id: id! });
 
     expect((await refusal(as(alice).memos.unfeature({ id: id! }))).code).toBe('FORBIDDEN');
-    expect((await featuredAtOf(id!)).featuredAt).toBeInstanceOf(Date);
+    expect((await datesOf(id!)).featuredAt).toBeInstanceOf(Date);
   });
 
   it('leaves the memo’s update date alone, since no word of it changed', async () => {
     const { id, updatedAt } = await as(alice).memos.create({ content: 'Pasta night', visibility: 'public' });
 
     await as(olivia).memos.feature({ id });
-    expect((await featuredAtOf(id)).updatedAt).toEqual(updatedAt);
+    expect((await datesOf(id)).updatedAt).toEqual(updatedAt);
     await as(olivia).memos.unfeature({ id });
-    expect((await featuredAtOf(id)).updatedAt).toEqual(updatedAt);
+    expect((await datesOf(id)).updatedAt).toEqual(updatedAt);
   });
 });
 
@@ -229,7 +229,7 @@ describe('a featured memo that stops being public', () => {
 
     await as(alice).memos.update({ id: id!, content: 'Pasta night', visibility: 'public' });
 
-    expect((await featuredAtOf(id!)).featuredAt).toBeInstanceOf(Date);
+    expect((await datesOf(id!)).featuredAt).toBeInstanceOf(Date);
   });
 
   it('is unfeatured when its author makes it private, and not featured back when made public again', async () => {
@@ -237,10 +237,10 @@ describe('a featured memo that stops being public', () => {
     await as(olivia).memos.feature({ id: id! });
 
     await as(alice).memos.update({ id: id!, content: 'Pasta night', visibility: 'private' });
-    expect((await featuredAtOf(id!)).featuredAt).toBeNull();
+    expect((await datesOf(id!)).featuredAt).toBeNull();
 
     await as(alice).memos.update({ id: id!, content: 'Pasta night', visibility: 'public' });
-    expect((await featuredAtOf(id!)).featuredAt).toBeNull();
+    expect((await datesOf(id!)).featuredAt).toBeNull();
   });
 
   it('is unfeatured when its author moves it into a space', async () => {
@@ -248,10 +248,10 @@ describe('a featured memo that stops being public', () => {
     await as(olivia).memos.feature({ id: id! });
 
     await as(alice).memos.space.move({ spaceId: club.id, id: id! });
-    expect((await featuredAtOf(id!)).featuredAt).toBeNull();
+    expect((await datesOf(id!)).featuredAt).toBeNull();
 
     await as(alice).memos.move({ id: id!, visibility: 'public' });
-    expect((await featuredAtOf(id!)).featuredAt).toBeNull();
+    expect((await datesOf(id!)).featuredAt).toBeNull();
   });
 });
 

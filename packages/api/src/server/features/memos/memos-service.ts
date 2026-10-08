@@ -23,7 +23,7 @@ import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/er
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
-import { mayFeatureMemo } from './operator-policy';
+import { mayFeatureMemo, type OperatorActor } from './operator-policy';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -46,8 +46,9 @@ const pinnedFirst = [sql`${memo.pinnedAt} DESC NULLS LAST`, desc(memo.createdAt)
 // of whoever governs a scope.
 const featuredFirst = [sql`${memo.featuredAt} DESC NULLS LAST`, desc(memo.createdAt)];
 
-// Who acts on what belongs to no scope: the user, and whether they run the instance.
-type Operator = { id: string; isOperator: boolean };
+// A user about to act on what belongs to no scope: who they are, and whether they run the
+// instance. Most are not, and are refused.
+type InstanceActor = { id: string } & OperatorActor;
 
 type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'spaceId'>;
 
@@ -438,14 +439,15 @@ export async function unpinMemo(db: DatabaseInstance, userId: string, input: Pin
 // that is not a comment: Explore shows nothing else, and featuring must never put a memo in
 // front of readers who may not read it. The role is asked first, before the memo is read, so
 // a refusal tells someone who is not an operator nothing about it.
-async function findMemoToFeature(db: DatabaseInstance, actor: Operator, id: string) {
+async function findMemoToFeature(db: Pick<DatabaseInstance, 'select'>, actor: InstanceActor, id: string) {
   if (!mayFeatureMemo(actor)) throw new InsufficientPermissionsError();
 
   const [existing] = await db
     .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility })
     .from(memo)
     .where(and(eq(memo.id, id), readableMemoCondition(actor.id)))
-    .limit(1);
+    .limit(1)
+    .for('update');
 
   if (!existing) throw new MemoNotFoundError();
   if (existing.parentId !== null) {
@@ -461,20 +463,22 @@ async function findMemoToFeature(db: DatabaseInstance, actor: Operator, id: stri
 // The same mechanics as a pin (ADR 0006): each names the state it wants, featuring a
 // featured memo keeps its date, and neither touches `updatedAt`, since featuring is
 // curation, not an edit.
-export async function featureMemo(db: DatabaseInstance, actor: Operator, input: FeatureMemoInput) {
-  const existing = await findMemoToFeature(db, actor, input.id);
+export async function featureMemo(db: DatabaseInstance, actor: InstanceActor, input: FeatureMemoInput) {
+  // Locked from the check to the write: an edit making the memo private waits, then clears
+  // the date, rather than being overtaken by a featuring the check no longer holds for.
+  return db.transaction(async (tx) => {
+    const existing = await findMemoToFeature(tx, actor, input.id);
 
-  // Public again in the write itself: the memo may have been made private since it was
-  // read, and the constraint `memo_featured_is_public` would refuse it as an error.
-  await db
-    .update(memo)
-    .set({ featuredAt: new Date() })
-    .where(and(eq(memo.id, existing.id), isNull(memo.featuredAt), eq(memo.visibility, 'public')));
+    await tx
+      .update(memo)
+      .set({ featuredAt: new Date() })
+      .where(and(eq(memo.id, existing.id), isNull(memo.featuredAt)));
 
-  return { success: true };
+    return { success: true };
+  });
 }
 
-export async function unfeatureMemo(db: DatabaseInstance, actor: Operator, input: FeatureMemoInput) {
+export async function unfeatureMemo(db: DatabaseInstance, actor: InstanceActor, input: FeatureMemoInput) {
   const existing = await findMemoToFeature(db, actor, input.id);
 
   await db.update(memo).set({ featuredAt: null }).where(eq(memo.id, existing.id));

@@ -201,7 +201,7 @@ export const MemoCard = ({
 
   // Featuring is the operator's decision, whoever wrote the memo, and only a public memo
   // that is not a comment stands on Explore to be featured. Offered wherever the memo is
-  // shown, so an operator features an announcement right where they wrote it.
+  // shown, so an operator features a memo right where they wrote it.
   const isFeatured = memo.featuredAt !== null;
   const mayFeature =
     !isComment && memo.visibility === 'public' && mayFeatureMemo({ isOperator: user?.isOperator ?? false });
