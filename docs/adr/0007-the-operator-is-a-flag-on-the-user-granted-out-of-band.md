@@ -56,7 +56,7 @@ does.
 
 - **A change takes up to five minutes to apply.** Sessions are cached in a cookie for five
   minutes, so a grant or a revocation reaches a signed-in user when that cache expires.
-  Accepted for an instance with a single operator; an urgent revocation means revoking the
-  account's sessions.
+  Accepted for an instance with a single operator. Revoking the account's sessions does not
+  shorten the window: a revoked session also lives on in its cached cookie until it expires.
 - **Revoking an operator undoes nothing they did.** What they curated (featured memos)
   belongs to Explore, not to whoever decided it.
