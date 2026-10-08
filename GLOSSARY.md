@@ -91,6 +91,12 @@ The user who created a given memo. Use "author" for a memo's creator, "user" for
 account in general.
 _Avoid_: owner, creator, poster.
 
+**Former user**:
+The author that a deleted account's memos and comments pass to when they outlive it: memos
+in a space, and comments under someone else's memo. It is no one, signs in nowhere, and is
+never a member. Shown as "Deleted user".
+_Avoid_: ghost, anonymous, deleted account.
+
 **Space**:
 A container of memos shared by several users. A memo belongs to at most one space, and a
 space owns its memos: they stay when their author leaves it.
