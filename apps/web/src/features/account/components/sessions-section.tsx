@@ -1,7 +1,7 @@
 import { Badge } from '@repo/ui/components/badge';
 import { Button } from '@repo/ui/components/button';
 import Bowser from 'bowser';
-import { formatDistanceToNow } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns';
 import { useId } from 'react';
 import { toast } from 'sonner';
 import { useRevokeOtherSessions } from '../hooks/use-revoke-other-sessions';
@@ -72,7 +72,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
           onClick={onRevokeOthers}
           disabled={revokeOtherSessions.isPending}
         >
-          Sign out all other sessions
+          Sign out every other device
         </Button>
       )}
     </section>
@@ -105,8 +105,8 @@ const SessionRow = ({
           {describeDevice(session.userAgent)}
         </p>
         <p className="text-xs text-muted-foreground">
-          {session.ipAddress ?? 'Unknown IP address'} · Last active{' '}
-          {formatDistanceToNow(session.updatedAt, { addSuffix: true })}
+          {session.ipAddress ?? 'Unknown IP address'} ·{' '}
+          {describeLastActive(session.updatedAt)}
         </p>
       </div>
       {isCurrent ? (
@@ -133,4 +133,13 @@ const describeDevice = (userAgent: string | null | undefined) => {
   const { browser, os } = Bowser.parse(userAgent);
   if (browser.name && os.name) return `${browser.name} on ${os.name}`;
   return browser.name || os.name || 'Unknown device';
+};
+
+// Better Auth moves `updatedAt` only when it extends a session, at most once a day, so the
+// day is all it tells: "3 hours ago" would claim a precision the data does not have.
+const describeLastActive = (updatedAt: Date) => {
+  const days = differenceInCalendarDays(new Date(), updatedAt);
+  if (days <= 0) return 'Active today';
+  if (days === 1) return 'Active yesterday';
+  return `Active ${days} days ago`;
 };

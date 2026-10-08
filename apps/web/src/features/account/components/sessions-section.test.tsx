@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { subDays } from 'date-fns';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useRevokeOtherSessions } from '../hooks/use-revoke-other-sessions';
 import { useRevokeSession } from '../hooks/use-revoke-session';
@@ -106,10 +107,43 @@ describe('SessionsSection', () => {
     render(<SessionsSection currentSessionId="current" />);
 
     await user.click(
-      screen.getByRole('button', { name: 'Sign out all other sessions' }),
+      screen.getByRole('button', { name: 'Sign out every other device' }),
     );
 
     expect(mockRevokeOtherSessions).toHaveBeenCalled();
+  });
+
+  it('says on which day each session was last active, the precision Better Auth records', () => {
+    listSessions(
+      session({ id: 'current', updatedAt: new Date() }),
+      session({
+        id: 'yesterday',
+        userAgent: FIREFOX_ON_WINDOWS,
+        updatedAt: subDays(new Date(), 1),
+      }),
+      session({
+        id: 'three-days-ago',
+        userAgent: 'curl/8.4.0',
+        updatedAt: subDays(new Date(), 3),
+      }),
+    );
+    render(<SessionsSection currentSessionId="current" />);
+
+    expect(
+      within(
+        screen.getByRole('listitem', { name: 'Chrome on macOS' }),
+      ).getByText(/Active today/),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('listitem', { name: 'Firefox on Windows' }),
+      ).getByText(/Active yesterday/),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('listitem', { name: 'Unknown device' }),
+      ).getByText(/Active 3 days ago/),
+    ).toBeInTheDocument();
   });
 
   it('offers no "sign out all" when this is the only session', () => {
@@ -117,7 +151,7 @@ describe('SessionsSection', () => {
     render(<SessionsSection currentSessionId="current" />);
 
     expect(
-      screen.queryByRole('button', { name: 'Sign out all other sessions' }),
+      screen.queryByRole('button', { name: 'Sign out every other device' }),
     ).not.toBeInTheDocument();
   });
 });
