@@ -168,17 +168,18 @@ export const MemoCard = ({
   // already in the cache.
   const space = useSpace(memo.spaceId ?? undefined);
   const actor = { isAuthor, role: space.data?.role ?? null };
+  // Whether the user runs the instance, for what the operator policy decides apart.
+  const operator = { isOperator: user?.isOperator ?? false };
+  const isPublic = memo.visibility === 'public';
   // Editing suggests the tags of the scope the memo lives in, not of the page showing it.
   const memoScope: MemoViewScope = memo.spaceId
     ? { kind: 'space', spaceId: memo.spaceId }
     : { kind: 'personal' };
   const mayEdit = mayEditMemo(actor);
   const isComment = !!memo.parentId;
-  // An operator may also delete any memo Explore shows, or a comment under one, which carries
-  // its parent's visibility. Asked of each policy apart, as the server does (ADR 0007).
-  const mayDelete =
-    mayDeleteMemo(actor) ||
-    mayDeletePublicMemo({ isOperator: user?.isOperator ?? false }, { isPublic: memo.visibility === 'public' });
+  // An operator may also delete any memo Explore shows, or a comment on one, which carries
+  // its memo's visibility. Asked of each policy apart, as the server does (ADR 0007).
+  const mayDelete = mayDeleteMemo(actor) || mayDeletePublicMemo(operator, { isPublic });
   const updateMemo = useUpdateMemo();
   const deleteMemo = useDeleteMemo();
   const deleteComment = useDeleteComment(memo.parentId ?? '');
@@ -208,8 +209,7 @@ export const MemoCard = ({
   // that is not a comment stands on Explore to be featured. Offered wherever the memo is
   // shown, so an operator features a memo right where they wrote it.
   const isFeatured = memo.featuredAt !== null;
-  const mayFeature =
-    !isComment && memo.visibility === 'public' && mayFeatureMemo({ isOperator: user?.isOperator ?? false });
+  const mayFeature = !isComment && isPublic && mayFeatureMemo(operator);
   const featureMemo = useFeatureMemo();
   const unfeatureMemo = useUnfeatureMemo();
   const toggleFeatured = () => {

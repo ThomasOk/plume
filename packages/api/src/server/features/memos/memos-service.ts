@@ -1,4 +1,4 @@
-import { alias, desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
+import { desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
 import { memo, user, attachment, spaceMember } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
@@ -334,13 +334,12 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
 
 /**
  * One memo a user is about to act on, with the facts the space policy decides from: whether
- * they wrote it, and their role in its space. The role is resolved in the same query, as
+ * they wrote it, and their role in its space. Its visibility comes along for the operator
+ * policy, which a comment shares with its memo. The role is resolved in the same query, as
  * readability is (ADR 0004): a link to a memo carries the memo, not its space.
  *
  * A memo the user cannot read answers like a missing one.
  */
-const parentMemo = alias(memo, 'parent_memo');
-
 async function findMemoForActor(db: DatabaseInstance, userId: string, id: string) {
   const [row] = await db
     .select({
@@ -348,14 +347,10 @@ async function findMemoForActor(db: DatabaseInstance, userId: string, id: string
       userId: memo.userId,
       parentId: memo.parentId,
       spaceId: memo.spaceId,
+      visibility: memo.visibility,
       role: spaceMember.role,
-      // Whether Explore shows the thread: a comment is public when its parent is. Read from
-      // the parent rather than the comment's own copy, which an edit of the parent's
-      // visibility leaves behind.
-      isPublic: sql<boolean>`coalesce(${parentMemo.visibility}, ${memo.visibility}) = 'public'`,
     })
     .from(memo)
-    .leftJoin(parentMemo, eq(parentMemo.id, memo.parentId))
     .leftJoin(
       spaceMember,
       and(eq(spaceMember.spaceId, memo.spaceId), eq(spaceMember.userId, userId)),
@@ -377,28 +372,40 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
   if (!mayEditMemo(existing.actor)) throw new InsufficientPermissionsError();
 
   // An edit leaves a memo where it is: moving it into or out of a space is its own
-  // operation, not a side effect of changing the visibility.
-  const { visibility } = placementIn(existing.spaceId, input.visibility);
+  // operation, not a side effect of changing the visibility. A comment has no visibility of
+  // its own to edit: it keeps its memo's (ADR 0001).
+  const isComment = existing.parentId !== null;
+  const { visibility } = isComment ? { visibility: undefined } : placementIn(existing.spaceId, input.visibility);
 
   const tags = extractTagsFromContent(input.content);
-  const [updatedMemo] = await db
-    .update(memo)
-    .set({
-      content: input.content,
-      tags,
-      visibility,
-      // A memo that stops being public stops being featured, and making it public again
-      // does not feature it back: that is an operator's decision to take again. An edit
-      // that keeps it public leaves it featured: fixing a typo undoes no one's decision.
-      ...(visibility !== 'public' && { featuredAt: null }),
-      updatedAt: new Date(),
-    })
-    .where(eq(memo.id, input.id))
-    .returning();
+  return db.transaction(async (tx) => {
+    const [updatedMemo] = await tx
+      .update(memo)
+      .set({
+        content: input.content,
+        tags,
+        visibility,
+        // A memo that stops being public stops being featured, and making it public again
+        // does not feature it back: that is an operator's decision to take again. An edit
+        // that keeps it public leaves it featured: fixing a typo undoes no one's decision.
+        ...(visibility !== 'public' && { featuredAt: null }),
+        updatedAt: new Date(),
+      })
+      .where(eq(memo.id, input.id))
+      .returning();
 
-  if (!updatedMemo) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to update memo' });
+    if (!updatedMemo) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to update memo' });
 
-  return updatedMemo;
+    // Its comments follow, as they do a move, so none stays readable by whom the memo no
+    // longer is, or hidden from whom it now is. After the memo's own row, which the update
+    // has locked: a comment written meanwhile either landed first and is caught here, or
+    // waits and copies the new visibility.
+    if (!isComment && visibility !== undefined) {
+      await tx.update(memo).set({ visibility }).where(eq(memo.parentId, existing.id));
+    }
+
+    return updatedMemo;
+  });
 }
 
 export async function deleteMemo(
@@ -413,9 +420,9 @@ export async function deleteMemo(
   const existing = await findMemoForActor(db, actor.id, input.id);
 
   // An admin may delete another member's memo or comment in their space, and an operator any
-  // memo Explore shows, or a comment under one: both are moderation. Asked of each policy
+  // memo Explore shows, or a comment on one, which carries its memo's visibility. Asked of each policy
   // apart, so the space policy never reads the operator flag (ADR 0007).
-  if (!mayDeleteMemo(existing.actor) && !mayDeletePublicMemo(actor, existing)) {
+  if (!mayDeleteMemo(existing.actor) && !mayDeletePublicMemo(actor, { isPublic: existing.visibility === 'public' })) {
     throw new InsufficientPermissionsError();
   }
 

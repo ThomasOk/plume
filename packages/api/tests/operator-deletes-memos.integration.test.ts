@@ -91,6 +91,16 @@ describe('an operator deleting a comment', () => {
     expect(ids(await as(bob).memos.listPublic({}))).toEqual([memoId]);
   });
 
+  it('removes a comment written before its memo was made public', async () => {
+    const { id: memoId } = await as(alice).memos.create({ content: 'Pasta night', visibility: 'private' });
+    const { id: commentId } = await as(alice).memos.create({ content: 'Fresh pasta only', parentId: memoId });
+    await as(alice).memos.update({ id: memoId, content: 'Pasta night', visibility: 'public' });
+
+    await as(olivia).memos.delete({ id: commentId });
+
+    expect(await as(alice).memos.listComments({ memoId })).toEqual([]);
+  });
+
   it('removes a comment on their own public memo, whoever wrote it', async () => {
     const { id: memoId } = await as(olivia).memos.create({ content: 'Welcome to Plume', visibility: 'public' });
     const { id: commentId } = await as(bob).memos.create({ content: 'Insults', parentId: memoId });
@@ -134,10 +144,7 @@ describe('what is out of an operator’s reach', () => {
     await as(alice).memos.update({ id: memoId, content: 'Pasta night', visibility: 'private' });
 
     expect(await refusal(as(olivia).memos.delete({ id: memoId }))).toEqual(missing);
-    // The comment keeps the copy of its parent's visibility it was written with, which an
-    // edit of the parent leaves behind, so it reads as readable: what decides is that its
-    // parent is no longer public.
-    expect((await refusal(as(olivia).memos.delete({ id: commentId }))).code).toBe('FORBIDDEN');
+    expect(await refusal(as(olivia).memos.delete({ id: commentId }))).toEqual(missing);
     expect(ids(await as(alice).memos.listComments({ memoId }))).toEqual([commentId]);
   });
 });
@@ -151,6 +158,15 @@ describe('an operator who is a member of a space', () => {
 
     expect((await refusal(as(olivia).memos.delete({ id: alices }))).code).toBe('FORBIDDEN');
     expect(ids(await as(alice).memos.space.list({ spaceId: club.id }))).toEqual([alices]);
+  });
+
+  it('as an admin there, deletes another member’s memo by their role', async () => {
+    await db.insert(spaceMember).values({ spaceId: choir.id, userId: olivia.id, role: 'admin', joinedAt: new Date() });
+    const { id: bobs } = await as(bob).memos.space.create({ spaceId: choir.id, content: 'Rehearsal' });
+
+    await as(olivia).memos.delete({ id: bobs });
+
+    expect(ids(await as(bob).memos.space.list({ spaceId: choir.id }))).toEqual([]);
   });
 });
 

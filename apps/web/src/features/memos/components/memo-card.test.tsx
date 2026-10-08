@@ -284,6 +284,7 @@ describe('MemoCard, an operator deleting a public memo', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Memo actions' }));
 
+    // A comment has no Open item to wait for, as the featuring tests' comment case does.
     expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 

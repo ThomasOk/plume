@@ -242,6 +242,48 @@ describe('memos.update', () => {
   });
 });
 
+// A comment has no audience of its own: it takes its memo's, and an edit of the memo's
+// visibility carries its comments along (ADR 0001), as a move does.
+describe('a comment, when its memo is edited', () => {
+  beforeEach(async () => {
+    await db.insert(user).values(testUser);
+  });
+
+  const visibilityOfComments = async (memoId: string) =>
+    (await createAuthenticatedCaller(db).memos.listComments({ memoId })).map((c) => c.visibility);
+
+  it('becomes public with a memo made public', async () => {
+    const caller = createAuthenticatedCaller(db);
+    const { id: memoId } = await caller.memos.create({ content: 'Draft', visibility: 'private' });
+    await caller.memos.create({ content: 'A thought', parentId: memoId });
+
+    await caller.memos.update({ id: memoId, content: 'Draft', visibility: 'public' });
+
+    expect(await visibilityOfComments(memoId)).toEqual(['public']);
+  });
+
+  it('is out of a visitor’s reach once its memo is made private', async () => {
+    const caller = createAuthenticatedCaller(db);
+    const { id: memoId } = await caller.memos.create({ content: 'Announcement', visibility: 'public' });
+    const { id: commentId } = await caller.memos.create({ content: 'A thought', parentId: memoId });
+
+    await caller.memos.update({ id: memoId, content: 'Announcement', visibility: 'private' });
+
+    expect(await visibilityOfComments(memoId)).toEqual(['private']);
+    await expect(createTestCaller(db).memos.getById({ id: commentId })).rejects.toThrow('Memo not found');
+  });
+
+  it('keeps its memo’s visibility when it is edited itself', async () => {
+    const caller = createAuthenticatedCaller(db);
+    const { id: memoId } = await caller.memos.create({ content: 'Announcement', visibility: 'public' });
+    const { id: commentId } = await caller.memos.create({ content: 'A thought', parentId: memoId });
+
+    await caller.memos.update({ id: commentId, content: 'A better thought', visibility: 'private' });
+
+    expect(await visibilityOfComments(memoId)).toEqual(['public']);
+  });
+});
+
 describe('memos.delete', () => {
   beforeEach(async () => {
     await db.insert(user).values(testUser);
