@@ -14,13 +14,13 @@ import { useCreateMemo } from '../hooks/use-create-memo';
 import { useCreateSpaceMemo } from '../hooks/use-create-space-memo';
 import { useDraft } from '../hooks/use-draft';
 import { useMemoScope } from '../hooks/use-memo-scope';
-import { AudienceSelector, type Audience } from './audience-selector';
+import { AudienceSelector, SpaceAudience, type PersonalAudience } from './audience-selector';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { AttachmentList, useFileUpload } from '@/features/attachments';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 // By path rather than through the spaces barrel, which itself imports this feature.
-import { useSpaces } from '@/features/spaces/hooks/use-spaces';
+import { useSpace } from '@/features/spaces/hooks/use-space';
 import { sounds } from '@/lib/sounds';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
@@ -49,14 +49,13 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
     },
   });
 
-  // Writing from inside a space writes into it: the current context is the answer, read
-  // from the URL, with no remembered "last used space". It is not part of the form, so a
-  // reset after saving keeps it.
+  // The form writes into the scope on screen, read from the URL: inside a space the memo
+  // goes into it with no choice offered, and a personal memo is private or public. The
+  // audience is not part of the form, so a reset after saving keeps it.
   const scope = useMemoScope();
-  const [audience, setAudience] = useState<Audience>(
-    scope.kind === 'space' ? { kind: 'space', spaceId: scope.spaceId } : { kind: 'private' },
-  );
-  const spaces = useSpaces({ enabled: !isComment });
+  const [personalAudience, setPersonalAudience] = useState<PersonalAudience>({ kind: 'private' });
+  // The space page has already fetched it: the form reads its title from the cache.
+  const space = useSpace(scope.kind === 'space' && !isComment ? scope.spaceId : undefined);
 
   const { user } = useAuth();
 
@@ -64,8 +63,13 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
     setIsFocusMode(false);
     sounds.collapse();
   };
-  // Use a distinct draft key for comments so they don't overwrite the main memo draft
-  const draftKey = isComment ? `comment-draft-${parentMemoId}` : 'memo-draft';
+  // Each scope keeps its own draft, so text started for one audience never reappears,
+  // pre-filled, in another. Comments have their own key so they don't overwrite it.
+  const draftKey = isComment
+    ? `comment-draft-${parentMemoId}`
+    : scope.kind === 'space'
+      ? `memo-draft-space-${scope.spaceId}`
+      : 'memo-draft';
   const { getDraft, saveDraft, clearDraft } = useDraft(user?.id, draftKey);
   const createMemo = useCreateMemo();
   const createSpaceMemo = useCreateSpaceMemo();
@@ -125,9 +129,9 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
     try {
       const newMemo = isComment
         ? await createComment.mutateAsync({ content: data.content, parentId: parentMemoId })
-        : audience.kind === 'space'
-          ? await createSpaceMemo.mutateAsync({ spaceId: audience.spaceId, content: data.content })
-          : await createMemo.mutateAsync({ content: data.content, visibility: audience.kind });
+        : scope.kind === 'space'
+          ? await createSpaceMemo.mutateAsync({ spaceId: scope.spaceId, content: data.content })
+          : await createMemo.mutateAsync({ content: data.content, visibility: personalAudience.kind });
       await confirmAll(newMemo.id);
       clearDraft();
       clearAll();
@@ -142,8 +146,10 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
   const isPending = createComment.isPending || createMemo.isPending || createSpaceMemo.isPending;
 
   // A comment takes its parent's audience, so it offers no choice.
-  const audienceControl = isComment ? undefined : (
-    <AudienceSelector value={audience} onChange={setAudience} spaces={spaces.data} />
+  const audienceControl = isComment ? undefined : scope.kind === 'space' ? (
+    <SpaceAudience title={space.data?.title} />
+  ) : (
+    <AudienceSelector value={personalAudience} onChange={setPersonalAudience} />
   );
 
   const onInsert = (text: string, startIndex: number, length: number) => {

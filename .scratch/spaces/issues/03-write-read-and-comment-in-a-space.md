@@ -54,3 +54,9 @@ Two things that are **mandatory in this ticket, not follow-ups**:
   but readable by anyone a URL reaches. Closing that takes presigned GETs (follow-up).
 - [x] The Attachments page still lists the signed-in User's own uploads
 - [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
+
+## Comments
+
+**2026-10-08** — The one flat audience list delivered here is withdrawn: the form now writes
+into the scope on screen, with no audience choice inside a Space and private/public only in
+the personal scope. See the spec's *Revisions* section and ticket 07.

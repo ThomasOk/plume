@@ -146,14 +146,13 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false }: MemoCardP
 
   // An edit leaves a memo where it is: a personal memo switches between private and
   // public, a memo in a space shows its space. A comment takes its parent's audience.
+  // Outside its space's page, the memo's space is not known, and the label reads "Space".
   const audienceControl = isComment ? undefined : visibility === 'space' ? (
-    <SpaceAudience />
+    <SpaceAudience title={space.data?.title} />
   ) : (
     <AudienceSelector
       value={{ kind: visibility }}
-      onChange={(audience) => {
-        if (audience.kind !== 'space') setValue('visibility', audience.kind);
-      }}
+      onChange={(audience) => setValue('visibility', audience.kind)}
     />
   );
 
