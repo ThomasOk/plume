@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { DeleteAccountSection } from '@/features/account/components/delete-account-section';
 import { ProfileSection } from '@/features/account/components/profile-section';
 import { authClient } from '@/lib/authClient';
 
@@ -12,6 +13,9 @@ function AccountSettings() {
   if (!session) return null;
 
   return (
-    <ProfileSection name={session.user.name} email={session.user.email} />
+    <div className="space-y-10">
+      <ProfileSection name={session.user.name} email={session.user.email} />
+      <DeleteAccountSection email={session.user.email} />
+    </div>
   );
 }

@@ -57,22 +57,25 @@ meaning would depend on another column being null.
   its own placement, at the price of a thread that differs from reader to reader. Trigger
   to revisit: authors asking to move commented memos, which would mean letting the
   commenters consent, or giving comments an audience of their own.
-- **No account deletion.** Plume has none today — no code path triggers the
-  `ON DELETE CASCADE` on `memo.user_id`. When one is built, deleting an account must not
-  take a space's memos with it: the chosen mechanism is the **Former user** (a reserved
-  `user` row, seeded by migration, with no `account` row so it can never sign in), to
-  which space memos — and comments under someone else's memo — are reassigned in the same
-  transaction that deletes the account. Personal memos then cascade on their own,
-  `memo.user_id` stays `NOT NULL`, and no query changes. Making the column nullable is the
-  trap: personal memos would be left with no author, hence no reader and no owner.
-  That transaction is Plume's own, not Better Auth's `deleteUser`: its `beforeDelete` hook
-  does not share the transaction of the delete it precedes, so a failure between the
-  reassignment and the `DELETE` would leave the account half-removed (better-auth 1.3.33:
-  the hook, the user, its sessions and its accounts are four separate awaits). Better Auth
-  only verifies the password; for an account without one, the procedure checks the
-  session's age itself, because the library's `freshAge` check scales seconds to
-  milliseconds twice and accepts sessions a thousand times older than configured.
-  Trigger: the account-deletion feature.
+- **Deleting an account keeps what others rely on.** A space's memos, and comments under
+  someone else's memo, outlive their author: they pass to the **Former user** (a reserved
+  `user` row, seeded by migration, with no `account` row so it can never sign in), in the
+  same transaction that deletes the account. The user's other memos — personal ones, with
+  every comment under them — cascade on their own, `memo.user_id` stays `NOT NULL`, and no
+  query changes. Making the column nullable is the trap: personal memos would be left with
+  no author, hence no reader and no owner. The attachments of what is reassigned pass with
+  it, since `attachment.user_id` cascades too. A space whose only member is the user goes
+  with them; one where they are the last admin among other members refuses the deletion
+  until someone else is made admin, the same rule as leaving.
+  The transaction is Plume's own (`account.delete`), not Better Auth's `deleteUser`: its
+  `beforeDelete` hook does not share the transaction of the delete it precedes, so a
+  failure between the reassignment and the `DELETE` would leave the account half-removed
+  (better-auth 1.3.33: the hook, the user, its sessions and its accounts are four separate
+  awaits). Better Auth's code is used only to verify the password; for an account without
+  one, the procedure checks the session's age itself (10 minutes), because the library's
+  `freshAge` check scales seconds to milliseconds twice and accepts sessions a thousand
+  times older than configured. Trigger to revisit: a user asking for their space memos to
+  leave with them, which would mean the space consenting.
 - **No in-app notification for invitations**, email only. `notification.entity_id` is a
   foreign key to `memo.id`; an invitation would force that column to become polymorphic,
   which is its own modelling decision and not a side effect of this one.

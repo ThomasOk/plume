@@ -28,7 +28,7 @@ export const createTestCaller = (db: DatabaseInstance) => {
 // `isOperator` forges the role the session would carry once granted (ADR 0007); that the
 // session tells the truth about it is proven on the Better Auth seam. `storage` and `logger`
 // let a test observe which objects a call removed from storage (see `createFakeStorage`) and
-// what it logged.
+// what it logged. `sessionCreatedAt` dates the sign-in, for what asks for a recent one.
 export const createAuthenticatedCaller = (
   db: DatabaseInstance,
   userId = 'test-user-id',
@@ -36,7 +36,13 @@ export const createAuthenticatedCaller = (
     isOperator = false,
     storage = mockStorage,
     logger = mockLogger,
-  }: { isOperator?: boolean; storage?: StorageService; logger?: AppLogger } = {},
+    sessionCreatedAt = new Date(),
+  }: {
+    isOperator?: boolean;
+    storage?: StorageService;
+    logger?: AppLogger;
+    sessionCreatedAt?: Date;
+  } = {},
 ) => {
   const now = new Date();
   return appRouter.createCaller({
@@ -61,7 +67,7 @@ export const createAuthenticatedCaller = (
         userId,
         expiresAt: new Date(Date.now() + 86400000),
         token: 'test-token',
-        createdAt: now,
+        createdAt: sessionCreatedAt,
         updatedAt: now,
         ipAddress: null,
         userAgent: null,

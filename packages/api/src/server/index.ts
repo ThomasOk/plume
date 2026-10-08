@@ -1,6 +1,7 @@
 import type { AppLogger, StorageService } from './trpc';
 import type { AuthInstance } from '@repo/auth/server';
 import type { DatabaseInstance } from '@repo/db/client';
+import { accountRouter } from './features/account';
 import { attachmentsRouter } from './features/attachments';
 import { invitationsRouter } from './features/invitations';
 import { memosRouter } from './features/memos';
@@ -16,6 +17,7 @@ export const appRouter = router({
   spaces: spacesRouter,
   invitations: invitationsRouter,
   preferences: preferencesRouter,
+  account: accountRouter,
 });
 
 export const createApi = ({
