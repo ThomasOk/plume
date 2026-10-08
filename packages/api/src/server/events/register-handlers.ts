@@ -14,7 +14,8 @@ import { createInProcessEventBus } from './event-bus';
 // stays untouched. Both reactions subscribe to the same fact and run independently.
 //
 // `invitationLinks` is required rather than defaulted: a server that forgot it would email
-// links pointing nowhere, and nothing would fail loudly.
+// links pointing nowhere, and nothing would fail loudly. Its `webUrl` also builds the comment
+// email's link to the Notifications settings.
 export function createEventBusWithHandlers(
   db: DatabaseInstance,
   emailSender: EmailSender,
@@ -22,7 +23,7 @@ export function createEventBusWithHandlers(
 ): EventBus {
   const bus = createInProcessEventBus();
   bus.on(COMMENT_CREATED, createPersistNotificationHandler(db));
-  bus.on(COMMENT_CREATED, createSendCommentEmailHandler(db, emailSender));
+  bus.on(COMMENT_CREATED, createSendCommentEmailHandler(db, emailSender, invitationLinks.webUrl));
   bus.on(INVITATION_CREATED, createSendInvitationEmailHandler(db, emailSender, invitationLinks));
   return bus;
 }

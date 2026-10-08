@@ -1,13 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { CommentEmailsSection } from '@/features/notifications/components/comment-emails-section';
 
 export const Route = createFileRoute('/settings/notifications')({
-  component: NotificationsSettings,
+  component: CommentEmailsSection,
 });
-
-function NotificationsSettings() {
-  return (
-    <p className="text-sm text-muted-foreground">
-      Notifications settings will appear here.
-    </p>
-  );
-}

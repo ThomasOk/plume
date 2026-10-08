@@ -5,6 +5,7 @@ import { attachmentsRouter } from './features/attachments';
 import { invitationsRouter } from './features/invitations';
 import { memosRouter } from './features/memos';
 import { notificationsRouter } from './features/notifications';
+import { preferencesRouter } from './features/preferences';
 import { spacesRouter } from './features/spaces';
 import { createTRPCContext as createTRPCContextInternal, router } from './trpc';
 
@@ -14,6 +15,7 @@ export const appRouter = router({
   notifications: notificationsRouter,
   spaces: spacesRouter,
   invitations: invitationsRouter,
+  preferences: preferencesRouter,
 });
 
 export const createApi = ({

@@ -117,3 +117,52 @@ describe('sendCommentEmail handler (via drainOnce)', () => {
     expect(emailSender.sent).toHaveLength(1);
   });
 });
+
+describe('the comment email and the author\'s preference', () => {
+  beforeEach(async () => {
+    await db.insert(user).values([author, commenter]);
+    await db.insert(memo).values(parentMemo);
+  });
+
+  const comment = () =>
+    createAuthenticatedCaller(db, commenter.id).memos.create({ content: 'Nice!', parentId: parentMemo.id });
+
+  const turnCommentEmails = (commentEmails: boolean) =>
+    createAuthenticatedCaller(db, author.id).preferences.update({ commentEmails });
+
+  const drain = async () => {
+    const emailSender = createFakeEmailSender();
+    await drainOnce({ db, bus: createEventBusWithHandlers(db, emailSender, TEST_INVITATION_LINKS) });
+    return emailSender.sent;
+  };
+
+  it('sends no email to an author who turned comment emails off, yet still notifies them in-app', async () => {
+    await turnCommentEmails(false);
+    const { id } = await comment();
+
+    expect(await drain()).toHaveLength(0);
+    const notifications = await db.select().from(notification).where(eq(notification.entityId, id));
+    expect(notifications).toHaveLength(1);
+  });
+
+  it('emails an author who never touched the preference', async () => {
+    await comment();
+
+    expect(await drain()).toHaveLength(1);
+  });
+
+  it('sends no email for a comment already waiting in the outbox when the author turns emails off', async () => {
+    await comment();
+    await turnCommentEmails(false);
+
+    expect(await drain()).toHaveLength(0);
+  });
+
+  it('links to the Notifications settings, on the web app', async () => {
+    await comment();
+
+    const [email] = await drain();
+    const href = /href="([^"]+)"/.exec(email!.html)?.[1];
+    expect(href).toBe('https://plume.example.com/settings/notifications');
+  });
+});

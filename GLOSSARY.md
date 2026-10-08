@@ -80,8 +80,16 @@ _Avoid_: file, upload, media.
 **Notification**:
 A signal to a user (the receiver) that another user (the sender) acted on their content.
 The only type today is a comment on one of the receiver's memos. A notification is
-`UNREAD` until it is archived.
+`UNREAD` until it is archived. The comment email is a separate signal from the
+notification: a preference can turn the email off, never the notification.
 _Avoid_: alert, message.
+
+**Preference**:
+A choice a user makes about how Plume behaves toward them. Every preference has a
+default, so a user who never touches it keeps the default. The only one today is whether
+they are emailed when someone comments on their memos. Distinct from the account (name,
+password, sessions), which describes who the user is rather than how Plume treats them.
+_Avoid_: setting (Settings is the page that shows them), option, config.
 
 **User**:
 An authenticated account (managed by Better Auth). The general term for a person using Plume.
