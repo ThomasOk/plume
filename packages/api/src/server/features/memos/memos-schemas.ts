@@ -47,6 +47,12 @@ export const pinMemoSchema = z.object({
   id: z.string().min(1, 'ID is required'),
 });
 
+// Featuring and unfeaturing name only the memo: whether the user may is decided from their
+// operator flag, which the session carries.
+export const featureMemoSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+});
+
 export const getByIdSchema = z.object({
   id: z.string().min(1, 'ID is required'),
 });

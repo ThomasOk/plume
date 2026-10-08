@@ -12,6 +12,7 @@ import type {
   moveSpaceMemoSchema,
   moveMemoSchema,
   pinMemoSchema,
+  featureMemoSchema,
 } from './memos-schemas';
 import type { StorageService } from '../../shared/storage';
 import type { DatabaseInstance } from '@repo/db/client';
@@ -22,6 +23,7 @@ import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/er
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
+import { mayFeatureMemo, type OperatorActor } from './operator-policy';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -32,11 +34,21 @@ type GetByIdInput = z.infer<typeof getByIdSchema>;
 // Into a space names only the memo; out of one names the new visibility as well.
 type MoveMemoInput = z.infer<typeof moveSpaceMemoSchema> | z.infer<typeof moveMemoSchema>;
 type PinMemoInput = z.infer<typeof pinMemoSchema>;
+type FeatureMemoInput = z.infer<typeof featureMemoSchema>;
 
 // The order of every list of a scope, filtered or not: the pinned first, the latest pin on
 // top, then the rest newest first (ADR 0006). Postgres puts nulls first in a descending
 // order, hence the explicit `NULLS LAST`.
 const pinnedFirst = [sql`${memo.pinnedAt} DESC NULLS LAST`, desc(memo.createdAt)];
+
+// The order of Explore, filtered or not: the featured first, the latest featured on top,
+// then the rest newest first. The same mechanics as a pin, decided by an operator instead
+// of whoever governs a scope.
+const featuredFirst = [sql`${memo.featuredAt} DESC NULLS LAST`, desc(memo.createdAt)];
+
+// A user about to act on what belongs to no scope: who they are, and whether they run the
+// instance. Most are not, and are refused.
+type InstanceActor = { id: string } & OperatorActor;
 
 type ParentMemo = Pick<typeof memo.$inferSelect, 'id' | 'parentId' | 'visibility' | 'spaceId'>;
 
@@ -51,6 +63,7 @@ export async function getMemoById(db: DatabaseInstance, storage: StorageService,
       visibility: memo.visibility,
       spaceId: memo.spaceId,
       pinnedAt: memo.pinnedAt,
+      featuredAt: memo.featuredAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       authorName: user.name,
@@ -108,6 +121,7 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
       visibility: memo.visibility,
       spaceId: memo.spaceId,
       pinnedAt: memo.pinnedAt,
+      featuredAt: memo.featuredAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       // Scope-free by construction: it counts the comments of a memo the scope has
@@ -143,6 +157,7 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
       visibility: memo.visibility,
       spaceId: memo.spaceId,
       pinnedAt: memo.pinnedAt,
+      featuredAt: memo.featuredAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       // Scope-free by construction: it counts the comments of a memo the scope has
@@ -154,9 +169,10 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
     .from(memo)
     .leftJoin(user, eq(memo.userId, user.id))
     // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin
-    // there would let any author take the top of the public page (ADR 0006).
+    // there would let any author take the top of the public page (ADR 0006). What comes
+    // first there is the operator's decision.
     .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId), ...buildFilterConditions(input)))
-    .orderBy(desc(memo.createdAt));
+    .orderBy(...featuredFirst);
 
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
 
@@ -295,6 +311,7 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
       visibility: memo.visibility,
       spaceId: memo.spaceId,
       pinnedAt: memo.pinnedAt,
+      featuredAt: memo.featuredAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
       authorName: user.name,
@@ -352,7 +369,16 @@ export async function updateMemo(db: DatabaseInstance, userId: string, input: Up
   const tags = extractTagsFromContent(input.content);
   const [updatedMemo] = await db
     .update(memo)
-    .set({ content: input.content, tags, visibility, updatedAt: new Date() })
+    .set({
+      content: input.content,
+      tags,
+      visibility,
+      // A memo that stops being public stops being featured, and making it public again
+      // does not feature it back: that is an operator's decision to take again. An edit
+      // that keeps it public leaves it featured: fixing a typo undoes no one's decision.
+      ...(visibility !== 'public' && { featuredAt: null }),
+      updatedAt: new Date(),
+    })
     .where(eq(memo.id, input.id))
     .returning();
 
@@ -409,13 +435,65 @@ export async function unpinMemo(db: DatabaseInstance, userId: string, input: Pin
   return { success: true };
 }
 
+// The memo an operator is about to feature or unfeature, once they may. Only a public memo
+// that is not a comment: Explore shows nothing else, and featuring must never put a memo in
+// front of readers who may not read it. The role is asked first, before the memo is read, so
+// a refusal tells someone who is not an operator nothing about it.
+async function findMemoToFeature(db: Pick<DatabaseInstance, 'select'>, actor: InstanceActor, id: string) {
+  if (!mayFeatureMemo(actor)) throw new InsufficientPermissionsError();
+
+  const [existing] = await db
+    .select({ id: memo.id, parentId: memo.parentId, visibility: memo.visibility })
+    .from(memo)
+    .where(and(eq(memo.id, id), readableMemoCondition(actor.id)))
+    .limit(1)
+    .for('update');
+
+  if (!existing) throw new MemoNotFoundError();
+  if (existing.parentId !== null) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'A comment cannot be featured' });
+  }
+  if (existing.visibility !== 'public') {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only a public memo can be featured' });
+  }
+
+  return existing;
+}
+
+// The same mechanics as a pin (ADR 0006): each names the state it wants, featuring a
+// featured memo keeps its date, and neither touches `updatedAt`, since featuring is
+// curation, not an edit.
+export async function featureMemo(db: DatabaseInstance, actor: InstanceActor, input: FeatureMemoInput) {
+  // Locked from the check to the write: an edit making the memo private waits, then clears
+  // the date, rather than being overtaken by a featuring the check no longer holds for.
+  return db.transaction(async (tx) => {
+    const existing = await findMemoToFeature(tx, actor, input.id);
+
+    await tx
+      .update(memo)
+      .set({ featuredAt: new Date() })
+      .where(and(eq(memo.id, existing.id), isNull(memo.featuredAt)));
+
+    return { success: true };
+  });
+}
+
+export async function unfeatureMemo(db: DatabaseInstance, actor: InstanceActor, input: FeatureMemoInput) {
+  const existing = await findMemoToFeature(db, actor, input.id);
+
+  await db.update(memo).set({ featuredAt: null }).where(eq(memo.id, existing.id));
+
+  return { success: true };
+}
+
 // Moving sets the visibility and the space together, on the memo and on its comments, in
 // one statement: the equivalence constraint is checked per row, and no row ever passes
 // through a state where one field has changed and the other has not (ADR 0003).
 //
 // It leaves `updatedAt` alone: a move changes who reads the memo, not what was written. It
 // unpins the memo: a pin belongs to the scope it was set in, by whoever governs it, and would
-// otherwise land in a scope where nobody decided it (ADR 0006).
+// otherwise land in a scope where nobody decided it (ADR 0006). It unfeatures it too: a move
+// takes a public memo into a space, or a space memo, never featured, out of one.
 export async function moveMemo(db: DatabaseInstance, authorId: string, destination: MemoDestination, input: MoveMemoInput) {
   return db.transaction(async (tx) => {
     // Locked against a comment being written while the memo moves: either the comment
@@ -460,7 +538,7 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, destinati
 
     await tx
       .update(memo)
-      .set({ ...placement, pinnedAt: null })
+      .set({ ...placement, pinnedAt: null, featuredAt: null })
       .where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id)));
 
     return { success: true };

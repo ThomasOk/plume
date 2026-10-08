@@ -12,6 +12,7 @@ import {
   moveSpaceMemoSchema,
   moveMemoSchema,
   pinMemoSchema,
+  featureMemoSchema,
 } from './memos-schemas';
 import {
   getMemoById,
@@ -27,6 +28,8 @@ import {
   moveMemo,
   pinMemo,
   unpinMemo,
+  featureMemo,
+  unfeatureMemo,
 } from './memos-service';
 
 export const getById = publicProcedure
@@ -88,6 +91,15 @@ export const pin = protectedProcedure
 export const unpin = protectedProcedure
   .input(pinMemoSchema)
   .mutation(({ ctx, input }) => unpinMemo(ctx.db, ctx.session.user.id, input));
+
+// Any signed-in user may call them; the operator flag the session carries decides (ADR 0007).
+export const feature = protectedProcedure
+  .input(featureMemoSchema)
+  .mutation(({ ctx, input }) => featureMemo(ctx.db, ctx.session.user, input));
+
+export const unfeature = protectedProcedure
+  .input(featureMemoSchema)
+  .mutation(({ ctx, input }) => unfeatureMemo(ctx.db, ctx.session.user, input));
 
 export const stats = protectedProcedure
   .query(({ ctx }) => getMemoStats(ctx.db, personalScope(ctx.session.user.id)));

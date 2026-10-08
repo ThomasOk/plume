@@ -11,6 +11,8 @@ interface MemoListProps {
   hideAuthors?: boolean;
   /** Leave pins out where the list is no one's scope: Explore. */
   ignorePins?: boolean;
+  /** Mark the featured memos where featuring decides the order: Explore. */
+  markFeatured?: boolean;
 }
 
 export const MemoList = ({
@@ -18,6 +20,7 @@ export const MemoList = ({
   emptyMessage = 'No memos yet. Start creating one!',
   hideAuthors = false,
   ignorePins = false,
+  markFeatured = false,
 }: MemoListProps) => {
   if (memos.length === 0) {
     return (
@@ -38,7 +41,7 @@ export const MemoList = ({
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }}
           >
-            <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} ignorePins={ignorePins} />
+            <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} ignorePins={ignorePins} markFeatured={markFeatured} />
           </motion.div>
         ))}
       </AnimatePresence>

@@ -52,6 +52,10 @@ export const memo = pgTable(
     // first among the pinned (ADR 0006). Set and cleared only by pinning, unpinning and
     // moving: never by an edit.
     pinnedAt: timestamp('pinned_at'),
+    // Null = not featured. Set by an operator to put a public memo first on Explore, the
+    // latest decision on top, as `pinned_at` does in a scope (ADR 0006). Cleared by every
+    // write that takes the memo out of `public`, and never set back by one.
+    featuredAt: timestamp('featured_at'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
@@ -73,6 +77,14 @@ export const memo = pgTable(
       'memo_space_visibility_equivalence',
       sql`(${table.spaceId} IS NOT NULL) = (${table.visibility}::text = 'space')`,
     ),
+    // Featured implies public, and a comment is never featured. The writes that take a
+    // memo out of `public` clear `featured_at` themselves; this makes the one that forgets
+    // fail instead of leaving a private memo featured, to resurface on Explore the day it
+    // is made public again.
+    check(
+      'memo_featured_is_public',
+      sql`${table.featuredAt} IS NULL OR (${table.visibility}::text = 'public' AND ${table.parentId} IS NULL)`,
+    ),
   ],
 );
 
@@ -93,6 +105,8 @@ export const insertMemoSchema = createInsertSchema(memo, {
   tags: true,
   // A pin is its own operation, decided by whoever governs the memo's scope (ADR 0006).
   pinnedAt: true,
+  // Featuring is its own operation, decided by an operator.
+  featuredAt: true,
   createdAt: true,
   updatedAt: true,
   // A client never names a space in a memo's fields: placing a memo in one requires

@@ -85,6 +85,13 @@
       "when": 1791468410820,
       "tag": "0011_user_is_operator",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791470178912,
+      "tag": "0012_memo_featured_at",
+      "breakpoints": true
     }
   ]
 }
