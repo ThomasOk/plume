@@ -60,6 +60,11 @@ export const createAuth = ({
     trustedOrigins: trustedOrigins.map((url) => new URL(url).origin),
     baseURL: baseURL,
     session: {
+      // Spares a database read on every request, at a known cost: anything that changes a
+      // session — signing it out from another device, revoking every other session at a
+      // password change, a new name, the operator flag — reaches a signed-in browser only
+      // when its cached cookie expires, up to five minutes later. Kept deliberately: an
+      // accepted window for Plume, like the lifetime of a short-lived access token.
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60,
