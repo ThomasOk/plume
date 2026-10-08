@@ -9,12 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as CalendarDemoRouteImport } from './routes/calendar-demo'
 import { Route as AttachmentsRouteImport } from './routes/attachments'
+import { Route as SettingsLayoutRouteImport } from './routes/settings/layout'
 import { Route as memosLayoutRouteImport } from './routes/(memos)/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SettingsSecurityRouteImport } from './routes/settings/security'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
+import { Route as SettingsDataRouteImport } from './routes/settings/data'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as MemosMemoIdRouteImport } from './routes/memos.$memoId'
 import { Route as InvitationsTokenRouteImport } from './routes/invitations.$token'
 import { Route as memosExploreRouteImport } from './routes/(memos)/explore'
@@ -25,11 +30,6 @@ import { Route as memosprivateIndexRouteImport } from './routes/(memos)/(private
 import { Route as memosprivateSpacesSpaceIdRouteImport } from './routes/(memos)/(private)/spaces.$spaceId'
 import { Route as memosprivateSpacesSpaceIdMembersRouteImport } from './routes/(memos)/(private)/spaces.$spaceId_.members'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -45,6 +45,11 @@ const AttachmentsRoute = AttachmentsRouteImport.update({
   path: '/attachments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsLayoutRoute = SettingsLayoutRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const memosLayoutRoute = memosLayoutRouteImport.update({
   id: '/(memos)',
   getParentRoute: () => rootRouteImport,
@@ -52,6 +57,31 @@ const memosLayoutRoute = memosLayoutRouteImport.update({
 const authLayoutRoute = authLayoutRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsLayoutRoute,
+} as any)
+const SettingsSecurityRoute = SettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => SettingsLayoutRoute,
+} as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => SettingsLayoutRoute,
+} as any)
+const SettingsDataRoute = SettingsDataRouteImport.update({
+  id: '/data',
+  path: '/data',
+  getParentRoute: () => SettingsLayoutRoute,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => SettingsLayoutRoute,
 } as any)
 const MemosMemoIdRoute = MemosMemoIdRouteImport.update({
   id: '/memos/$memoId',
@@ -102,15 +132,20 @@ const memosprivateSpacesSpaceIdMembersRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof memosprivateIndexRoute
+  '/settings': typeof SettingsLayoutRouteWithChildren
   '/attachments': typeof AttachmentsRoute
   '/calendar-demo': typeof CalendarDemoRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/data': typeof SettingsDataRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings/': typeof SettingsIndexRoute
   '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
   '/spaces/$spaceId/members': typeof memosprivateSpacesSpaceIdMembersRoute
 }
@@ -119,12 +154,16 @@ export interface FileRoutesByTo {
   '/attachments': typeof AttachmentsRoute
   '/calendar-demo': typeof CalendarDemoRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/explore': typeof memosExploreRoute
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/data': typeof SettingsDataRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings': typeof SettingsIndexRoute
   '/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
   '/spaces/$spaceId/members': typeof memosprivateSpacesSpaceIdMembersRoute
 }
@@ -132,16 +171,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(auth)': typeof authLayoutRouteWithChildren
   '/(memos)': typeof memosLayoutRouteWithChildren
+  '/settings': typeof SettingsLayoutRouteWithChildren
   '/attachments': typeof AttachmentsRoute
   '/calendar-demo': typeof CalendarDemoRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
   '/(memos)/(private)': typeof memosprivateLayoutRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(memos)/explore': typeof memosExploreRoute
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/data': typeof SettingsDataRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/security': typeof SettingsSecurityRoute
+  '/settings/': typeof SettingsIndexRoute
   '/(memos)/(private)/': typeof memosprivateIndexRoute
   '/(memos)/(private)/spaces/$spaceId': typeof memosprivateSpacesSpaceIdRoute
   '/(memos)/(private)/spaces/$spaceId_/members': typeof memosprivateSpacesSpaceIdMembersRoute
@@ -150,15 +194,20 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/settings'
     | '/attachments'
     | '/calendar-demo'
     | '/notifications'
-    | '/settings'
     | '/sign-in'
     | '/sign-up'
     | '/explore'
     | '/invitations/$token'
     | '/memos/$memoId'
+    | '/settings/account'
+    | '/settings/data'
+    | '/settings/notifications'
+    | '/settings/security'
+    | '/settings/'
     | '/spaces/$spaceId'
     | '/spaces/$spaceId/members'
   fileRoutesByTo: FileRoutesByTo
@@ -167,28 +216,37 @@ export interface FileRouteTypes {
     | '/attachments'
     | '/calendar-demo'
     | '/notifications'
-    | '/settings'
     | '/sign-in'
     | '/sign-up'
     | '/explore'
     | '/invitations/$token'
     | '/memos/$memoId'
+    | '/settings/account'
+    | '/settings/data'
+    | '/settings/notifications'
+    | '/settings/security'
+    | '/settings'
     | '/spaces/$spaceId'
     | '/spaces/$spaceId/members'
   id:
     | '__root__'
     | '/(auth)'
     | '/(memos)'
+    | '/settings'
     | '/attachments'
     | '/calendar-demo'
     | '/notifications'
-    | '/settings'
     | '/(memos)/(private)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(memos)/explore'
     | '/invitations/$token'
     | '/memos/$memoId'
+    | '/settings/account'
+    | '/settings/data'
+    | '/settings/notifications'
+    | '/settings/security'
+    | '/settings/'
     | '/(memos)/(private)/'
     | '/(memos)/(private)/spaces/$spaceId'
     | '/(memos)/(private)/spaces/$spaceId_/members'
@@ -197,23 +255,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   authLayoutRoute: typeof authLayoutRouteWithChildren
   memosLayoutRoute: typeof memosLayoutRouteWithChildren
+  SettingsLayoutRoute: typeof SettingsLayoutRouteWithChildren
   AttachmentsRoute: typeof AttachmentsRoute
   CalendarDemoRoute: typeof CalendarDemoRoute
   NotificationsRoute: typeof NotificationsRoute
-  SettingsRoute: typeof SettingsRoute
   InvitationsTokenRoute: typeof InvitationsTokenRoute
   MemosMemoIdRoute: typeof MemosMemoIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -235,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttachmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(memos)': {
       id: '/(memos)'
       path: '/'
@@ -248,6 +306,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof authLayoutRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsLayoutRoute
+    }
+    '/settings/security': {
+      id: '/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof SettingsSecurityRouteImport
+      parentRoute: typeof SettingsLayoutRoute
+    }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsLayoutRoute
+    }
+    '/settings/data': {
+      id: '/settings/data'
+      path: '/data'
+      fullPath: '/settings/data'
+      preLoaderRoute: typeof SettingsDataRouteImport
+      parentRoute: typeof SettingsLayoutRoute
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsLayoutRoute
     }
     '/memos/$memoId': {
       id: '/memos/$memoId'
@@ -358,13 +451,33 @@ const memosLayoutRouteWithChildren = memosLayoutRoute._addFileChildren(
   memosLayoutRouteChildren,
 )
 
+interface SettingsLayoutRouteChildren {
+  SettingsAccountRoute: typeof SettingsAccountRoute
+  SettingsDataRoute: typeof SettingsDataRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
+  SettingsSecurityRoute: typeof SettingsSecurityRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsLayoutRouteChildren: SettingsLayoutRouteChildren = {
+  SettingsAccountRoute: SettingsAccountRoute,
+  SettingsDataRoute: SettingsDataRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
+  SettingsSecurityRoute: SettingsSecurityRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsLayoutRouteWithChildren = SettingsLayoutRoute._addFileChildren(
+  SettingsLayoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   authLayoutRoute: authLayoutRouteWithChildren,
   memosLayoutRoute: memosLayoutRouteWithChildren,
+  SettingsLayoutRoute: SettingsLayoutRouteWithChildren,
   AttachmentsRoute: AttachmentsRoute,
   CalendarDemoRoute: CalendarDemoRoute,
   NotificationsRoute: NotificationsRoute,
-  SettingsRoute: SettingsRoute,
   InvitationsTokenRoute: InvitationsTokenRoute,
   MemosMemoIdRoute: MemosMemoIdRoute,
 }

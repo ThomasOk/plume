@@ -1,7 +1,9 @@
 import { betterAuth } from 'better-auth';
 
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { APIError } from 'better-auth/api';
 import type { DatabaseInstance } from '@repo/db/client';
+import { accountNameSchema } from './account-name';
 
 export interface AuthOptions {
   baseURL: string;
@@ -61,6 +63,25 @@ export const createAuth = ({
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60,
+      },
+    },
+    databaseHooks: {
+      user: {
+        update: {
+          // Better Auth stores any name it is given; this is the authority on a name change,
+          // the rule the settings form also checks. Sign-up is not covered: its form
+          // validates a name of its own. The hook sees only the fields being changed.
+          before: async (data) => {
+            if (data.name === undefined) return;
+            const name = accountNameSchema.safeParse(data.name);
+            if (!name.success) {
+              throw new APIError('BAD_REQUEST', {
+                message: name.error.issues[0]?.message,
+              });
+            }
+            return { data: { ...data, name: name.data } };
+          },
+        },
       },
     },
     emailAndPassword: {

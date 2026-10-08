@@ -6,7 +6,8 @@
   "exports": {
     "./client": "./src/client.ts",
     "./server": "./src/server.ts",
-    "./operator": "./src/operator.ts"
+    "./operator": "./src/operator.ts",
+    "./account-name": "./src/account-name.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -20,7 +21,8 @@
   "prettier": "@repo/prettier-config",
   "dependencies": {
     "@repo/db": "workspace:*",
-    "better-auth": "catalog:"
+    "better-auth": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
