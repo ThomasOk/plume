@@ -18,7 +18,7 @@ import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsSecurityRouteImport } from './routes/settings/security'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
-import { Route as SettingsDataRouteImport } from './routes/settings/data'
+import { Route as SettingsExportRouteImport } from './routes/settings/export'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as MemosMemoIdRouteImport } from './routes/memos.$memoId'
 import { Route as InvitationsTokenRouteImport } from './routes/invitations.$token'
@@ -73,9 +73,9 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsLayoutRoute,
 } as any)
-const SettingsDataRoute = SettingsDataRouteImport.update({
-  id: '/data',
-  path: '/data',
+const SettingsExportRoute = SettingsExportRouteImport.update({
+  id: '/export',
+  path: '/export',
   getParentRoute: () => SettingsLayoutRoute,
 } as any)
 const SettingsAccountRoute = SettingsAccountRouteImport.update({
@@ -142,7 +142,7 @@ export interface FileRoutesByFullPath {
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/settings/account': typeof SettingsAccountRoute
-  '/settings/data': typeof SettingsDataRoute
+  '/settings/export': typeof SettingsExportRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/': typeof SettingsIndexRoute
@@ -160,7 +160,7 @@ export interface FileRoutesByTo {
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/settings/account': typeof SettingsAccountRoute
-  '/settings/data': typeof SettingsDataRoute
+  '/settings/export': typeof SettingsExportRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings': typeof SettingsIndexRoute
@@ -182,7 +182,7 @@ export interface FileRoutesById {
   '/invitations/$token': typeof InvitationsTokenRoute
   '/memos/$memoId': typeof MemosMemoIdRoute
   '/settings/account': typeof SettingsAccountRoute
-  '/settings/data': typeof SettingsDataRoute
+  '/settings/export': typeof SettingsExportRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/security': typeof SettingsSecurityRoute
   '/settings/': typeof SettingsIndexRoute
@@ -204,7 +204,7 @@ export interface FileRouteTypes {
     | '/invitations/$token'
     | '/memos/$memoId'
     | '/settings/account'
-    | '/settings/data'
+    | '/settings/export'
     | '/settings/notifications'
     | '/settings/security'
     | '/settings/'
@@ -222,7 +222,7 @@ export interface FileRouteTypes {
     | '/invitations/$token'
     | '/memos/$memoId'
     | '/settings/account'
-    | '/settings/data'
+    | '/settings/export'
     | '/settings/notifications'
     | '/settings/security'
     | '/settings'
@@ -243,7 +243,7 @@ export interface FileRouteTypes {
     | '/invitations/$token'
     | '/memos/$memoId'
     | '/settings/account'
-    | '/settings/data'
+    | '/settings/export'
     | '/settings/notifications'
     | '/settings/security'
     | '/settings/'
@@ -328,11 +328,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsLayoutRoute
     }
-    '/settings/data': {
-      id: '/settings/data'
-      path: '/data'
-      fullPath: '/settings/data'
-      preLoaderRoute: typeof SettingsDataRouteImport
+    '/settings/export': {
+      id: '/settings/export'
+      path: '/export'
+      fullPath: '/settings/export'
+      preLoaderRoute: typeof SettingsExportRouteImport
       parentRoute: typeof SettingsLayoutRoute
     }
     '/settings/account': {
@@ -453,7 +453,7 @@ const memosLayoutRouteWithChildren = memosLayoutRoute._addFileChildren(
 
 interface SettingsLayoutRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
-  SettingsDataRoute: typeof SettingsDataRoute
+  SettingsExportRoute: typeof SettingsExportRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsSecurityRoute: typeof SettingsSecurityRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -461,7 +461,7 @@ interface SettingsLayoutRouteChildren {
 
 const SettingsLayoutRouteChildren: SettingsLayoutRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
-  SettingsDataRoute: SettingsDataRoute,
+  SettingsExportRoute: SettingsExportRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsSecurityRoute: SettingsSecurityRoute,
   SettingsIndexRoute: SettingsIndexRoute,

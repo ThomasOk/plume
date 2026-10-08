@@ -64,5 +64,9 @@ export {
   type InvitationLinkConfig,
 } from './features/invitations/invitation-token';
 
+// The memo export, outside tRPC because tRPC does not return binary bodies: the deployable
+// server serves it as a plain HTTP download.
+export { buildMemoArchive } from './features/export/memo-archive';
+
 export type AppRouter = typeof appRouter;
 export type { AppLogger, StorageService };

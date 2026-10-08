@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { trpcServer } from '@hono/trpc-server';
 import {
+  buildMemoArchive,
   createApi,
   createEventBusWithHandlers,
   createNoopEmailSender,
@@ -23,6 +24,8 @@ const wildcardPath = {
   BETTER_AUTH: '/api/auth/*',
   TRPC: '/trpc/*',
 } as const;
+
+const MEMO_EXPORT_PATH = '/api/export';
 
 const db = createDb({ databaseUrl: env.SERVER_POSTGRES_URL });
 
@@ -133,6 +136,22 @@ app.use(
       }),
   }),
 );
+
+// A plain download, so the web app links to it rather than fetching it: a top-level
+// navigation carries the session cookie without a CORS rule, and `attachment` keeps the
+// browser on the page.
+app.get(MEMO_EXPORT_PATH, async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return c.text('Unauthorized', 401);
+
+  const archive = await buildMemoArchive(db, session.user.id);
+  const date = new Date().toISOString().slice(0, 10);
+  // fflate allocates the zip in an ArrayBuffer of its own, never a shared one.
+  return c.body(archive as Uint8Array<ArrayBuffer>, 200, {
+    'Content-Type': 'application/zip',
+    'Content-Disposition': `attachment; filename="plume-memos-${date}.zip"`,
+  });
+});
 
 app.get('/', (c) => {
   return c.json({ name: 'plume-api', status: 'ok' });
