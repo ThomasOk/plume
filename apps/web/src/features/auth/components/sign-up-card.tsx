@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { passwordSchema } from '@repo/auth/password';
 import { Button } from '@repo/ui/components/button';
 import {
   Form,
@@ -19,7 +20,7 @@ import Spinner from '@/components/ui/spinner';
 const formSchema = z.object({
   name: z.string().trim().min(1, 'Required'),
   email: z.email(),
-  password: z.string().min(8, 'Minimum of 8 characters required'),
+  password: passwordSchema,
 });
 
 interface SignUpCardProps {

@@ -1,13 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { PasswordSection } from '@/features/account/components/password-section';
 
 export const Route = createFileRoute('/settings/security')({
   component: SecuritySettings,
 });
 
 function SecuritySettings() {
-  return (
-    <p className="text-sm text-muted-foreground">
-      Security settings will appear here.
-    </p>
-  );
+  return <PasswordSection />;
 }
