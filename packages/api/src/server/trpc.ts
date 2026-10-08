@@ -15,6 +15,10 @@ import {
   AlreadyMemberError,
   MemberNotFoundError,
   LastAdminError,
+  LastAdminOfSpacesError,
+  ConfirmationEmailMismatchError,
+  IncorrectPasswordError,
+  ReauthenticationRequiredError,
 } from './shared/errors';
 export type { StorageService };
 
@@ -64,6 +68,15 @@ export const createTRPCContext = async ({
 
 export const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: SuperJSON,
+  // A refusal's message is for a person; what the interface acts on travels in its data.
+  // Only the spaces of a last-admin refusal do today.
+  errorFormatter: ({ shape, error }) => ({
+    ...shape,
+    data: {
+      ...shape.data,
+      spaces: error.cause instanceof LastAdminOfSpacesError ? error.cause.spaces : null,
+    },
+  }),
 });
 
 export const router = t.router;
@@ -81,6 +94,10 @@ const domainErrorCodes: [new (...args: never[]) => Error, TRPCError['code']][] =
   [AlreadyMemberError, 'CONFLICT'],
   [MemberNotFoundError, 'NOT_FOUND'],
   [LastAdminError, 'CONFLICT'],
+  [LastAdminOfSpacesError, 'CONFLICT'],
+  [ConfirmationEmailMismatchError, 'BAD_REQUEST'],
+  [IncorrectPasswordError, 'BAD_REQUEST'],
+  [ReauthenticationRequiredError, 'PRECONDITION_FAILED'],
 ];
 
 // tRPC's `next()` never throws: a failure further down comes back as `{ ok: false }`, with

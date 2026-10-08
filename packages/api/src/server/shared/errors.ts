@@ -84,3 +84,38 @@ export class LastAdminError extends Error {
     super('A space needs an admin. Make someone else an admin first.');
   }
 }
+
+// Deleting the account of the last admin of spaces that have other members would leave each
+// with nobody able to govern it. The spaces travel with the refusal so the interface can name
+// them: the user has to make someone else admin in each one first.
+export class LastAdminOfSpacesError extends Error {
+  readonly code = 'LAST_ADMIN_OF_SPACES';
+  constructor(readonly spaces: { id: string; name: string }[]) {
+    super('You are the only admin of spaces with other members. Make someone else an admin of each first.');
+  }
+}
+
+// The email typed to confirm an account deletion is not the account's.
+export class ConfirmationEmailMismatchError extends Error {
+  readonly code = 'CONFIRMATION_EMAIL_MISMATCH';
+  constructor() {
+    super('The email does not match your account');
+  }
+}
+
+// A wrong password, or none given for an account that has one: the same answer for both.
+export class IncorrectPasswordError extends Error {
+  readonly code = 'INCORRECT_PASSWORD';
+  constructor() {
+    super('Incorrect password');
+  }
+}
+
+// An account without a password proves who is deleting it by a recent sign-in. Distinct from
+// a wrong password: the way out is signing in again, not retyping something.
+export class ReauthenticationRequiredError extends Error {
+  readonly code = 'REAUTHENTICATION_REQUIRED';
+  constructor() {
+    super('Sign in again to delete your account');
+  }
+}

@@ -8,7 +8,8 @@
     "./server": "./src/server.ts",
     "./operator": "./src/operator.ts",
     "./account-name": "./src/account-name.ts",
-    "./password": "./src/password.ts"
+    "./password": "./src/password.ts",
+    "./credential": "./src/credential.ts"
   },
   "scripts": {
     "build": "tsc",

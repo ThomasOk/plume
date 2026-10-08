@@ -113,7 +113,22 @@ describe('listing spaces', () => {
 
     const result = await creatorCaller.spaces.list();
 
-    expect(result).toEqual([{ id: mine.id, title: 'Cooking club', role: 'admin' }]);
+    expect(result).toEqual([{ id: mine.id, title: 'Cooking club', role: 'admin', memberCount: 1 }]);
+  });
+
+  // So that deleting an account can warn, by name, of the spaces that go with it.
+  it('counts the members of each space', async () => {
+    const creatorCaller = createAuthenticatedCaller(db, creator.id);
+    const shared = await creatorCaller.spaces.create({ title: 'Cooking club' });
+    await creatorCaller.spaces.create({ title: 'Diary' });
+    await db.insert(spaceMember).values({ spaceId: shared.id, userId: outsider.id, role: 'member', joinedAt: new Date() });
+
+    const result = await creatorCaller.spaces.list();
+
+    expect(result.map(({ title, memberCount }) => ({ title, memberCount }))).toEqual([
+      { title: 'Cooking club', memberCount: 2 },
+      { title: 'Diary', memberCount: 1 },
+    ]);
   });
 
   it('orders the spaces by title', async () => {

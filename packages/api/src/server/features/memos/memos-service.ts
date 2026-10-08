@@ -14,13 +14,13 @@ import type {
   pinMemoSchema,
   featureMemoSchema,
 } from './memos-schemas';
-import type { StorageService } from '../../shared/storage';
 import type { AppLogger } from '../../trpc';
 import type { DatabaseInstance } from '@repo/db/client';
 import type { z } from 'zod';
 import { COMMENT_CREATED } from '../../events/domain-events';
 import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
+import { removeDeletedObjects, type StorageService } from '../../shared/storage';
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
@@ -445,17 +445,9 @@ export async function deleteMemo(
     return removed.map(({ storageKey }) => storageKey);
   });
 
-  // Best-effort, once the deletion has committed: the memo is the source of truth, and an
-  // attachment left in storage is a smaller harm than a memo that cannot be deleted. Every
-  // attachment is attempted, whichever fails.
-  const removals = await Promise.allSettled(storageKeys.map((key) => storage.deleteObject(key)));
-  removals.forEach((removal, i) => {
-    if (removal.status === 'rejected') {
-      logger.error(
-        { err: removal.reason, memoId: input.id, storageKey: storageKeys[i] },
-        'Failed to remove a deleted memo\'s attachment from storage',
-      );
-    }
+  await removeDeletedObjects(storage, logger, storageKeys, {
+    memoId: input.id,
+    message: 'Failed to remove a deleted memo\'s attachment from storage',
   });
 
   return { success: true };
