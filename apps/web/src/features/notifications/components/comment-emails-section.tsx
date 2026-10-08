@@ -5,7 +5,7 @@ import { usePreferences } from '../hooks/use-preferences';
 import { useUpdatePreferences } from '../hooks/use-update-preferences';
 
 export const CommentEmailsSection = () => {
-  const { data: preferences } = usePreferences();
+  const { data: preferences, isError } = usePreferences();
   const updatePreferences = useUpdatePreferences();
 
   const onCheckedChange = (commentEmails: boolean) => {
@@ -34,6 +34,11 @@ export const CommentEmailsSection = () => {
           onCheckedChange={onCheckedChange}
         />
       </div>
+      {isError && (
+        <p className="text-sm text-destructive">
+          Your preferences could not be loaded. Reload the page to try again.
+        </p>
+      )}
     </section>
   );
 };

@@ -18,7 +18,7 @@ export async function getPreferences(db: DatabaseInstance, userId: string) {
     .where(eq(userPreference.userId, userId))
     .limit(1);
 
-  return row ?? DEFAULT_PREFERENCES;
+  return row ?? { ...DEFAULT_PREFERENCES };
 }
 
 export async function updatePreferences(

@@ -13,7 +13,9 @@ export const useUpdatePreferences = () => {
       onMutate: async (preferences) => {
         await queryClient.cancelQueries({ queryKey });
         const previous = queryClient.getQueryData(queryKey);
-        queryClient.setQueryData(queryKey, preferences);
+        queryClient.setQueryData(queryKey, (current) =>
+          current ? { ...current, ...preferences } : current,
+        );
         return { previous };
       },
       onError: (_error, _preferences, context) => {
