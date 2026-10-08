@@ -13,6 +13,8 @@ export type SpaceAction =
   | 'deleteOwnMemo'
   | 'editOthersMemo'
   | 'deleteOthersMemo'
+  // Pin or unpin any memo of the space, whoever wrote it.
+  | 'pinMemo'
   // Invite, remove, or change a role.
   | 'manageMembership'
   // Rename or delete the space.
@@ -31,6 +33,9 @@ const SPACE_MATRIX: Record<SpaceAction, Record<SpaceRole, boolean>> = {
   // did not write, and the model has no way to record that. Deleting it is moderation.
   editOthersMemo: { admin: false, member: false },
   deleteOthersMemo: { admin: true, member: false },
+  // A pin puts a memo first for every member, so it is the space's decision, not the
+  // author's: curation, like deleting is moderation (ADR 0006).
+  pinMemo: { admin: true, member: false },
   manageMembership: { admin: true, member: false },
   manageSpace: { admin: true, member: false },
 };
@@ -57,6 +62,13 @@ export function mayEditMemo({ isAuthor, role }: MemoActor): boolean {
 export function mayDeleteMemo({ isAuthor, role }: MemoActor): boolean {
   if (role === null) return isAuthor;
   return may(role, isAuthor ? 'deleteOwnMemo' : 'deleteOthersMemo');
+}
+
+// Unlike editing and deleting, authorship does not count in a space: the pin belongs to the
+// scope, so only the role does, and a member may not unpin their own memo either.
+export function mayPinMemo({ isAuthor, role }: MemoActor): boolean {
+  if (role === null) return isAuthor;
+  return may(role, 'pinMemo');
 }
 
 /**
