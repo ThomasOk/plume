@@ -36,7 +36,7 @@ export {
 } from '../server/features/spaces/space-policy';
 
 // What an operator may do, for the same reason.
-export { mayFeatureMemo } from '../server/features/memos/operator-policy';
+export { mayDeletePublicMemo, mayFeatureMemo } from '../server/features/memos/operator-policy';
 
 // Invitations feature schemas
 export { createInvitationSchema } from '../server/features/invitations/invitations-schemas';

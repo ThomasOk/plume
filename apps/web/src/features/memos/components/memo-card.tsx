@@ -3,6 +3,7 @@ import {
   updateMemoSchema,
   MAX_MEMO_CHARACTERS,
   mayDeleteMemo,
+  mayDeletePublicMemo,
   mayEditMemo,
   mayFeatureMemo,
   mayPinMemo,
@@ -172,9 +173,13 @@ export const MemoCard = ({
     ? { kind: 'space', spaceId: memo.spaceId }
     : { kind: 'personal' };
   const mayEdit = mayEditMemo(actor);
-  const mayDelete = mayDeleteMemo(actor);
-  const updateMemo = useUpdateMemo();
   const isComment = !!memo.parentId;
+  // An operator may also delete any memo Explore shows, or a comment under one, which carries
+  // its parent's visibility. Asked of each policy apart, as the server does (ADR 0007).
+  const mayDelete =
+    mayDeleteMemo(actor) ||
+    mayDeletePublicMemo({ isOperator: user?.isOperator ?? false }, { isPublic: memo.visibility === 'public' });
+  const updateMemo = useUpdateMemo();
   const deleteMemo = useDeleteMemo();
   const deleteComment = useDeleteComment(memo.parentId ?? '');
   const deleteAction = isComment ? deleteComment : deleteMemo;

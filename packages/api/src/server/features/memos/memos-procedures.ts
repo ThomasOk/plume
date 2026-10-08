@@ -72,9 +72,10 @@ export const update = protectedProcedure
   .input(updateMemoSchema)
   .mutation(({ ctx, input }) => updateMemo(ctx.db, ctx.session.user.id, input));
 
+// The operator flag the session carries lets an operator delete a public memo too (ADR 0007).
 export const deleteMemo = protectedProcedure
   .input(deleteMemoSchema)
-  .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.storage, ctx.logger, ctx.session.user.id, input));
+  .mutation(({ ctx, input }) => deleteMemoService(ctx.db, ctx.storage, ctx.logger, ctx.session.user, input));
 
 export const move = protectedProcedure
   .input(moveMemoSchema)

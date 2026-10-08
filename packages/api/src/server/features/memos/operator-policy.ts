@@ -14,3 +14,11 @@ export interface OperatorActor {
 export function mayFeatureMemo({ isOperator }: OperatorActor): boolean {
   return isOperator;
 }
+
+// Deleting is moderation of Explore: an operator may delete any author's memo Explore shows,
+// or a comment under one, and nothing else (ADR 0007). Whoever may delete a memo by their
+// authorship or their space role is the space policy's answer; the two are asked apart and
+// combined by "or" where a memo is deleted.
+export function mayDeletePublicMemo({ isOperator }: OperatorActor, { isPublic }: { isPublic: boolean }): boolean {
+  return isOperator && isPublic;
+}

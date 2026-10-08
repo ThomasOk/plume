@@ -1,4 +1,4 @@
-import { desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
+import { alias, desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
 import { memo, user, attachment, spaceMember } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
@@ -24,7 +24,7 @@ import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/er
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
-import { mayFeatureMemo, type OperatorActor } from './operator-policy';
+import { mayDeletePublicMemo, mayFeatureMemo, type OperatorActor } from './operator-policy';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -339,10 +339,23 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
  *
  * A memo the user cannot read answers like a missing one.
  */
+const parentMemo = alias(memo, 'parent_memo');
+
 async function findMemoForActor(db: DatabaseInstance, userId: string, id: string) {
   const [row] = await db
-    .select({ id: memo.id, userId: memo.userId, parentId: memo.parentId, spaceId: memo.spaceId, role: spaceMember.role })
+    .select({
+      id: memo.id,
+      userId: memo.userId,
+      parentId: memo.parentId,
+      spaceId: memo.spaceId,
+      role: spaceMember.role,
+      // Whether Explore shows the thread: a comment is public when its parent is. Read from
+      // the parent rather than the comment's own copy, which an edit of the parent's
+      // visibility leaves behind.
+      isPublic: sql<boolean>`coalesce(${parentMemo.visibility}, ${memo.visibility}) = 'public'`,
+    })
     .from(memo)
+    .leftJoin(parentMemo, eq(parentMemo.id, memo.parentId))
     .leftJoin(
       spaceMember,
       and(eq(spaceMember.spaceId, memo.spaceId), eq(spaceMember.userId, userId)),
@@ -392,13 +405,19 @@ export async function deleteMemo(
   db: DatabaseInstance,
   storage: StorageService,
   logger: AppLogger,
-  userId: string,
+  actor: InstanceActor,
   input: DeleteMemoInput,
 ) {
-  const existing = await findMemoForActor(db, userId, input.id);
+  // Read as anyone reads: an operator's reach stops where what they can read stops, so a
+  // memo they cannot read answers as a missing one (ADR 0004).
+  const existing = await findMemoForActor(db, actor.id, input.id);
 
-  // An admin may delete another member's memo or comment in their space: that is moderation.
-  if (!mayDeleteMemo(existing.actor)) throw new InsufficientPermissionsError();
+  // An admin may delete another member's memo or comment in their space, and an operator any
+  // memo Explore shows, or a comment under one: both are moderation. Asked of each policy
+  // apart, so the space policy never reads the operator flag (ADR 0007).
+  if (!mayDeleteMemo(existing.actor) && !mayDeletePublicMemo(actor, existing)) {
+    throw new InsufficientPermissionsError();
+  }
 
   // The cascade would remove the attachment records of the memo and of its comments, not the
   // objects in storage, so they are deleted first, returning their keys. Locking the thread
