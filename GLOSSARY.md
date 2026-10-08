@@ -98,8 +98,10 @@ _Avoid_: workspace, team, group, organization.
 
 **Operator**:
 A user who runs the Plume instance and acts on what belongs to no scope, such as featuring
-memos on Explore. Being an operator grants nothing inside a space they are not a member of.
-_Avoid_: admin (a role in a space), superuser, developer, owner.
+memos on Explore or deleting another user's public memo, or a comment on one. Being an
+operator grants nothing inside a space they are not a member of, and nothing over a memo
+that is not public.
+_Avoid_: admin (a role in a space), superuser, developer, owner, moderator.
 
 **Member**:
 A user who belongs to a space. `member` is also the name of the ordinary role, the one

@@ -1,7 +1,7 @@
 # The operator is a flag on the user, granted out of band
 
 An operator runs the Plume instance and acts on what belongs to no scope, such as featuring
-memos on Explore. The role is a boolean on Better Auth's user table, `user.is_operator`,
+memos on Explore or deleting another user's public memo, or a comment on one. The role is a boolean on Better Auth's user table, `user.is_operator`,
 not null and false by default, declared as an additional user field with `input: false`. A
 boolean rather than a role enum: there is one instance-level capability, and "role" already
 names the space roles. It becomes an enum the day there are several instance levels.
@@ -34,7 +34,11 @@ over `grantOperator` and `revokeOperator` in `@repo/auth/operator`, which the te
 The role reaches the app through the session: the server reads `session.user.isOperator`,
 and the web client infers the same field into its session type, so the interface knows
 without an extra request. Being an operator grants nothing inside a space — no membership
-check consults the flag (ADR 0004's isolation is untouched).
+check consults the flag (ADR 0004's isolation is untouched) — and nothing over a memo that is
+not public: what an operator may act on is exactly what Explore exposes. Their powers are
+decided in an operator policy of their own, beside the space policy and never inside it; an
+action open to both, such as deleting a memo, asks each policy and allows it if either
+does.
 
 ## Considered options
 
