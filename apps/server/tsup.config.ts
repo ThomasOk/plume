@@ -34,10 +34,12 @@ export default defineConfig({
   },
 
   // https://github.com/egoist/tsup/issues/927#issuecomment-2416440833
+  // The banner is raw text esbuild can't rename around, so its import takes a name no
+  // bundled dependency will declare (fflate imports `createRequire` at its top level).
   banner: ({ format }) => {
     if (format === 'esm')
       return {
-        js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+        js: `import { createRequire as __bannerCreateRequire } from 'module'; const require = __bannerCreateRequire(import.meta.url);`,
       };
     return {};
   },
