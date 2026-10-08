@@ -33,15 +33,15 @@ can do nothing about their own account once it exists.
 point straight to one, and a side navigation between them. `/settings` itself opens the
 first.
 
-- **Account** — the user edits their name.
+- **Account** — the user edits their name and, in a danger zone, deletes their account.
 - **Security** — a user who signs in with a password changes it, giving the current one,
   and may sign out every other device at the same time. Every user sees the devices they
   are signed in on, the current one marked, and signs any of them out, or all but this one.
 - **Notifications** — one switch: "Email me when someone comments on my memos", on by
   default. The in-app notification is not affected. Every comment email links to this
   section.
-- **Data** — the user downloads a zip of every memo they wrote, as readable Markdown files,
-  and, in a danger zone, deletes their account.
+- **Export** — the user downloads a zip of every memo they wrote, as readable Markdown
+  files.
 
 Deleting an account takes the user's personal memos with it, and keeps everything that
 belongs to someone else: their memos in a space and their comments under another author's
@@ -54,7 +54,7 @@ recent sign-in — and for the user's email typed out.
 
 ### The page
 
-1. As a user, I want a settings page split into Account, Security, Notifications and Data, so that I find a setting by what it is about.
+1. As a user, I want a settings page split into Account, Security, Notifications and Export, so that I find a setting by what it is about.
 2. As a user, I want each section to have its own address, so that a link (in an email, in a message) opens the right section directly.
 3. As a user, I want `/settings` to open the Account section, so that the menu's Settings entry lands somewhere useful.
 4. As a user, I want to move between sections from a side navigation that shows which section I am in, so that I always know where I am.
@@ -100,7 +100,7 @@ recent sign-in — and for the user's email typed out.
 32. As a user receiving a comment email, I want a link to manage my notifications, so that I can turn the emails off from the email itself.
 33. As a user who follows that link while signed out, I want to sign in and land on the Notifications section, so that the link still gets me there.
 
-### Data — export
+### Export
 
 34. As a user, I want to download every memo I wrote as a zip, so that I keep a copy of my notes outside Plume.
 35. As a user, I want my personal memos and the memos I wrote in each space in separate folders, so that the archive mirrors how I organised my writing.
@@ -114,10 +114,10 @@ recent sign-in — and for the user's email typed out.
 43. As a user with no memos, I want the export to still give me a valid, empty archive, so that the action never fails.
 44. As a user, I want the download to start straight away from the button, so that exporting is one click.
 
-### Data — account deletion
+### Account — deletion
 
-45. As a user, I want to delete my account from the Data section, so that I can leave Plume.
-46. As a user about to delete my account, I want to be told what will be deleted and what will stay, so that I decide knowing the consequences.
+45. As a user, I want to delete my account from the Account section, so that I can leave Plume.
+46. As a user about to delete my account, I want to be told what will be deleted and what will stay, and offered to export my memos first, so that I decide knowing the consequences and can keep a copy of my notes.
 47. As a user about to delete my account, I want to type my email to confirm, so that I cannot delete it with a stray click.
 48. As a user with a password, I want to be asked for it to delete my account, so that someone using my open session cannot delete it.
 49. As a user who signs in with Google, I want to be asked to sign in again if my session is not recent, so that deletion is still protected without a password.
@@ -139,12 +139,12 @@ recent sign-in — and for the user's email typed out.
 ### Page and routing
 
 - Route definitions stay in the web app's routes folder: a settings layout route with a
-  child route per section (`account`, `security`, `notifications`, `data`), and
+  child route per section (`account`, `security`, `notifications`, `export`), and
   `/settings` redirecting to `/settings/account`. The layout owns the sign-in guard (the
   existing redirect to sign-in) and the section navigation. On narrow screens the
   navigation becomes a horizontal tab row.
 - A new `account` web feature exposes the section components (profile, password, sessions,
-  export button, deletion) and their hooks; the email preference switch lives in the
+  export section, deletion) and their hooks; the email preference switch lives in the
   `notifications` feature. Routes only compose them.
 
 ### Account — name
@@ -230,9 +230,14 @@ recent sign-in — and for the user's email typed out.
 - A pin on a reassigned memo stays (a pin belongs to its scope, not to the author). Events
   still waiting in the outbox that name the deleted user find nothing to react to and do
   nothing.
+- The deletion sits in a danger zone at the bottom of the Account section: deleting the
+  account acts on who the user is, which is what that section is about. Its confirmation
+  screen links to the Export section ("Export your memos first"). The link puts export in
+  front of the user at the moment they decide, which keeping the two in one section only
+  did by proximity.
 - The client, on success, clears its session state and sends the user to the sign-in page.
 
-### Data — export
+### Export
 
 - An archive builder in the api package: given the database and a user id, it returns the
   zip's bytes. The Hono server exposes it as an authenticated `GET` route under the API
@@ -312,7 +317,8 @@ characters, is refused; a name with surrounding spaces is stored trimmed.
 
 The seam of the sign-in card and memo form tests. Covers: the password form is absent for
 an account with no credential provider and present otherwise; the deletion's confirm
-button stays disabled until the email is typed exactly; a last-admin refusal lists the
+button stays disabled until the email is typed exactly, and its screen links to the
+Export section; a last-admin refusal lists the
 spaces it names; a re-authentication refusal offers to sign in again; the session marked
 as current shows "This device" and has no sign-out button of its own.
 

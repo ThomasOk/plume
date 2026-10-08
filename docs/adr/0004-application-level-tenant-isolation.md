@@ -57,3 +57,19 @@ as `/spaces/:id/memos/:memoId` so that `spaceProcedure` can run first — would 
 existing link to a memo, notifications included, to move the same check into the URL.
 Reads of a *set* of memos (list, search, tags, activity, count) are unaffected and take a
 `MemoScope` as above.
+
+## The export reads by author
+
+The memo export reads a set of memos that neither scope describes: every memo the user is
+the author of, personal or in a space, comments excluded. It filters on the author directly
+and takes no `MemoScope`. Being the author is the authorization, so this read includes
+memos in spaces the user has since left. A space owns those memos (ADR 0003), but they are
+still the user's own words. The condition can only ever admit memos that person wrote, so
+it cannot leak another tenant's rows.
+
+The alternative was a third `MemoScope` kind, `{ kind: 'author', userId }`. It was rejected
+because it would be a scope no view has. Every other scope decides what a memo list shows,
+and this one would exist for a single export query. Adding it to the type would also invite
+it into list and search reads, where it would wrongly mix a user's spaces into their
+personal views. If a second read of this shape appears, that is the trigger to turn the
+condition into a named scope.

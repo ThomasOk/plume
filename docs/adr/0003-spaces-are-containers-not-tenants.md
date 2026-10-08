@@ -46,6 +46,8 @@ meaning would depend on another column being null.
   page, with the space as the signatory rather than a person.
 - **A space owns its memos.** Leaving a space, or being removed from it, leaves the memos
   behind; `memo.user_id` still names their author, who simply stops being a reader.
+  The one exception is the author's own export, which still includes them (ADR 0004, "The
+  export reads by author").
   Deleting a space deletes its memos, admins only.
 - **A memo someone else commented on stays where it is.** Its author may move it into or
   out of a space only while every comment under it is theirs. A comment has no audience of

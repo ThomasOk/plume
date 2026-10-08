@@ -5,7 +5,7 @@ const sections = [
   { to: '/settings/account', label: 'Account' },
   { to: '/settings/security', label: 'Security' },
   { to: '/settings/notifications', label: 'Notifications' },
-  { to: '/settings/data', label: 'Data' },
+  { to: '/settings/export', label: 'Export' },
 ] as const;
 
 // A side column on wide screens, a row of tabs on a phone: four short labels fit a narrow
