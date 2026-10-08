@@ -265,3 +265,44 @@ describe('MemoCard, featuring a memo on Explore', () => {
     expect(screen.queryByRole('img', { name: 'Featured' })).not.toBeInTheDocument();
   });
 });
+
+describe('MemoCard, an operator deleting a public memo', () => {
+  it('offers an operator Delete on another user’s public memo', async () => {
+    signedIn({ isOperator: true });
+    await renderWithRouter(<MemoCard memo={publicMemo()} />);
+
+    await openActions();
+
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
+  it('offers an operator Delete on another user’s comment on a public memo', async () => {
+    signedIn({ isOperator: true });
+    await renderWithRouter(<MemoCard memo={{ ...publicMemo(), parentId: 'parent-1' } as unknown as Memo} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Memo actions' }));
+
+    // A comment has no Open item to wait for, as the featuring tests' comment case does.
+    expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  it('offers an operator no Delete on another user’s memo that is not public', async () => {
+    signedIn({ isOperator: true });
+    await renderWithRouter(<MemoCard memo={publicMemo({ visibility: 'private' })} />);
+
+    await openActions();
+
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
+  it('offers anyone else no Delete on another user’s public memo', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={publicMemo()} />);
+
+    await openActions();
+
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+});

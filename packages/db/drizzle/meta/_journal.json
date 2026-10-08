@@ -92,6 +92,13 @@
       "when": 1791470178912,
       "tag": "0012_memo_featured_at",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791476654290,
+      "tag": "0013_comment_visibility_follows_memo",
+      "breakpoints": true
     }
   ]
 }
