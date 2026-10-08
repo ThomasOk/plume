@@ -42,8 +42,9 @@ visibility = 'space'  ⟺  space_id IS NOT NULL
 
 A Space is a navigation context: `/` lists personal Memos, `/spaces/:id` lists a Space's.
 The sidebar carries a switcher, and every derived view — Tag tree, Activity calendar,
-Memo count — takes the subject of whatever is in scope. A Memo written from within a Space
-goes into that Space, with no hidden state.
+Memo count — takes the subject of whatever is in scope. The form writes into the scope on
+screen: a Memo written from within a Space goes into that Space, with no choice offered
+and no hidden state, and a Memo written from the personal scope stays personal.
 
 Each Member holds a **Role**. An `admin` governs the Space and its membership; a `member`
 writes and governs only their own Memos. Neither may edit another Member's Memo. Members
@@ -56,73 +57,76 @@ the Invitation ceases to exist once accepted.
 
 1. As a User, I want my existing Memos to stay exactly where they are when Spaces ship, so that I lose nothing and relearn nothing.
 2. As a User, I want a Memo I write outside any Space to remain personal and private by default, so that the safe case stays the default case.
-3. As a User, I want to pick a Memo's audience from one flat list — private, public, or one of my Spaces — so that I make one decision instead of reconciling two fields.
-4. As a User, I want the audience list to show only the Spaces I am a Member of, so that I cannot address a Space I cannot write to.
-5. As a Member, I want a Memo I write from inside a Space to land in that Space without my having to say so, so that the current context is the answer.
-6. As a Member, I want to read every Memo in my Space regardless of who wrote it, so that the Space is genuinely shared.
-7. As a Member, I want to see each Memo's Author in the Space, so that I know who wrote what.
-8. As a User, I want to move one of my Memos from personal into a Space, and back, so that a note that turns out to be team business can become team business.
-9. As a User, I want moving a Memo out of a Space to make me choose its new audience, so that a Memo never silently changes who can read it.
-10. As a User, I want a Memo in a Space to be impossible to mark public, so that nothing written for my team can reach Explore by accident.
-11. As a User, I want a Memo in a Space to be impossible to mark private, so that a Memo in a shared container is never invisible to the people sharing it.
-12. As a User who is not a Member, I want a Space's Memos to be completely absent — not merely hidden behind an error — so that their existence is not disclosed.
+3. As a User, I want the form to write into the scope I am looking at, so that the Memo I just wrote appears in the list I wrote it in.
+4. As a Member, I want a Memo I write from inside a Space to land in that Space with no audience choice offered, so that writing for the team cannot be turned into something else by a stray click.
+5. As a Member, I want the form inside a Space to show that Space's title, so that I know who will read what I write before I save it.
+6. As a User, I want the form in my personal scope to offer only private or public, so that a team Memo is written where the team reads it rather than addressed from elsewhere.
+7. As a Member editing one of my Memos in a Space, I want to see the Space's title, as when writing, so that writing and editing say the same thing about where the Memo lives.
+8. As a User, I want each scope to keep its own Draft, so that a note I started for myself never reappears, pre-filled, in a Space where one keystroke would publish it to the team.
+9. As a Member, I want to read every Memo in my Space regardless of who wrote it, so that the Space is genuinely shared.
+10. As a Member, I want to see each Memo's Author in the Space, so that I know who wrote what.
+11. As a User, I want to move one of my Memos from personal into a Space, and back, so that a note that turns out to be team business can become team business.
+12. As a User, I want moving a Memo out of a Space to make me choose its new audience, so that a Memo never silently changes who can read it.
+13. As a User, I want a Memo in a Space to be impossible to mark public, so that nothing written for my team can reach Explore by accident.
+14. As a User, I want a Memo in a Space to be impossible to mark private, so that a Memo in a shared container is never invisible to the people sharing it.
+15. As a User who is not a Member, I want a Space's Memos to be completely absent — not merely hidden behind an error — so that their existence is not disclosed.
 
 ### Navigating
 
-13. As a Member, I want a Space switcher in the sidebar, so that I can move between my personal Memos and each of my Spaces.
-14. As a Member, I want the Space I am in to be part of the URL, so that I can bookmark it and share the link with a colleague.
-15. As a Member, I want the Tag tree in a Space to show the Tags used by every Member, so that the Space has one shared vocabulary.
-16. As a Member, I want filtering by a Tag inside a Space to search only that Space, so that results never mix contexts.
-17. As a Member, I want the Activity calendar in a Space to aggregate every Member's writing as a single count per day, so that the page has one subject and no per-person breakdown.
-18. As a User, I want my personal views to exclude my Space Memos, so that "my notes" means my notes.
-19. As a User, I want search inside a Space to cover only that Space, so that a search never leaks across containers.
-20. As a visitor, I want Explore to be unchanged, so that the public page keeps showing individual public Memos and no team content.
+16. As a Member, I want a Space switcher in the sidebar, so that I can move between my personal Memos and each of my Spaces.
+17. As a Member, I want the Space I am in to be part of the URL, so that I can bookmark it and share the link with a colleague.
+18. As a Member, I want the Tag tree in a Space to show the Tags used by every Member, so that the Space has one shared vocabulary.
+19. As a Member, I want filtering by a Tag inside a Space to search only that Space, so that results never mix contexts.
+20. As a Member, I want the Activity calendar in a Space to aggregate every Member's writing as a single count per day, so that the page has one subject and no per-person breakdown.
+21. As a User, I want my personal views to exclude my Space Memos, so that "my notes" means my notes.
+22. As a User, I want search inside a Space to cover only that Space, so that a search never leaks across containers.
+23. As a visitor, I want Explore to be unchanged, so that the public page keeps showing individual public Memos and no team content.
 
 ### Creating and governing a Space
 
-21. As a User, I want to create a Space with a title, so that I have somewhere to put shared notes.
-22. As the creator of a Space, I want to be its first admin automatically, so that I can invite people immediately.
-23. As an admin, I want to rename a Space, so that its name can follow what the team actually does.
-24. As an admin, I want to see the list of Members and their Roles, so that I know who has access.
-25. As an admin, I want to promote a Member to admin, so that governance survives my absence.
-26. As an admin, I want to demote another admin to member, so that a mistaken promotion is reversible.
-27. As an admin, I want to remove a Member, so that someone who left the team loses access.
-28. As an admin, I want removing a Member to leave their Memos in the Space, so that the team keeps its work.
-29. As a Member, I want to leave a Space on my own, so that I am not stuck in a group I no longer belong to.
-30. As the last admin, I want to be refused when I try to leave or demote myself, so that a Space can never end up ungovernable.
-31. As an admin, I want to delete a Space, with an explicit confirmation naming what will be destroyed, so that I cannot do it by reflex.
-32. As a member, I want the governance actions to be absent from my interface, not merely to fail, so that I am not offered what I cannot do.
+24. As a User, I want to create a Space with a title, so that I have somewhere to put shared notes.
+25. As the creator of a Space, I want to be its first admin automatically, so that I can invite people immediately.
+26. As an admin, I want to rename a Space, so that its name can follow what the team actually does.
+27. As an admin, I want to see the list of Members and their Roles, so that I know who has access.
+28. As an admin, I want to promote a Member to admin, so that governance survives my absence.
+29. As an admin, I want to demote another admin to member, so that a mistaken promotion is reversible.
+30. As an admin, I want to remove a Member, so that someone who left the team loses access.
+31. As an admin, I want removing a Member to leave their Memos in the Space, so that the team keeps its work.
+32. As a Member, I want to leave a Space on my own, so that I am not stuck in a group I no longer belong to.
+33. As the last admin, I want to be refused when I try to leave or demote myself, so that a Space can never end up ungovernable.
+34. As an admin, I want to delete a Space, with an explicit confirmation naming what will be destroyed, so that I cannot do it by reflex.
+35. As a member, I want the governance actions to be absent from my interface, not merely to fail, so that I am not offered what I cannot do.
 
 ### Inviting
 
-33. As an admin, I want to invite someone by email address, so that I can invite a colleague who has no Plume account yet.
-34. As an admin, I want to choose the Role the invitee will receive, so that I do not have to promote them in a second step.
-35. As an invitee, I want an email with a link, so that I can join without being told to go and find something.
-36. As an invitee without an account, I want to sign up and land in the Space in one flow, so that the Invitation is not lost on the way.
-37. As an invitee with an account, I want to accept while signed in, so that I join in one click.
-38. As an invitee, I want an expired link to say so plainly and offer nothing else, so that I know to ask for a new one.
-39. As an invitee, I want a link that was already used to stop working, so that a forwarded email does not grant access to a stranger.
-40. As an admin, I want to see the pending Invitations for my Space, so that I know who has not answered.
-41. As an admin, I want to revoke a pending Invitation, so that a mistake or a departure can be undone before it takes effect.
-42. As an admin, I want inviting an email that is already a Member to be refused with a clear reason, so that I do not create a duplicate.
-43. As an admin, I want re-inviting an address that already has a pending Invitation to replace it rather than stack a second one, so that only one live link exists per address.
-44. As a User, I want an Invitation to be honoured on the strength of its link alone, so that nobody can claim it by signing up with my email address.
+36. As an admin, I want to invite someone by email address, so that I can invite a colleague who has no Plume account yet.
+37. As an admin, I want to choose the Role the invitee will receive, so that I do not have to promote them in a second step.
+38. As an invitee, I want an email with a link, so that I can join without being told to go and find something.
+39. As an invitee without an account, I want to sign up and land in the Space in one flow, so that the Invitation is not lost on the way.
+40. As an invitee with an account, I want to accept while signed in, so that I join in one click.
+41. As an invitee, I want an expired link to say so plainly and offer nothing else, so that I know to ask for a new one.
+42. As an invitee, I want a link that was already used to stop working, so that a forwarded email does not grant access to a stranger.
+43. As an admin, I want to see the pending Invitations for my Space, so that I know who has not answered.
+44. As an admin, I want to revoke a pending Invitation, so that a mistake or a departure can be undone before it takes effect.
+45. As an admin, I want inviting an email that is already a Member to be refused with a clear reason, so that I do not create a duplicate.
+46. As an admin, I want re-inviting an address that already has a pending Invitation to replace it rather than stack a second one, so that only one live link exists per address.
+47. As a User, I want an Invitation to be honoured on the strength of its link alone, so that nobody can claim it by signing up with my email address.
 
 ### Comments and attachments
 
-45. As a Member, I want to comment on a Memo in my Space, so that discussion happens where the Memo is.
-46. As a Member, I want my Comment to inherit the parent Memo's Space and visibility, so that a Comment is never more visible than what it answers.
-47. As a User who is not a Member, I want commenting on a Space's Memo to be impossible, so that discussion stays inside the Space.
-48. As an Author, I want to be notified when someone comments on my Memo in a Space, so that the existing notification behaviour still applies.
-49. As a Member, I want an Attachment on a Space's Memo to be readable by the Space, so that shared Memos are not broken images.
-50. As a User who is not a Member, I want a Space Memo's Attachment to be refused, so that the file is not a back door around the Memo's audience.
-51. As a User, I want the Attachments page to keep listing what I uploaded, everywhere, so that my file library stays mine.
+48. As a Member, I want to comment on a Memo in my Space, so that discussion happens where the Memo is.
+49. As a Member, I want my Comment to inherit the parent Memo's Space and visibility, so that a Comment is never more visible than what it answers.
+50. As a User who is not a Member, I want commenting on a Space's Memo to be impossible, so that discussion stays inside the Space.
+51. As an Author, I want to be notified when someone comments on my Memo in a Space, so that the existing notification behaviour still applies.
+52. As a Member, I want an Attachment on a Space's Memo to be readable by the Space, so that shared Memos are not broken images.
+53. As a User who is not a Member, I want a Space Memo's Attachment to be refused, so that the file is not a back door around the Memo's audience.
+54. As a User, I want the Attachments page to keep listing what I uploaded, everywhere, so that my file library stays mine.
 
 ### Safety
 
-52. As an admin, I want to delete a Space and have its Memos and Comments go with it, so that nothing is left orphaned.
-53. As a User, I want an admin to be unable to edit my Memo, so that nothing is ever published under my name that I did not write.
-54. As a developer, I want a query that reads Memos without declaring a scope to fail to compile, so that the leak is caught before it ships.
+55. As an admin, I want to delete a Space and have its Memos and Comments go with it, so that nothing is left orphaned.
+56. As a User, I want an admin to be unable to edit my Memo, so that nothing is ever published under my name that I did not write.
+57. As a developer, I want a query that reads Memos without declaring a scope to fail to compile, so that the leak is caught before it ships.
 
 ## Implementation Decisions
 
@@ -231,9 +235,14 @@ type MemoScope =
 
 - `/spaces/:id` scopes the Memo list and every derived view. The sidebar carries a Space
   switcher.
-- The audience control is **one flat list** — private, public, then each Space the User
-  belongs to. It is not a visibility picker plus a Space picker, and it needs no function
-  to hide illegal combinations, because the model has none.
+- The form writes into the **scope on screen** (revised, see *Revisions*). Inside a Space
+  it offers no audience choice: it shows the Space's title as a non-interactive label, the
+  same label shown when editing a Memo of that Space. In the personal scope it offers
+  private and public only. Changing a Memo's scope remains the Move operation. There is
+  still no visibility picker plus Space picker, and no function hiding illegal
+  combinations, because the model has none.
+- A **Draft is kept per scope**. The personal scope keeps the existing Draft; each Space has
+  its own, so changing scope never carries text into a different audience.
 - Governance actions absent, not disabled, for a `member`.
 - A members page lists Members with their Roles and the pending Invitations.
 - An Invitation acceptance page works signed out, and carries the invitee through sign-up
@@ -301,10 +310,20 @@ User can read.
 
 ### Frontend
 
-No new Vitest coverage is required — the interface work is route composition over hooks
-that the API tests already cover. One Playwright scenario is added: an admin invites, the
-invitee accepts, and the invitee then reads the Space's Memos. It runs on demand, outside
-`pnpm test`, per the repo's definition of done.
+The interface work is mostly route composition over hooks that the API tests already
+cover. The exception is the memo form, which since the revision carries the rule that
+places a Memo: it gets one component seam — the memo form rendered with its mutation and
+Space hooks mocked, and the scope supplied by mocking the hook that reads it from the URL.
+Prior art: `space-actions-menu.test.tsx`. It asserts what a User sees and what gets
+created: inside a Space, no audience control, the Space's title, and the Memo created in
+that Space; in the personal scope, only private and public offered; a Draft typed in one
+scope absent from another; and the same title label when editing a Space's Memo.
+
+One Playwright scenario is added: an admin invites, the invitee accepts, and the invitee
+then reads the Space's Memos. The existing scenario that writes from inside a Space asserts
+the non-interactive label rather than an audience button, and that the personal scope's
+menu does not offer the Space. They run on demand, outside `pnpm test`, per the repo's
+definition of done.
 
 ## Out of Scope
 
@@ -332,7 +351,8 @@ diverged from on three points, each for a stated reason. It keeps visibility and
 placement as **independent** axes, which forces a reconciliation step on every write — about
 thirty lines in its memo store, plus a filter function in the editor to hide the illegal
 combinations from the menu. The equivalence adopted here deletes both, and collapses its
-two-part audience control into one flat list. It **merges Invitation into Membership** via a
+two-part audience control — first into one flat list, then, after the revision below, into
+no control at all inside a Space. It **merges Invitation into Membership** via a
 status column, which only works because it invites existing users. And it aggregates a
 shared context's statistics **in the browser**, fetching every Member's stats separately —
 a fan-out that grows with membership and hands the client a per-person breakdown the screen
@@ -343,3 +363,21 @@ delete a User who is still a Member of any Space, and its deletion routine runs 
 four hundred lines of hand-written, batched, lock-ordered Go — the price of a schema with
 almost no foreign keys. Plume declares its cascades in the database, which is why this spec
 can leave that problem alone.
+
+## Revisions
+
+### 2026-10-08 — The form writes into the scope on screen
+
+The first version offered one flat audience list — private, public, then every Space the
+User belongs to — with the current scope as its default. In use, that let a Member write
+from inside one Space into another, or onto Explore, and the Memo then vanished from the
+list they were looking at; the same happened from the personal scope towards a Space. The
+flat list solved the reference implementation's problem (two axes to reconcile) but kept a
+choice the context had already made.
+
+The scope now decides: inside a Space there is no choice, only the Space's title; in the
+personal scope the choice is private or public. Moving a Memo between scopes is the Move
+operation, unchanged. Removing the visible choice made a shared Draft dangerous — a
+personal Draft would reappear, pre-filled, behind a reassuring Space label — so Drafts are
+now kept per scope. The equivalence between visibility and Space, and ADR 0003, are
+untouched; only who makes the decision at writing time changed. Delivered by ticket 07.

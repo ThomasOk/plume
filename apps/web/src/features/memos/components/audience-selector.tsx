@@ -3,65 +3,48 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu';
-import { Fragment } from 'react';
 import { IoEarthOutline } from 'react-icons/io5';
 import { RiCheckLine, RiGroupLine, RiLockLine } from 'react-icons/ri';
-import type { Space } from '@/lib/types';
 import type { IconType } from 'react-icons';
 import { sounds } from '@/lib/sounds';
 
 /**
- * Who a memo is written for, as one choice: private, public, or one of the user's spaces.
- * Visibility and placement are one decision (ADR 0003), so there is no second picker to
- * reconcile and no combination to hide.
+ * Who reads a memo, as one value: private, public, or one of the user's spaces. Visibility
+ * and placement are one decision (ADR 0003), so there is no second picker to reconcile and
+ * no combination to hide. A memo gets it from the scope it is written in; a move changes it.
  */
 export type Audience =
   | { kind: 'private' }
   | { kind: 'public' }
   | { kind: 'space'; spaceId: string };
 
+/** The audiences a personal memo chooses between: a space is reached by writing in it. */
+export type PersonalAudience = Exclude<Audience, { kind: 'space' }>;
+
 interface AudienceOption {
-  audience: Audience;
+  audience: PersonalAudience;
   label: string;
   icon: IconType;
 }
 
-const personalOptions: AudienceOption[] = [
-  { audience: { kind: 'private' }, label: 'Private', icon: RiLockLine },
-  { audience: { kind: 'public' }, label: 'Public', icon: IoEarthOutline },
-];
-
-const isSame = (a: Audience, b: Audience) =>
-  a.kind === b.kind && (a.kind !== 'space' || (b.kind === 'space' && a.spaceId === b.spaceId));
+const personalOptions: Record<PersonalAudience['kind'], AudienceOption> = {
+  private: { audience: { kind: 'private' }, label: 'Private', icon: RiLockLine },
+  public: { audience: { kind: 'public' }, label: 'Public', icon: IoEarthOutline },
+};
 
 const triggerClassName =
   'inline-flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground min-w-0';
 
 interface AudienceSelectorProps {
-  value: Audience;
-  onChange: (value: Audience) => void;
-  /** The spaces offered after private and public: only those the user is a member of. */
-  spaces?: Pick<Space, 'id' | 'title'>[];
+  value: PersonalAudience;
+  onChange: (value: PersonalAudience) => void;
 }
 
-export const AudienceSelector = ({ value, onChange, spaces = [] }: AudienceSelectorProps) => {
-  const options: AudienceOption[] = [
-    ...personalOptions,
-    ...spaces.map((space) => ({
-      audience: { kind: 'space' as const, spaceId: space.id },
-      label: space.title,
-      icon: RiGroupLine,
-    })),
-  ];
-  // Before the spaces have loaded, a space audience has no title to show yet.
-  const current = options.find((option) => isSame(option.audience, value)) ?? {
-    audience: value,
-    label: 'Space',
-    icon: RiGroupLine,
-  };
+/** The audience of a personal memo: private or public. */
+export const AudienceSelector = ({ value, onChange }: AudienceSelectorProps) => {
+  const current = personalOptions[value.kind];
   const Icon = current.icon;
 
   return (
@@ -78,21 +61,18 @@ export const AudienceSelector = ({ value, onChange, spaces = [] }: AudienceSelec
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {options.map((option, index) => {
+        {Object.values(personalOptions).map((option) => {
           const OptionIcon = option.icon;
-          const key = option.audience.kind === 'space' ? option.audience.spaceId : option.audience.kind;
           return (
-            <Fragment key={key}>
-              {index === personalOptions.length && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                className="gap-2 cursor-pointer"
-                onClick={() => { sounds.tick(); onChange(option.audience); }}
-              >
-                <OptionIcon className="size-4" />
-                <span className="flex-1 truncate max-w-56">{option.label}</span>
-                {isSame(option.audience, value) && <RiCheckLine className="size-4 text-primary" />}
-              </DropdownMenuItem>
-            </Fragment>
+            <DropdownMenuItem
+              key={option.audience.kind}
+              className="gap-2 cursor-pointer"
+              onClick={() => { sounds.tick(); onChange(option.audience); }}
+            >
+              <OptionIcon className="size-4" />
+              <span className="flex-1">{option.label}</span>
+              {option.audience.kind === value.kind && <RiCheckLine className="size-4 text-primary" />}
+            </DropdownMenuItem>
           );
         })}
       </DropdownMenuContent>
@@ -100,13 +80,18 @@ export const AudienceSelector = ({ value, onChange, spaces = [] }: AudienceSelec
   );
 };
 
+interface SpaceAudienceProps {
+  /** The space's title; until it has loaded, the label reads "Space". */
+  title?: string;
+}
+
 /**
- * The audience of a memo that is in a space, shown rather than chosen: an edit leaves a
- * memo where it is, and moving it out of its space is a separate operation.
+ * The audience of a memo in a space, shown rather than chosen: writing in a space writes
+ * into it, an edit leaves a memo where it is, and leaving the space is a move.
  */
-export const SpaceAudience = () => (
+export const SpaceAudience = ({ title }: SpaceAudienceProps) => (
   <span className={triggerClassName}>
     <RiGroupLine className="size-4 shrink-0" />
-    <span>Space</span>
+    <span className="truncate max-w-40">{title ?? 'Space'}</span>
   </span>
 );

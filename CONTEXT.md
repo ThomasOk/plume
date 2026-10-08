@@ -34,10 +34,17 @@ its visibility is `space`.
 _Avoid_: shared, published.
 
 **Audience**:
-The one choice a user makes when writing a memo: private, public, or one of the spaces
-they are a member of. It sets the memo's visibility and its space together, because the
-two are a single decision — choosing a space *is* choosing `space` visibility.
+Who reads a memo, as one value: private, public, or one of the author's spaces. It sets the
+memo's visibility and its space together, because the two are a single decision. A memo
+gets its audience from the scope it is written in. Entering or leaving a space is a move;
+a personal memo switching between private and public is an edit.
 _Avoid_: destination, target, share with.
+
+**Scope**:
+The context a user is in: their personal memos, or one space. It decides what the memo
+list and every derived view show, and where a memo written there lands. Writing in a space
+puts the memo in that space; writing in the personal scope offers only private or public.
+_Avoid_: context, view, workspace.
 
 **Personal**:
 Said of a memo that belongs to no space. A personal memo is private or public; it is
@@ -91,6 +98,7 @@ _Avoid_: request, invite.
 
 **Draft**:
 A memo being composed, saved locally in the browser but not yet persisted to the server.
+Each scope keeps its own draft, so a draft never follows the user into another scope.
 _Avoid_: autosave.
 
 **Activity**:
