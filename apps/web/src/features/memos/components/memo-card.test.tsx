@@ -8,7 +8,12 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSpace } from '@/features/spaces/hooks/use-space';
 import { renderWithRouter } from '@/tests/render-with-router';
 
-const { pin, unpin } = vi.hoisted(() => ({ pin: vi.fn(), unpin: vi.fn() }));
+const { pin, unpin, feature, unfeature } = vi.hoisted(() => ({
+  pin: vi.fn(),
+  unpin: vi.fn(),
+  feature: vi.fn(),
+  unfeature: vi.fn(),
+}));
 
 // The card is rendered outside any space's URL, as on a memo's own page: whatever it knows
 // about the space, it knows from the memo.
@@ -19,6 +24,8 @@ vi.mock('../hooks', async (importOriginal) => ({
   useDeleteComment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   usePinMemo: () => ({ mutate: pin, isPending: false }),
   useUnpinMemo: () => ({ mutate: unpin, isPending: false }),
+  useFeatureMemo: () => ({ mutate: feature, isPending: false }),
+  useUnfeatureMemo: () => ({ mutate: unfeature, isPending: false }),
   useMemoTags: vi.fn(),
 }));
 vi.mock('../hooks/use-move-memo', () => ({
@@ -167,5 +174,82 @@ describe('MemoCard, pinning a memo of a space', () => {
     expect(screen.queryByRole('img', { name: 'Pinned' })).not.toBeInTheDocument();
     await openActions();
     expect(screen.queryByRole('menuitem', { name: 'Unpin' })).not.toBeInTheDocument();
+  });
+});
+
+const publicMemo = ({ featuredAt = null, visibility = 'public' }: { featuredAt?: Date | null; visibility?: 'public' | 'private' } = {}): Memo => ({
+  id: 'memo-1',
+  userId: ALICE,
+  parentId: null,
+  content: 'Welcome to Plume',
+  tags: [],
+  visibility,
+  spaceId: null,
+  pinnedAt: null,
+  featuredAt,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  commentCount: 0,
+  author: { name: 'Alice', image: null },
+  attachments: [],
+} as unknown as Memo);
+
+const signedInAsOperator = (isOperator: boolean) => {
+  vi.mocked(useAuth).mockReturnValue({ user: { id: BOB, isOperator } } as any);
+  vi.mocked(useSpace).mockReturnValue({ data: undefined } as any);
+};
+
+describe('MemoCard, featuring a memo on Explore', () => {
+  it('lets an operator feature another user’s public memo, naming only the memo', async () => {
+    signedInAsOperator(true);
+    await renderWithRouter(<MemoCard memo={publicMemo()} />);
+
+    const user = await openActions();
+    await user.click(screen.getByRole('menuitem', { name: 'Feature' }));
+
+    expect(feature).toHaveBeenCalledWith({ id: 'memo-1' }, expect.anything());
+  });
+
+  it('offers an operator to unfeature a featured memo', async () => {
+    signedInAsOperator(true);
+    await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
+
+    const user = await openActions();
+    await user.click(screen.getByRole('menuitem', { name: 'Unfeature' }));
+
+    expect(unfeature).toHaveBeenCalledWith({ id: 'memo-1' }, expect.anything());
+  });
+
+  it('offers anyone else neither', async () => {
+    signedInAsOperator(false);
+    await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
+
+    await openActions();
+
+    expect(screen.queryByRole('menuitem', { name: 'Feature' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Unfeature' })).not.toBeInTheDocument();
+  });
+
+  it('offers an operator nothing on a memo that is not public', async () => {
+    signedInAsOperator(true);
+    await renderWithRouter(<MemoCard memo={publicMemo({ visibility: 'private' })} />);
+
+    await openActions();
+
+    expect(screen.queryByRole('menuitem', { name: 'Feature' })).not.toBeInTheDocument();
+  });
+
+  it('marks a featured memo where Explore’s rules apply', async () => {
+    signedInAsOperator(false);
+    await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} markFeatured />);
+
+    expect(screen.getByRole('img', { name: 'Featured' })).toBeInTheDocument();
+  });
+
+  it('leaves the mark out of a scope’s list, where featuring decides nothing', async () => {
+    signedInAsOperator(false);
+    await renderWithRouter(<MemoCard memo={publicMemo({ featuredAt: new Date() })} />);
+
+    expect(screen.queryByRole('img', { name: 'Featured' })).not.toBeInTheDocument();
   });
 });

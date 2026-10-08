@@ -31,9 +31,12 @@ export const createTestCaller = (db: DatabaseInstance) => {
   return appRouter.createCaller({ db, storage: mockStorage, session: null, requestId: 'test', logger: mockLogger, invitationSecret: TEST_INVITATION_SECRET });
 };
 
+// `isOperator` forges the role the session would carry once granted (ADR 0007); that the
+// session tells the truth about it is proven on the Better Auth seam.
 export const createAuthenticatedCaller = (
   db: DatabaseInstance,
   userId = 'test-user-id',
+  { isOperator = false }: { isOperator?: boolean } = {},
 ) => {
   const now = new Date();
   return appRouter.createCaller({
@@ -51,7 +54,7 @@ export const createAuthenticatedCaller = (
         createdAt: now,
         updatedAt: now,
         image: null,
-        isOperator: false,
+        isOperator,
       },
       session: {
         id: 'test-session-id',

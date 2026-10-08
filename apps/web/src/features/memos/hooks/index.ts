@@ -9,6 +9,8 @@ export { useDeleteMemo } from './use-delete-memo';
 export { useMoveMemo } from './use-move-memo';
 export { usePinMemo } from './use-pin-memo';
 export { useUnpinMemo } from './use-unpin-memo';
+export { useFeatureMemo } from './use-feature-memo';
+export { useUnfeatureMemo } from './use-unfeature-memo';
 export { useMemosStats } from './use-memos-stats';
 export { useMemoTags } from './use-memo-tags';
 export { usePublicMemoTags } from './use-public-memo-tags';

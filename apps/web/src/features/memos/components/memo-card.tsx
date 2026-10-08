@@ -4,6 +4,7 @@ import {
   MAX_MEMO_CHARACTERS,
   mayDeleteMemo,
   mayEditMemo,
+  mayFeatureMemo,
   mayPinMemo,
 } from '@repo/api/schemas';
 import {
@@ -44,8 +45,10 @@ import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { IoEarthOutline } from 'react-icons/io5';
 import {
+  MdAutoAwesome,
   MdMoreVert,
   MdOutlineCloseFullscreen,
+  MdOutlineAutoAwesome,
   MdOutlineDelete,
   MdOutlineEdit,
   MdOutlineOpenInFull,
@@ -58,7 +61,15 @@ import type { Author, Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
 import type { MemoViewScope } from '../types';
-import { useDeleteComment, useDeleteMemo, usePinMemo, useUnpinMemo, useUpdateMemo } from '../hooks';
+import {
+  useDeleteComment,
+  useDeleteMemo,
+  useFeatureMemo,
+  usePinMemo,
+  useUnfeatureMemo,
+  useUnpinMemo,
+  useUpdateMemo,
+} from '../hooks';
 import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
 import { MemoFooter } from './memo-footer';
@@ -84,10 +95,22 @@ interface MemoCardProps {
    * every author's memos, and a pin there would mean nothing to its reader (ADR 0006).
    */
   ignorePins?: boolean;
+  /**
+   * Show that the memo is featured where that decides its place: on Explore, and on the
+   * memo's own page, which a shared link from Explore leads to. Not in a scope's list,
+   * where only pins decide the order.
+   */
+  markFeatured?: boolean;
 }
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
-export const MemoCard = ({ memo, author, hideCommentPreview = false, ignorePins = false }: MemoCardProps) => {
+export const MemoCard = ({
+  memo,
+  author,
+  hideCommentPreview = false,
+  ignorePins = false,
+  markFeatured = false,
+}: MemoCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const savedAttachments = memo.attachments;
   const deleteAttachment = useDeleteAttachment();
@@ -167,6 +190,28 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false, ignorePins 
   const togglePin = () => {
     sounds.tick();
     const [mutation, done] = isPinned ? [unpinMemo, 'Memo unpinned'] : [pinMemo, 'Memo pinned'];
+    mutation.mutate(
+      { id: memo.id },
+      {
+        onSuccess: () => toast.success(done),
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  // Featuring is the operator's decision, whoever wrote the memo, and only a public memo
+  // that is not a comment stands on Explore to be featured. Offered wherever the memo is
+  // shown, so an operator features an announcement right where they wrote it.
+  const isFeatured = memo.featuredAt !== null;
+  const mayFeature =
+    !isComment && memo.visibility === 'public' && mayFeatureMemo({ isOperator: user?.isOperator ?? false });
+  const featureMemo = useFeatureMemo();
+  const unfeatureMemo = useUnfeatureMemo();
+  const toggleFeatured = () => {
+    sounds.tick();
+    const [mutation, done] = isFeatured
+      ? [unfeatureMemo, 'Memo unfeatured']
+      : [featureMemo, 'Memo featured on Explore'];
     mutation.mutate(
       { id: memo.id },
       {
@@ -341,6 +386,18 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false, ignorePins 
                   </Tooltip>
                 </TooltipProvider>
               )}
+              {isFeatured && markFeatured && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center" role="img" aria-label="Featured">
+                        <MdAutoAwesome className="size-4 text-primary" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Featured</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {memo.visibility === 'public' && (
                 <TooltipProvider>
                   <Tooltip>
@@ -383,6 +440,18 @@ export const MemoCard = ({ memo, author, hideCommentPreview = false, ignorePins 
                         >
                           <MdOutlinePushPin className="size-4" />
                           {isPinned ? 'Unpin' : 'Pin'}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {mayFeature && (
+                      <>
+                        {!mayPin && <DropdownMenuSeparator />}
+                        <DropdownMenuItem
+                          disabled={featureMemo.isPending || unfeatureMemo.isPending}
+                          onClick={toggleFeatured}
+                        >
+                          <MdOutlineAutoAwesome className="size-4" />
+                          {isFeatured ? 'Unfeature' : 'Feature'}
                         </DropdownMenuItem>
                       </>
                     )}

@@ -1,0 +1,2 @@
+ALTER TABLE "memo" ADD COLUMN "featured_at" timestamp;--> statement-breakpoint
+ALTER TABLE "memo" ADD CONSTRAINT "memo_featured_is_public" CHECK ("memo"."featured_at" IS NULL OR ("memo"."visibility"::text = 'public' AND "memo"."parent_id" IS NULL));
