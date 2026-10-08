@@ -59,6 +59,14 @@ unpins the memo, and Explore — which is no one's scope — ignores pins. Comme
 pinned.
 _Avoid_: favorite, bookmark, star, sticky.
 
+**Featured**:
+Said of a public memo an operator highlights first on Explore, for every reader of
+Explore, signed in or not. Any author's public memo may be featured; a comment may not.
+A memo that stops being public stops being featured, and becoming public again does not
+feature it back.
+Distinct from a pin: a pin belongs to a scope, and Explore is no one's scope.
+_Avoid_: promoted, highlighted, announcement, pinned (on Explore).
+
 **Explore**:
 The public page listing every user's public memos. Readable without signing in.
 _Avoid_: feed, timeline, public page.
@@ -87,6 +95,11 @@ _Avoid_: owner, creator, poster.
 A container of memos shared by several users. A memo belongs to at most one space, and a
 space owns its memos: they stay when their author leaves it.
 _Avoid_: workspace, team, group, organization.
+
+**Operator**:
+A user who runs the Plume instance and acts on what belongs to no scope, such as featuring
+memos on Explore. Being an operator grants nothing inside a space they are not a member of.
+_Avoid_: admin (a role in a space), superuser, developer, owner.
 
 **Member**:
 A user who belongs to a space. `member` is also the name of the ordinary role, the one
