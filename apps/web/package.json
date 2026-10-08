@@ -32,6 +32,7 @@
     "@tanstack/router-devtools": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/tanstack-react-query": "catalog:",
+    "bowser": "^2.14.1",
     "date-fns": "^4.1.0",
     "dotenv-cli": "catalog:",
     "highlight.js": "^11.11.1",
