@@ -1,10 +1,11 @@
 import { type DatabaseInstance, attachment, memo, space, spaceMember, user } from '@repo/db';
+import type { AppLogger } from '../src/server/trpc';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
 import { createFakeStorage } from './helpers/storage';
 import { createAuthenticatedCaller } from './helpers/trpc';
 
-// Deleting a memo removes its attachments' files from storage, not only their records, so a
-// deleted memo leaves nothing reachable by its link — whoever deletes it.
+// Deleting a memo removes its attachments from storage, not only their records, so a deleted
+// memo leaves nothing reachable by its link — whoever deletes it.
 
 let db: DatabaseInstance;
 
@@ -63,7 +64,7 @@ describe('deleting a memo', () => {
     await db.insert(user).values([alice, bob]);
   });
 
-  it('removes the files of its attachments from storage', async () => {
+  it('removes its attachments from storage', async () => {
     await db.insert(memo).values(memoRow('memo-1'));
     await db.insert(attachment).values([
       attachmentOn('memo-1', 'uploads/alice/one.png'),
@@ -76,7 +77,7 @@ describe('deleting a memo', () => {
     expect(storage.deletedKeys.sort()).toEqual(['uploads/alice/one.png', 'uploads/alice/two.png']);
   });
 
-  it('removes the files attached to its comments', async () => {
+  it('removes its comments\' attachments from storage', async () => {
     await db.insert(memo).values(memoRow('memo-1', { visibility: 'public' }));
     await db.insert(memo).values(memoRow('comment-1', { userId: bob.id, parentId: 'memo-1', visibility: 'public' }));
     await db.insert(attachment).values([
@@ -90,7 +91,7 @@ describe('deleting a memo', () => {
     expect(storage.deletedKeys.sort()).toEqual(['uploads/alice/memo.png', 'uploads/bob/comment.png']);
   });
 
-  it('removes the files of a member\'s memo deleted by an admin of its space', async () => {
+  it('removes the attachments of a member\'s memo deleted by an admin of its space', async () => {
     await db.insert(space).values({ id: 'club', title: 'Club', createdAt: new Date(), updatedAt: new Date() });
     await db.insert(spaceMember).values([
       { spaceId: 'club', userId: alice.id, role: 'admin', joinedAt: new Date() },
@@ -115,17 +116,38 @@ describe('deleting a memo', () => {
     expect(await db.select().from(memo)).toEqual([]);
   });
 
-  // The memo is the source of truth: a file left behind is a smaller harm than a memo that
-  // cannot be deleted while storage is down.
-  it('succeeds even when storage fails to remove a file', async () => {
+  // The memo is the source of truth: an attachment left in storage is a smaller harm than a
+  // memo that cannot be deleted while storage is down.
+  it('succeeds, and logs the failure, when storage fails to remove an attachment', async () => {
     await db.insert(memo).values(memoRow('memo-1'));
     await db.insert(attachment).values(attachmentOn('memo-1', 'uploads/alice/photo.png'));
-    const storage = createFakeStorage({ failDeletes: true });
+    const storage = createFakeStorage({ failingKeys: ['uploads/alice/photo.png'] });
+    const logged: object[] = [];
+    const logger: AppLogger = {
+      info: () => {},
+      debug: () => {},
+      error: (obj) => void logged.push(obj as object),
+    };
 
     await expect(
-      createAuthenticatedCaller(db, alice.id, { storage }).memos.delete({ id: 'memo-1' }),
+      createAuthenticatedCaller(db, alice.id, { storage, logger }).memos.delete({ id: 'memo-1' }),
     ).resolves.toEqual({ success: true });
 
     expect(await db.select().from(memo)).toEqual([]);
+    expect(logged).toEqual([expect.objectContaining({ memoId: 'memo-1', storageKey: 'uploads/alice/photo.png' })]);
+  });
+
+  it('still removes the other attachments when one of them fails', async () => {
+    await db.insert(memo).values(memoRow('memo-1'));
+    await db.insert(attachment).values([
+      attachmentOn('memo-1', 'uploads/alice/one.png'),
+      attachmentOn('memo-1', 'uploads/alice/two.png'),
+      attachmentOn('memo-1', 'uploads/alice/three.png'),
+    ]);
+    const storage = createFakeStorage({ failingKeys: ['uploads/alice/one.png'] });
+
+    await createAuthenticatedCaller(db, alice.id, { storage }).memos.delete({ id: 'memo-1' });
+
+    expect(storage.deletedKeys.sort()).toEqual(['uploads/alice/three.png', 'uploads/alice/two.png']);
   });
 });

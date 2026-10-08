@@ -400,31 +400,34 @@ export async function deleteMemo(
   // An admin may delete another member's memo or comment in their space: that is moderation.
   if (!mayDeleteMemo(existing.actor)) throw new InsufficientPermissionsError();
 
-  // The cascade removes the attachment records of the memo and of its comments, not their
-  // files: read the keys first, in the same transaction as the deletion.
-  const files = await db.transaction(async (tx) => {
-    const thread = tx
+  // The cascade would remove the attachment records of the memo and of its comments, not the
+  // objects in storage, so they are deleted first, returning their keys. Locking the thread
+  // first makes an attachment confirmed onto it meanwhile wait for this deletion and then
+  // fail, instead of slipping in between and leaving its object behind.
+  const storageKeys = await db.transaction(async (tx) => {
+    const thread = await tx
       .select({ id: memo.id })
       .from(memo)
-      .where(or(eq(memo.id, input.id), eq(memo.parentId, input.id)));
-    const rows = await tx
-      .select({ storageKey: attachment.storageKey })
-      .from(attachment)
-      .where(inArray(attachment.memoId, thread));
+      .where(or(eq(memo.id, input.id), eq(memo.parentId, input.id)))
+      .for('update');
+    const removed = await tx
+      .delete(attachment)
+      .where(inArray(attachment.memoId, thread.map(({ id }) => id)))
+      .returning({ storageKey: attachment.storageKey });
 
     await tx.delete(memo).where(eq(memo.id, input.id));
-    return rows;
+    return removed.map(({ storageKey }) => storageKey);
   });
 
-  // Best-effort, once the deletion has committed: the memo is the source of truth, and a
-  // file left in storage is a smaller harm than a memo that cannot be deleted. Every file is
-  // attempted, whichever fails.
-  const removals = await Promise.allSettled(files.map(({ storageKey }) => storage.deleteObject(storageKey)));
+  // Best-effort, once the deletion has committed: the memo is the source of truth, and an
+  // attachment left in storage is a smaller harm than a memo that cannot be deleted. Every
+  // attachment is attempted, whichever fails.
+  const removals = await Promise.allSettled(storageKeys.map((key) => storage.deleteObject(key)));
   removals.forEach((removal, i) => {
     if (removal.status === 'rejected') {
       logger.error(
-        { err: removal.reason, memoId: input.id, storageKey: files[i]!.storageKey },
-        'Failed to remove a deleted memo\'s file from storage',
+        { err: removal.reason, memoId: input.id, storageKey: storageKeys[i] },
+        'Failed to remove a deleted memo\'s attachment from storage',
       );
     }
   });
