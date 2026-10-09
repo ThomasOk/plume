@@ -11,6 +11,6 @@ The memos featured below are a quick tour:
 3. **Hashtags and tags**, to organise memos
 4. **A conversation**, with comments and reactions
 
-Sign up to write your own, or just keep scrolling. The code is on [GitHub](https://github.com/ThomasOk/plume).
+Sign up to write your own.
 
 #plume
