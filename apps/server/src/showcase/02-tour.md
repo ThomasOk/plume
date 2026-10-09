@@ -1,6 +1,8 @@
 # 🧰 What you can do in Plume
 
-**Write:** memos in Markdown, with a live preview, emojis, and file attachments (images and files up to a size limit).
+**Write:** memos in Markdown, with a live preview and emojis.
+
+**Attach:** add images and files to a memo, up to 30 MB each. The Attachments page lists them all and clears the unused ones in one go.
 
 **Choose who reads:** every memo is _private_ (only you), _public_ (everyone, here on Explore), or belongs to a _space_.
 
