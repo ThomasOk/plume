@@ -283,6 +283,8 @@ describe('a comment, when its memo is edited', () => {
     await db.insert(user).values(testUser);
   });
 
+  const contentsOf = (comments: Array<{ content: string }>) => comments.map((c) => c.content);
+
   const visibilityOfComments = async (memoId: string) =>
     (await createAuthenticatedCaller(db).memos.listComments({ memoId })).map((c) => c.visibility);
 
@@ -305,6 +307,31 @@ describe('a comment, when its memo is edited', () => {
 
     expect(await visibilityOfComments(memoId)).toEqual(['private']);
     await expect(createTestCaller(db).memos.getById({ id: commentId })).rejects.toThrow('Memo not found');
+  });
+
+  // A private memo is read by its author alone, and so is the conversation under it: the
+  // comment's own author loses it with the memo, though they wrote it.
+  it('is out of its own author’s reach once its memo is made private', async () => {
+    const commenter = { ...testUser, id: 'commenter-id', email: 'commenter@example.com' };
+    await db.insert(user).values(commenter);
+    const owner = createAuthenticatedCaller(db);
+    const reader = createAuthenticatedCaller(db, commenter.id);
+    const { id: memoId } = await owner.memos.create({ content: 'Announcement', visibility: 'public' });
+    const { id: commentId } = await reader.memos.create({ content: 'A thought', parentId: memoId });
+    const { id: uploadId } = await reader.attachments.getUploadUrl({
+      filename: 'photo.png',
+      mimeType: 'image/png',
+      size: 1024,
+    });
+
+    await owner.memos.update({ id: memoId, content: 'Announcement', visibility: 'private' });
+
+    await expect(reader.memos.getById({ id: commentId })).rejects.toThrow('Memo not found');
+    await expect(reader.memos.update({ id: commentId, content: 'Still here' })).rejects.toThrow('Memo not found');
+    await expect(reader.memos.delete({ id: commentId })).rejects.toThrow('Memo not found');
+    await expect(reader.attachments.listByMemo({ memoId: commentId })).rejects.toThrow('Memo not found');
+    await expect(reader.attachments.confirmUpload({ id: uploadId, memoId: commentId })).rejects.toThrow('Memo not found');
+    expect(contentsOf(await owner.memos.listComments({ memoId }))).toEqual(['A thought']);
   });
 
   it('keeps its memo’s visibility when it is edited itself', async () => {

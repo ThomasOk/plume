@@ -1,4 +1,4 @@
-import { and, eq, isNull, or, sql } from '@repo/db';
+import { alias, and, eq, isNull, or, sql } from '@repo/db';
 import { memo, spaceMember } from '@repo/db/schema';
 import type { SpaceMembership } from '../spaces';
 import type { SQL } from '@repo/db';
@@ -49,6 +49,11 @@ export const memoScopeCondition = (scope: MemoScope): SQL => {
  * membership that `spaceProcedure` resolves for a scoped read is resolved here inside the
  * query, so it still answers a non-member exactly as it answers a missing memo.
  *
+ * A comment carries its memo's visibility and space (ADR 0001), but not its author: a
+ * private comment is the private conversation of its memo's author, so the personal term
+ * asks who wrote the memo, not the comment. Otherwise a comment's author would keep a memo
+ * that turned private, through the one comment they wrote under it.
+ *
  * Guards that test `visibility === 'private'` instead let everything non-private through,
  * which a space memo now is.
  */
@@ -56,6 +61,10 @@ export const readableMemoCondition = (readerId: string | null): SQL => {
   const isPublic = eq(memo.visibility, 'public');
   if (!readerId) return isPublic;
 
+  // Named in the FROM by hand: an alias interpolated into raw SQL renders without its table.
+  const parent = alias(memo, 'parent');
+  const threadAuthorId = sql`COALESCE((SELECT ${parent.userId} FROM ${memo} AS ${sql.identifier('parent')} WHERE ${parent.id} = ${memo.parentId}), ${memo.userId})`;
+  const isReadersPersonal = and(sql`${threadAuthorId} = ${readerId}`, isNull(memo.spaceId))!;
   const inReadersSpaces = sql`${memo.spaceId} IN (SELECT ${spaceMember.spaceId} FROM ${spaceMember} WHERE ${spaceMember.userId} = ${readerId})`;
-  return or(isPublic, memoScopeCondition(personalScope(readerId)), inReadersSpaces)!;
+  return or(isPublic, isReadersPersonal, inReadersSpaces)!;
 };
