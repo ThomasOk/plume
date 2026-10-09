@@ -3,12 +3,14 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   // `migrate` is Railway's pre-deploy command (see src/migrate.ts). The operator commands
-  // ship too, so the role can be granted from a shell on the production service (ADR 0007).
+  // ship too, so the role can be granted from a shell on the production service (ADR 0007),
+  // and so does the showcase command an operator features Explore's memos with.
   entry: [
     './src/index.ts',
     './src/migrate.ts',
     './src/grant-operator.ts',
     './src/revoke-operator.ts',
+    './src/seed-showcase.ts',
   ],
   format: 'esm',
   noExternal: [/.*/],
@@ -22,13 +24,22 @@ export default defineConfig({
   minify: false,
   sourcemap: true,
   // The SQL migrations travel with the bundle, so the production image (which keeps only
-  // `dist`) can apply them. `clean` empties dist first, so this copy is always fresh.
+  // `dist`) can apply them, and the showcase texts with them, for the same reason. `clean`
+  // empties dist first, so these copies are always fresh.
   onSuccess: async () => {
     cpSync(
       new URL('../../packages/db/drizzle', import.meta.url),
       new URL('./dist/drizzle', import.meta.url),
       {
         recursive: true,
+      },
+    );
+    cpSync(
+      new URL('./src/showcase', import.meta.url),
+      new URL('./dist/showcase', import.meta.url),
+      {
+        recursive: true,
+        filter: (source) => !source.endsWith('.ts'),
       },
     );
   },
