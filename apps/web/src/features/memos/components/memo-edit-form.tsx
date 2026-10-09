@@ -195,6 +195,8 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
       audienceControl={audienceControl}
       onCancel={exitEdit}
       onAttachFile={triggerFileSelect}
+      editorRef={textareaRef}
+      onInsert={onInsert}
     />
   );
 

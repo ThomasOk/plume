@@ -3,7 +3,8 @@ import { Button } from '@repo/ui/components/button';
 import { cn } from '@repo/ui/lib/utils';
 import { useReducedMotion } from 'motion/react';
 import { MdOutlineAttachFile } from 'react-icons/md';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
+import { EmojiButton } from './emoji-button';
 import { sounds } from '@/lib/sounds';
 
 const SHOW_THRESHOLD = 0.7;
@@ -108,6 +109,9 @@ interface MemoFooterProps {
   audienceControl?: ReactNode;
   onCancel?: () => void;
   onAttachFile?: () => void;
+  /** The text field the emoji button inserts into, through the editor's insertion path. */
+  editorRef: RefObject<HTMLTextAreaElement | null>;
+  onInsert: (text: string, startIndex: number, length: number) => void;
 }
 
 export const MemoFooter = ({
@@ -118,6 +122,8 @@ export const MemoFooter = ({
   audienceControl,
   onCancel,
   onAttachFile,
+  editorRef,
+  onInsert,
 }: MemoFooterProps) => {
   return (
     <div className="flex items-center justify-between gap-2 pt-3">
@@ -134,6 +140,7 @@ export const MemoFooter = ({
             <MdOutlineAttachFile className="size-4" />
           </Button>
         )}
+        <EmojiButton editorRef={editorRef} onInsert={onInsert} />
       </div>
       <div className="flex items-center gap-2">
         <CharacterIndicator charCount={charCount} />
