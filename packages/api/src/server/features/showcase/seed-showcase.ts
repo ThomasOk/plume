@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from '@repo/db';
+import { and, asc, eq, inArray, isNull } from '@repo/db';
 import { memo, user } from '@repo/db/schema';
 import type { ReactionEmoji } from '../memos/memos-schemas';
 import type { DatabaseInstance } from '@repo/db/client';
@@ -14,8 +14,9 @@ import { reactToMemo } from '../memos/reactions-service';
  * comment records its outbox event, and the featured constraint holds, as for any other memo.
  *
  * Re-runnable: a memo is recognised by its first line among its author's public memos, and a
- * comment by its first line among its author's comments on that memo. A rerun updates a text
- * that changed instead of writing it twice.
+ * comment by its rank among its author's comments on that memo (a comment is often a single
+ * line, so its first line is its whole text). A rerun updates a text that changed instead of
+ * writing it twice.
  */
 
 export interface ShowcaseReaction {
@@ -130,12 +131,19 @@ export async function seedShowcase(db: DatabaseInstance, showcase: Showcase): Pr
       () => createMemo(db, authorId, { kind: 'personal' }, { content: entry.content, visibility: 'public' }),
     );
 
-    const comments = await db.select({ id: memo.id, userId: memo.userId, content: memo.content }).from(memo).where(eq(memo.parentId, id));
+    const comments = await db
+      .select({ id: memo.id, userId: memo.userId, content: memo.content })
+      .from(memo)
+      .where(eq(memo.parentId, id))
+      .orderBy(asc(memo.createdAt), asc(memo.id));
+    const rank = new Map<string, number>();
     for (const comment of entry.comments ?? []) {
+      const nth = rank.get(comment.authorId) ?? 0;
+      rank.set(comment.authorId, nth + 1);
       const { id: commentId } = await upsert(
         db,
         comment.authorId,
-        comments.find((c) => c.userId === comment.authorId && firstLine(c.content) === firstLine(comment.content)),
+        comments.filter((c) => c.userId === comment.authorId)[nth],
         comment.content,
         () => createMemo(db, comment.authorId, { kind: 'personal' }, { content: comment.content, parentId: id }),
       );

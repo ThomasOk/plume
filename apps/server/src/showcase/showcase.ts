@@ -39,7 +39,7 @@ export const buildShowcase = (
         {
           authorId: firstReader,
           content:
-            'A reading log — one memo per book, tagged by genre. And a task list for the to-read pile, which only ever grows.',
+            'A reading log: one memo per book, tagged by genre. And a task list for the to-read pile, which only ever grows.',
           reactions: [
             { userId: secondReader, emoji: '😂' },
             { userId: author, emoji: '❤️' },

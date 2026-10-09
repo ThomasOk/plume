@@ -100,6 +100,17 @@ describe('seedShowcase', () => {
     expect(written!.content).toBe('# Welcome\n\nPlume, reworded.');
   });
 
+  it('updates a comment whose text changed in place, recognising it by its author and rank', async () => {
+    await seedShowcase(db, showcase());
+
+    const edited = showcase();
+    edited.memos[1]!.comments![0]!.content = 'Really love it.';
+    const [, conversation] = await seedShowcase(db, edited);
+
+    const comments = await createTestCaller(db).memos.listComments({ memoId: conversation!.id });
+    expect(comments.map((c) => c.content)).toEqual(['Really love it.', 'Same here.']);
+  });
+
   it('follows a reordering of the showcase on a rerun', async () => {
     await seedShowcase(db, showcase());
 

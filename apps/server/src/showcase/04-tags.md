@@ -1,6 +1,6 @@
 # 🏷️ Hashtags and tags
 
-Write a hashtag anywhere in a memo and Plume turns it into a tag — no separate field to fill in. This memo carries #plume/tags and #organisation.
+Write a hashtag anywhere in a memo and Plume turns it into a tag, with no separate field to fill in. This memo carries #plume/tags and #organisation.
 
 Tags can be **hierarchical**, with a `/`: #recipes/italian and #recipes/french both sit under `recipes`. Filtering by the parent tag shows the memos of every child.
 
