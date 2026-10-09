@@ -63,6 +63,8 @@ beforeEach(() => {
 const inPersonalScope = () => vi.mocked(useMemoScope).mockReturnValue({ kind: 'personal' });
 const inSpace = (spaceId = 'club') => vi.mocked(useMemoScope).mockReturnValue({ kind: 'space', spaceId });
 
+const textarea = () => screen.getByPlaceholderText<HTMLTextAreaElement>('Write your memo here...');
+
 const write = async (content: string) => {
   const user = userEvent.setup();
   await user.type(screen.getByPlaceholderText('Write your memo here...'), content);
@@ -122,7 +124,6 @@ describe('MemoForm, in the personal scope', () => {
 describe('MemoForm, drafts', () => {
   const personalDraftKey = `${USER_ID}-memo-draft`;
   const spaceDraftKey = `${USER_ID}-memo-draft-space-club`;
-  const textarea = () => screen.getByPlaceholderText<HTMLTextAreaElement>('Write your memo here...');
 
   it('restores a personal draft, including one saved before drafts were per scope', async () => {
     localStorage.setItem(personalDraftKey, 'A note for myself');
@@ -176,7 +177,6 @@ describe('MemoForm, emojis', () => {
     expect(screen.getByRole('button', { name: 'Insert emoji' })).toBeInTheDocument();
   });
 
-  const textarea = () => screen.getByPlaceholderText<HTMLTextAreaElement>('Write your memo here...');
   const openPicker = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('button', { name: 'Insert emoji' }));
     return screen.findByRole('dialog', { name: 'Emoji picker' });
@@ -249,5 +249,23 @@ describe('MemoForm, emojis', () => {
     await vi.waitFor(() =>
       expect(mockCreateMemo).toHaveBeenCalledWith({ content: 'Pasta night 🎉', visibility: 'private' }),
     );
+  });
+
+  it('a click outside closes the picker and puts the writer back in the text, after the emoji', async () => {
+    // While the picker is open, the page behind it does not take clicks.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await renderWithRouter(<MemoForm />);
+    await user.type(textarea(), 'Pasta night');
+    textarea().setSelectionRange(5, 5);
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🔥' }));
+    await user.click(document.body);
+
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Emoji picker' })).not.toBeInTheDocument(),
+    );
+    await vi.waitFor(() => expect(textarea()).toHaveFocus());
+    expect(textarea().selectionStart).toBe('Pasta🔥'.length);
   });
 });

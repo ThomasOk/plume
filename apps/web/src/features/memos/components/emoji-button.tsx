@@ -1,6 +1,6 @@
 import { Button } from '@repo/ui/components/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@repo/ui/components/popover';
-import { lazy, Suspense, useRef, useState, type RefObject } from 'react';
+import { Component, lazy, Suspense, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { MdOutlineEmojiEmotions } from 'react-icons/md';
 import { sounds } from '@/lib/sounds';
 
@@ -8,7 +8,35 @@ import { sounds } from '@/lib/sounds';
 const loadEmojiPicker = () => import('./emoji-picker');
 const EmojiPicker = lazy(() => loadEmojiPicker().then((module) => ({ default: module.EmojiPicker })));
 
+// The picker's own size (see `emoji-picker.tsx`), repeated so the fallbacks do not import it
+// and pull the picker into the initial bundle.
 const PICKER_SIZE = 'h-80 w-80';
+
+const PickerMessage = ({ children }: { children: ReactNode }) => (
+  <div className={`${PICKER_SIZE} flex items-center justify-center text-sm text-muted-foreground`}>
+    {children}
+  </div>
+);
+
+/**
+ * Keeps a picker that failed to load (a lost connection, a chunk gone with a new deploy)
+ * inside its popover, rather than taking the editor and the writer's text down with it.
+ */
+class PickerErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? (
+      <PickerMessage>The emoji picker could not load.</PickerMessage>
+    ) : (
+      this.props.children
+    );
+  }
+}
 
 interface EmojiButtonProps {
   editorRef: RefObject<HTMLTextAreaElement | null>;
@@ -43,11 +71,8 @@ export const EmojiButton = ({ editorRef, onInsert }: EmojiButtonProps) => {
 
   const returnToText = (event: Event) => {
     event.preventDefault();
-    // After the browser has placed the focus: a click outside may have landed on another
-    // control, or in the text at a caret of its own, and that choice is the writer's.
+    // After Radix has let go of the focus, which it does on a tick of its own.
     setTimeout(() => {
-      const active = document.activeElement;
-      if (active && active !== document.body) return;
       const editor = editorRef.current;
       editor?.focus();
       editor?.setSelectionRange(selection.current.start, selection.current.end);
@@ -55,7 +80,9 @@ export const EmojiButton = ({ editorRef, onInsert }: EmojiButtonProps) => {
   };
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    // Modal, so a click outside closes the picker only: the page behind does not take it, and
+    // in focus mode the backdrop does not close focus mode as well.
+    <Popover open={open} onOpenChange={onOpenChange} modal>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -78,15 +105,11 @@ export const EmojiButton = ({ editorRef, onInsert }: EmojiButtonProps) => {
         // Escape closes the picker only, not the focus mode around the editor.
         onEscapeKeyDown={(event) => event.stopPropagation()}
       >
-        <Suspense
-          fallback={
-            <div className={`${PICKER_SIZE} flex items-center justify-center text-sm text-muted-foreground`}>
-              Loading…
-            </div>
-          }
-        >
-          <EmojiPicker onEmojiSelect={insert} />
-        </Suspense>
+        <PickerErrorBoundary>
+          <Suspense fallback={<PickerMessage>Loading…</PickerMessage>}>
+            <EmojiPicker onEmojiSelect={insert} />
+          </Suspense>
+        </PickerErrorBoundary>
       </PopoverContent>
     </Popover>
   );

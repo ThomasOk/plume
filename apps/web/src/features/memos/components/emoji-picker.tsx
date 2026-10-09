@@ -5,6 +5,9 @@ import { env } from '@/env';
  * Plume serves the emoji data itself (copied from `emojibase-data` by `vite.config.ts`), so
  * opening the picker makes no request to an outside domain and survives a CDN outage.
  */
+// On a touch screen, focusing the search would raise the keyboard over the picker.
+const hasFinePointer = () => window.matchMedia('(pointer: fine)').matches;
+
 const EMOJIBASE_URL = `${env.PUBLIC_BASE_PATH.replace(/\/$/, '')}/emojibase`;
 
 interface EmojiPickerProps {
@@ -22,7 +25,7 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => (
     className="isolate flex h-80 w-80 flex-col"
   >
     <Picker.Search
-      autoFocus
+      autoFocus={hasFinePointer()}
       aria-label="Search emojis"
       className="z-10 mx-2 mt-2 appearance-none rounded-md bg-muted px-2.5 py-2 text-base outline-hidden placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
     />
