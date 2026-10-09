@@ -1,4 +1,4 @@
-# 🧭 What you can do in Plume
+# 🧰 What you can do in Plume
 
 **Write:** memos in Markdown, with a live preview, emojis, and file attachments (images and files up to a size limit).
 
@@ -11,7 +11,5 @@
 **Find:** full-text search, filter by tag or by day on the activity calendar.
 
 **Talk:** comment on a memo, react with an emoji, and get notified when someone comments on yours (by email too, unless you turn it off in Settings).
-
-**Leave:** export all your memos as a zip of Markdown files, or delete your account. Your memos in a space stay with the space.
 
 #plume/features
