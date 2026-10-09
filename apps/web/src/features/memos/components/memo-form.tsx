@@ -206,6 +206,8 @@ export const MemoForm = ({ parentMemoId, onSuccess, onCancel, autoFocus = false 
                 audienceControl={audienceControl}
                 onCancel={onCancel}
                 onAttachFile={triggerFileSelect}
+                editorRef={textareaRef}
+                onInsert={onInsert}
               />
             </form>
             <input
@@ -292,6 +294,8 @@ export const MemoForm = ({ parentMemoId, onSuccess, onCancel, autoFocus = false 
                           audienceControl={audienceControl}
                           onCancel={onCancel}
                           onAttachFile={triggerFileSelect}
+                          editorRef={textareaRef}
+                          onInsert={onInsert}
                         />
                       </form>
                     </CardContent>

@@ -10,6 +10,13 @@ vi.mock('../hooks', async (importOriginal) => ({
   useUpdateMemo: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('./tag-suggestions', () => ({ TagSuggestions: () => null }));
+vi.mock('./emoji-picker', () => ({
+  EmojiPicker: ({ onEmojiSelect }: { onEmojiSelect: (emoji: string) => void }) => (
+    <button type="button" onClick={() => onEmojiSelect('🔥')}>
+      🔥
+    </button>
+  ),
+}));
 vi.mock('@/features/spaces/hooks/use-space', () => ({ useSpace: () => ({ data: undefined }) }));
 vi.mock('@/features/attachments', () => ({
   AttachmentList: () => null,
@@ -86,5 +93,36 @@ describe('MemoEditForm, outside a memo card', () => {
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('offers the emoji button while editing', async () => {
+    await renderWithRouter(<Host />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    expect(screen.getByRole('button', { name: 'Insert emoji' })).toBeInTheDocument();
+  });
+
+  it('offers the emoji button in focus mode, whose Escape closes the picker only', async () => {
+    await renderWithRouter(<Host />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Enter focus mode' }));
+    await screen.findByRole('button', { name: 'Exit focus mode' });
+    const [, inFocusMode] = screen.getAllByRole('button', { name: 'Insert emoji' });
+    await user.click(inFocusMode!);
+    await user.click(await screen.findByRole('button', { name: '🔥' }));
+    await user.keyboard('{Escape}');
+
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Emoji picker' })).not.toBeInTheDocument(),
+    );
+    // Focus mode animates out over a few hundred milliseconds: give it the time to leave.
+    await expect(
+      vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Exit focus mode' })).not.toBeInTheDocument()),
+    ).rejects.toThrow();
+    expect(screen.getAllByRole('textbox')[1]).toHaveValue('Count me in🔥');
   });
 });

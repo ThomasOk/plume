@@ -16,6 +16,18 @@ vi.mock('../hooks/use-create-comment', () => ({
 }));
 vi.mock('../hooks/use-memo-scope');
 vi.mock('./tag-suggestions', () => ({ TagSuggestions: () => null }));
+// The lazily loaded picker, replaced by a few emojis: the tests hold the editor, not the library.
+vi.mock('./emoji-picker', () => ({
+  EmojiPicker: ({ onEmojiSelect }: { onEmojiSelect: (emoji: string) => void }) => (
+    <div>
+      {['🔥', '🎉'].map((emoji) => (
+        <button key={emoji} type="button" onClick={() => onEmojiSelect(emoji)}>
+          {emoji}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@/features/auth/hooks/use-auth');
 vi.mock('@/features/spaces/hooks/use-space');
 vi.mock('@/features/attachments', () => ({
@@ -146,5 +158,96 @@ describe('MemoForm, drafts', () => {
     await renderWithRouter(<MemoForm />);
 
     await vi.waitFor(() => expect(textarea()).toHaveValue('Agenda for the club'));
+  });
+});
+
+describe('MemoForm, emojis', () => {
+  beforeEach(() => inPersonalScope());
+
+  it('offers an emoji button when writing a memo', async () => {
+    await renderWithRouter(<MemoForm />);
+
+    expect(screen.getByRole('button', { name: 'Insert emoji' })).toBeInTheDocument();
+  });
+
+  it('offers an emoji button when writing a comment', async () => {
+    await renderWithRouter(<MemoForm parentMemoId="memo-1" />);
+
+    expect(screen.getByRole('button', { name: 'Insert emoji' })).toBeInTheDocument();
+  });
+
+  const textarea = () => screen.getByPlaceholderText<HTMLTextAreaElement>('Write your memo here...');
+  const openPicker = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: 'Insert emoji' }));
+    return screen.findByRole('dialog', { name: 'Emoji picker' });
+  };
+
+  it('inserts the emoji at the caret, in the middle of existing text', async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<MemoForm />);
+    await user.type(textarea(), 'Pasta night');
+    textarea().setSelectionRange(5, 5);
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🔥' }));
+
+    expect(textarea()).toHaveValue('Pasta🔥 night');
+  });
+
+  it('replaces the selected text with the emoji', async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<MemoForm />);
+    await user.type(textarea(), 'Pasta night');
+    textarea().setSelectionRange(6, 11);
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🎉' }));
+
+    expect(textarea()).toHaveValue('Pasta 🎉');
+  });
+
+  it('stays open after a pick, for the next one', async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<MemoForm />);
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🔥' }));
+    await user.click(screen.getByRole('button', { name: '🎉' }));
+
+    expect(screen.getByRole('dialog', { name: 'Emoji picker' })).toBeInTheDocument();
+    expect(textarea()).toHaveValue('🔥🎉');
+  });
+
+  it('closing the picker puts the writer back in the text, after the last emoji', async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<MemoForm />);
+    await user.type(textarea(), 'Pasta night');
+    textarea().setSelectionRange(5, 5);
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🔥' }));
+    await user.keyboard('{Escape}');
+
+    await vi.waitFor(() => expect(textarea()).toHaveFocus());
+    expect(screen.queryByRole('dialog', { name: 'Emoji picker' })).not.toBeInTheDocument();
+    expect(textarea().selectionStart).toBe('Pasta🔥'.length);
+    await user.keyboard('!');
+    expect(textarea()).toHaveValue('Pasta🔥! night');
+  });
+
+  it('saves an inserted emoji with the memo, and keeps it in the draft', async () => {
+    const user = userEvent.setup();
+    await renderWithRouter(<MemoForm />);
+    await user.type(textarea(), 'Pasta night ');
+
+    await openPicker(user);
+    await user.click(await screen.findByRole('button', { name: '🎉' }));
+
+    await vi.waitFor(() => expect(localStorage.getItem(`${USER_ID}-memo-draft`)).toBe('Pasta night 🎉'));
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await vi.waitFor(() =>
+      expect(mockCreateMemo).toHaveBeenCalledWith({ content: 'Pasta night 🎉', visibility: 'private' }),
+    );
   });
 });
