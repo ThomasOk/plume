@@ -12,6 +12,7 @@
     "lint": "eslint",
     "operator:grant": "pnpm env:run tsx src/grant-operator.ts",
     "operator:revoke": "pnpm env:run tsx src/revoke-operator.ts",
+    "showcase:seed": "pnpm env:run tsx src/seed-showcase.ts",
     "start": "NODE_ENV=production pnpm env:run node dist/index.js",
     "typecheck": "tsc --noEmit"
   },

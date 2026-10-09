@@ -70,5 +70,15 @@ export {
 // server serves it as a plain HTTP download.
 export { buildMemoArchive } from './features/export/memo-archive';
 
+// The showcase featured on Explore, written by a command run against the database, as the
+// operator role is granted (ADR 0007).
+export {
+  seedShowcase,
+  ShowcaseRefusedError,
+  type Showcase,
+  type ShowcaseMemo,
+  type SeededMemo,
+} from './features/showcase/seed-showcase';
+
 export type AppRouter = typeof appRouter;
 export type { AppLogger, StorageService };
