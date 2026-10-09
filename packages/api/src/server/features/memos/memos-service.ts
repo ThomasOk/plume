@@ -610,17 +610,15 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, destinati
       throw new TRPCError({ code: 'CONFLICT', message: 'A memo others have commented on cannot be moved' });
     }
 
+    const memoAndItsComments = or(eq(memo.id, existing.id), eq(memo.parentId, existing.id));
     await tx
       .update(memo)
       .set({ ...placement, pinnedAt: null, featuredAt: null })
-      .where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id)));
+      .where(memoAndItsComments);
 
-    await tx.delete(reaction).where(
-      inArray(
-        reaction.memoId,
-        tx.select({ id: memo.id }).from(memo).where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id))),
-      ),
-    );
+    await tx
+      .delete(reaction)
+      .where(inArray(reaction.memoId, tx.select({ id: memo.id }).from(memo).where(memoAndItsComments)));
 
     return { success: true };
   });

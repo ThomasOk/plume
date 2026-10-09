@@ -1,7 +1,7 @@
 import { REACTION_EMOJIS, type ReactionEmoji } from '@repo/api/schemas';
-import type { Reaction } from '@/lib/types';
+import type { ReactionSummary } from '@/lib/types';
 
-type Reactor = Reaction['reactors'][number];
+type Reactor = ReactionSummary['reactors'][number];
 
 /**
  * A memo's reactions as they stand once the reader's own changes to `emoji` — or to none —
@@ -9,7 +9,7 @@ type Reactor = Reaction['reactors'][number];
  * one gains them, an emoji nobody chooses any more leaves, and the order stays the set's,
  * as the server gives it.
  */
-export const withReaction = (summary: Reaction[], me: Reactor, emoji: ReactionEmoji | null): Reaction[] => {
+export const withReaction = (summary: ReactionSummary[], me: Reactor, emoji: ReactionEmoji | null): ReactionSummary[] => {
   const withoutMe = summary
     .map((entry) =>
       entry.reactedByMe
@@ -26,7 +26,7 @@ export const withReaction = (summary: Reaction[], me: Reactor, emoji: ReactionEm
   if (emoji === null) return withoutMe;
 
   const existing = withoutMe.find((entry) => entry.emoji === emoji);
-  const chosen: Reaction = existing
+  const chosen: ReactionSummary = existing
     ? { ...existing, count: existing.count + 1, reactedByMe: true, reactors: [...existing.reactors, me] }
     : { emoji, count: 1, reactedByMe: true, reactors: [me] };
 

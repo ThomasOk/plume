@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@repo/ui/components/pop
 import { cn } from '@repo/ui/lib/utils';
 import { useState, type ReactElement } from 'react';
 import { MdOutlineAddReaction } from 'react-icons/md';
-import type { Reaction } from '@/lib/types';
+import type { ReactionSummary } from '@/lib/types';
 import { useReactToMemo, useUnreactToMemo } from '../hooks';
 
 /**
@@ -20,7 +20,7 @@ const useSetReaction = (memoId: string) => {
 
 interface ReactionPickerProps {
   memoId: string;
-  reactions: Reaction[];
+  reactions: ReactionSummary[];
   /** The control that opens the picker. */
   children: ReactElement;
 }
@@ -64,7 +64,7 @@ const ReactionPicker = ({ memoId, reactions, children }: ReactionPickerProps) =>
 
 interface ReactButtonProps {
   memoId: string;
-  reactions: Reaction[];
+  reactions: ReactionSummary[];
 }
 
 /**
@@ -86,10 +86,17 @@ export const ReactButton = ({ memoId, reactions }: ReactButtonProps) => (
 
 interface ReactionRowProps {
   memoId: string;
-  reactions: Reaction[];
+  reactions: ReactionSummary[];
   /** Whether the reader may react: signed in. Otherwise the pills only tell. */
   canReact: boolean;
 }
+
+const PillContent = ({ emoji, count }: Pick<ReactionSummary, 'emoji' | 'count'>) => (
+  <>
+    <span>{emoji}</span>
+    <span className="text-xs text-muted-foreground">{count}</span>
+  </>
+);
 
 const pillClassName =
   'inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums transition-[background-color,border-color,transform] duration-150 ease-out';
@@ -124,13 +131,11 @@ export const ReactionRow = ({ memoId, reactions, canReact }: ReactionRowProps) =
               reactedByMe && 'border-primary/50 bg-primary/10 hover:bg-primary/20',
             )}
           >
-            <span>{emoji}</span>
-            <span className="text-xs text-muted-foreground">{count}</span>
+            <PillContent emoji={emoji} count={count} />
           </button>
         ) : (
           <span key={emoji} className={pillClassName}>
-            <span>{emoji}</span>
-            <span className="text-xs text-muted-foreground">{count}</span>
+            <PillContent emoji={emoji} count={count} />
           </span>
         ),
       )}

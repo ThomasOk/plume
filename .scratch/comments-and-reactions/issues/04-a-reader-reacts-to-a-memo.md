@@ -28,17 +28,17 @@ optimistic rewrite of the summary is a pure function. See the spec, sections *Re
 
 **Status:** ready-for-agent
 
-- [ ] The schema change follows the workflow in `AGENTS.md`, with the generated migration committed.
-- [ ] A reader reacts; the summary shows the emoji, count 1, `reactedByMe` for them and their name among the reactors, for them and for another reader (seam 1).
-- [ ] Reacting with another emoji replaces the reaction; with the same emoji changes nothing; `unreact` removes it and is harmless without one (seam 1).
-- [ ] Several readers: counts per emoji, ordered as the set, no entry at zero (seam 1).
-- [ ] The author may react to their own memo (seam 1).
-- [ ] An anonymous caller cannot react; a caller who cannot read the memo gets `NOT_FOUND` on `react` and `unreact`; an emoji outside the set is rejected (seam 1).
-- [ ] The summary is on a personal list, a space list, Explore and a memo's page; an anonymous reader of Explore gets counts and names with `reactedByMe` false (seam 1).
-- [ ] A move clears the memo's reactions; switching a personal memo between private and public keeps them (seam 1).
-- [ ] Deleting a memo removes its reactions; deleting an account removes that user's reactions and passes nothing to the Former user (seam 1, account deletion suite).
-- [ ] Reacting creates no notification and records no outbox event (seam 1).
-- [ ] Row, pills, add control and picker behave as described, for a signed-in and an anonymous reader (seam 2).
-- [ ] The summary rewrite handles a first reaction, a replacement, a removal, the last of an emoji, and keeps the order (seam 3).
-- [ ] A refused reaction disappears and a toast says so.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [x] The schema change follows the workflow in `AGENTS.md`, with the generated migration committed.
+- [x] A reader reacts; the summary shows the emoji, count 1, `reactedByMe` for them and their name among the reactors, for them and for another reader (seam 1).
+- [x] Reacting with another emoji replaces the reaction; with the same emoji changes nothing; `unreact` removes it and is harmless without one (seam 1).
+- [x] Several readers: counts per emoji, ordered as the set, no entry at zero (seam 1).
+- [x] The author may react to their own memo (seam 1).
+- [x] An anonymous caller cannot react; a caller who cannot read the memo gets `NOT_FOUND` on `react` and `unreact`; an emoji outside the set is rejected (seam 1).
+- [x] The summary is on a personal list, a space list, Explore and a memo's page; an anonymous reader of Explore gets counts and names with `reactedByMe` false (seam 1).
+- [x] A move clears the memo's reactions; switching a personal memo between private and public keeps them (seam 1).
+- [x] Deleting a memo removes its reactions; deleting an account removes that user's reactions and passes nothing to the Former user (seam 1, account deletion suite).
+- [x] Reacting creates no notification and records no outbox event (seam 1).
+- [x] Row, pills, add control and picker behave as described, for a signed-in and an anonymous reader (seam 2).
+- [x] The summary rewrite handles a first reaction, a replacement, a removal, the last of an emoji, and keeps the order (seam 3).
+- [x] A refused reaction disappears and a toast says so.
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.

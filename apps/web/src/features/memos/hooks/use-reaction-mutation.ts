@@ -1,12 +1,12 @@
 import { type QueryKey, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Reaction } from '@/lib/types';
+import type { ReactionSummary } from '@/lib/types';
 import type { ReactionEmoji } from '@repo/api/schemas';
 import { withReaction } from '../reaction-summary';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useTRPC } from '@/lib/api';
 
-type WithReactions = { id: string; reactions: Reaction[] };
+type WithReactions = { id: string; reactions: ReactionSummary[] };
 
 const holdsReactions = (value: unknown): value is WithReactions =>
   typeof value === 'object' && value !== null && 'id' in value && Array.isArray((value as WithReactions).reactions);
@@ -14,7 +14,7 @@ const holdsReactions = (value: unknown): value is WithReactions =>
 // A cached read as it stands once the memo's reactions are rewritten: a list holding the
 // memo, or the memo itself on its page. Anything else under `memos` — stats, tags, a list
 // without it — comes back as it was, so the caller can tell which reads it touched.
-const rewriteMemoIn = (data: unknown, memoId: string, rewrite: (summary: Reaction[]) => Reaction[]): unknown => {
+const rewriteMemoIn = (data: unknown, memoId: string, rewrite: (summary: ReactionSummary[]) => ReactionSummary[]): unknown => {
   if (Array.isArray(data)) {
     let touched = false;
     const next = data.map((item) => {
@@ -45,18 +45,25 @@ export const useReactionMutation = <Variables extends { memoId: string }>(
   return useMutation({
     mutationFn,
     onMutate: async (variables) => {
-      const memosKey = trpc.memos.pathKey();
-      // A refetch already in flight would land on top of the rewrite with the state before it.
-      await queryClient.cancelQueries({ queryKey: memosKey });
-
       const touched: [QueryKey, unknown][] = [];
       if (!user) return { touched };
       const me = { id: user.id, name: user.name };
-      for (const [queryKey, data] of queryClient.getQueriesData({ queryKey: memosKey })) {
-        const next = rewriteMemoIn(data, variables.memoId, (summary) => withReaction(summary, me, emojiOf(variables)));
-        if (next === data) continue;
+      const rewrite = (data: unknown) =>
+        rewriteMemoIn(data, variables.memoId, (summary) => withReaction(summary, me, emojiOf(variables)));
+
+      const holding = queryClient
+        .getQueriesData({ queryKey: trpc.memos.pathKey() })
+        .filter(([, data]) => rewrite(data) !== data)
+        .map(([queryKey]) => queryKey);
+      // A refetch of one of them already in flight would land on top of the rewrite with the
+      // state before it. Only those: cancelling another read, still on its first fetch, would
+      // leave it without data.
+      await Promise.all(holding.map((queryKey) => queryClient.cancelQueries({ queryKey, exact: true })));
+
+      for (const queryKey of holding) {
+        const data = queryClient.getQueryData(queryKey);
         touched.push([queryKey, data]);
-        queryClient.setQueryData(queryKey, next);
+        queryClient.setQueryData(queryKey, rewrite(data));
       }
       return { touched };
     },
