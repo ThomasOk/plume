@@ -28,9 +28,13 @@ type CreateMemoInput = z.infer<typeof createMemoSchema>;
 interface MemoFormProps {
   parentMemoId?: string;
   onSuccess?: () => void;
+  /** Offers a Cancel button, for a form opened on demand. The draft stays for next time. */
+  onCancel?: () => void;
+  /** Puts the caret in the text field on mount, for a form the reader just asked for. */
+  autoFocus?: boolean;
 }
 
-export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
+export const MemoForm = ({ parentMemoId, onSuccess, onCancel, autoFocus = false }: MemoFormProps) => {
   const isComment = Boolean(parentMemoId);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -187,6 +191,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                 onSubmit={handleSubmit(onSubmit)}
                 onInsert={onInsert}
                 placeholder={isComment ? 'Write a comment...' : 'Write your memo here...'}
+                autoFocus={autoFocus}
                 errorMessage={errors.content?.message}
               />
               <AttachmentList
@@ -199,6 +204,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                 isPending={isPending || isUploading}
                 isValid={isValid}
                 audienceControl={audienceControl}
+                onCancel={onCancel}
                 onAttachFile={triggerFileSelect}
               />
             </form>
@@ -284,6 +290,7 @@ export const MemoForm = ({ parentMemoId, onSuccess }: MemoFormProps) => {
                           isPending={isPending || isUploading}
                           isValid={isValid}
                           audienceControl={audienceControl}
+                          onCancel={onCancel}
                           onAttachFile={triggerFileSelect}
                         />
                       </form>
