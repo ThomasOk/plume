@@ -190,6 +190,33 @@ describe('deleting an account', () => {
     ]);
   });
 
+  it('takes the user\'s reactions with it, everywhere, passing none to the Former user', async () => {
+    await db.insert(space).values(spaceRow('club', 'Cooking club'));
+    await db.insert(spaceMember).values([
+      { spaceId: 'club', userId: alice.id, role: 'member', joinedAt: new Date() },
+      { spaceId: 'club', userId: bob.id, role: 'admin', joinedAt: new Date() },
+    ]);
+    await db.insert(memo).values([
+      memoRow('bobs-public-memo', { userId: bob.id, visibility: 'public' }),
+      memoRow('bobs-space-memo', { userId: bob.id, ...inSpace('club') }),
+      memoRow('alices-space-memo', inSpace('club')),
+    ]);
+    await as(alice).memos.react({ memoId: 'bobs-public-memo', emoji: '👍' });
+    await as(carol).memos.react({ memoId: 'bobs-public-memo', emoji: '👍' });
+    await as(alice).memos.react({ memoId: 'bobs-space-memo', emoji: '❤️' });
+    await as(alice).memos.react({ memoId: 'alices-space-memo', emoji: '🎉' });
+    await as(bob).memos.react({ memoId: 'alices-space-memo', emoji: '🙏' });
+
+    await deleteAlice();
+
+    const reactionsOn = async (id: string) =>
+      (await as(bob).memos.getById({ id })).reactions.map(({ emoji, reactors }) => ({ emoji, reactors: reactors.map(({ id }) => id) }));
+    expect(await reactionsOn('bobs-public-memo')).toEqual([{ emoji: '👍', reactors: [carol.id] }]);
+    expect(await reactionsOn('bobs-space-memo')).toEqual([]);
+    // The memo she wrote outlives her; the reaction she left on it does not.
+    expect(await reactionsOn('alices-space-memo')).toEqual([{ emoji: '🙏', reactors: [bob.id] }]);
+  });
+
   it('passes the user\'s comment under another author\'s memo to the Former user', async () => {
     await db.insert(memo).values(memoRow('bobs-memo', { userId: bob.id, visibility: 'public' }));
     await db.insert(memo).values(memoRow('alices-comment', { parentId: 'bobs-memo', visibility: 'public' }));

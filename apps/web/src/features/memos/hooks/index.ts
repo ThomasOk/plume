@@ -20,3 +20,5 @@ export { useComments } from './use-comments';
 export { LATEST_COMMENTS_SHOWN, useLatestComments } from './use-latest-comments';
 export { useCreateComment } from './use-create-comment';
 export { useDeleteComment } from './use-delete-comment';
+export { useReactToMemo } from './use-react-to-memo';
+export { useUnreactToMemo } from './use-unreact-to-memo';

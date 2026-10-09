@@ -16,6 +16,8 @@ export {
   updateMemoSchema,
   deleteMemoSchema,
   MAX_MEMO_CHARACTERS,
+  REACTION_EMOJIS,
+  type ReactionEmoji,
 } from '../server/features/memos/memos-schemas';
 
 // Spaces feature schemas

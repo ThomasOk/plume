@@ -65,3 +65,25 @@ export const listMemosSchema = z.object({
   tag: z.string().optional(),
   query: z.string().optional(),
 });
+
+// The emojis a reader may react with, in the order every summary shows them: 👍 first, the
+// most common. Each means something distinct — acknowledge, love, laugh, celebrate,
+// insightful, thanks, sympathise — and none is hostile: in a space shared between
+// colleagues, a thumbs-down on someone's memo reads as a reproach. Fixed in code, so adding
+// one is a change here, not a migration: the column is plain text.
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '💡', '🙏', '😢'] as const;
+
+export const reactionEmojiSchema = z.enum(REACTION_EMOJIS);
+
+export type ReactionEmoji = z.infer<typeof reactionEmojiSchema>;
+
+// Each names the state it wants rather than toggling, as pins do: two quick clicks cannot
+// cancel each other in flight.
+export const reactSchema = z.object({
+  memoId: z.string().min(1, 'Memo ID is required'),
+  emoji: reactionEmojiSchema,
+});
+
+export const unreactSchema = z.object({
+  memoId: z.string().min(1, 'Memo ID is required'),
+});

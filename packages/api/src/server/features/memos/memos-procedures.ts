@@ -13,6 +13,8 @@ import {
   moveMemoSchema,
   pinMemoSchema,
   featureMemoSchema,
+  reactSchema,
+  unreactSchema,
 } from './memos-schemas';
 import {
   getMemoById,
@@ -31,6 +33,7 @@ import {
   featureMemo,
   unfeatureMemo,
 } from './memos-service';
+import { reactToMemo, unreactToMemo } from './reactions-service';
 
 export const getById = publicProcedure
   .input(getByIdSchema)
@@ -45,11 +48,11 @@ export const getById = publicProcedure
 
 export const list = protectedProcedure
   .input(listMemosSchema)
-  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, personalScope(ctx.session.user.id), input));
+  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, personalScope(ctx.session.user.id), ctx.session.user.id, input));
 
 export const listPublic = publicProcedure
   .input(listMemosSchema)
-  .query(({ ctx, input }) => listPublicMemos(ctx.db, ctx.storage, input));
+  .query(({ ctx, input }) => listPublicMemos(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
 
 export const create = protectedProcedure
   .input(createMemoSchema)
@@ -102,6 +105,15 @@ export const unfeature = protectedProcedure
   .input(featureMemoSchema)
   .mutation(({ ctx, input }) => unfeatureMemo(ctx.db, ctx.session.user, input));
 
+// Open to any signed-in reader of the memo, its author included, wherever it is read.
+export const react = protectedProcedure
+  .input(reactSchema)
+  .mutation(({ ctx, input }) => reactToMemo(ctx.db, ctx.session.user.id, input));
+
+export const unreact = protectedProcedure
+  .input(unreactSchema)
+  .mutation(({ ctx, input }) => unreactToMemo(ctx.db, ctx.session.user.id, input));
+
 export const stats = protectedProcedure
   .query(({ ctx }) => getMemoStats(ctx.db, personalScope(ctx.session.user.id)));
 
@@ -127,7 +139,7 @@ export const space = router({
     ),
   list: spaceProcedure
     .input(listMemosSchema)
-    .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), input)),
+    .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), ctx.session.user.id, input)),
   stats: spaceProcedure
     .query(({ ctx }) => getMemoStats(ctx.db, spaceScope(ctx.membership))),
   tags: spaceProcedure

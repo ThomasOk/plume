@@ -1,5 +1,5 @@
 import { asc, desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
-import { memo, user, attachment, spaceMember } from '@repo/db/schema';
+import { memo, user, attachment, spaceMember, reaction } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
 import type {
@@ -25,6 +25,7 @@ import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 import { mayDeletePublicMemo, mayFeatureMemo, type OperatorActor } from './operator-policy';
+import { fetchReactionsForMemos } from './reactions-service';
 
 type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
@@ -81,10 +82,12 @@ export async function getMemoById(db: DatabaseInstance, storage: StorageService,
 
   const { authorName, authorImage, ...memoData } = row;
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, [memoData.id]);
+  const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, [memoData.id]);
   return {
     ...memoData,
     author: formatAuthor(authorName, authorImage),
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+    reactions: reactionsByMemoId.get(memoData.id) ?? [],
   };
 }
 
@@ -111,7 +114,9 @@ async function fetchAttachmentsForMemos(
   return byMemoId;
 }
 
-export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, input: ListMemosInput) {
+// `readerId` is who reads the scope, which a space scope does not tell: it says whose memos
+// are listed, not who is looking at them.
+export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
   const memos = await db
     .select({
       id: memo.id,
@@ -138,16 +143,19 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
     .where(and(memoScopeCondition(scope), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(...pinnedFirst);
 
-  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memos.map((m) => m.id));
+  const memoIds = memos.map((m) => m.id);
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memoIds);
+  const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, memoIds);
 
   return memos.map(({ authorName, authorImage, ...memoData }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+    reactions: reactionsByMemoId.get(memoData.id) ?? [],
   }));
 }
 
-export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, input: ListMemosInput) {
+export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListMemosInput) {
   const rows = await db
     .select({
       id: memo.id,
@@ -175,12 +183,15 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
     .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId), ...buildFilterConditions(input)))
     .orderBy(...featuredFirst);
 
-  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
+  const memoIds = rows.map((r) => r.id);
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memoIds);
+  const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, memoIds);
 
   return rows.map(({ authorName, authorImage, ...memoData }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+    reactions: reactionsByMemoId.get(memoData.id) ?? [],
   }));
 }
 
@@ -554,7 +565,9 @@ export async function unfeatureMemo(db: DatabaseInstance, actor: InstanceActor, 
 // It leaves `updatedAt` alone: a move changes who reads the memo, not what was written. It
 // unpins the memo: a pin belongs to the scope it was set in, by whoever governs it, and would
 // otherwise land in a scope where nobody decided it (ADR 0006). It unfeatures it too: a move
-// takes a public memo into a space, or a space memo, never featured, out of one.
+// takes a public memo into a space, or a space memo, never featured, out of one. And it clears
+// the reactions of the memo and of the comments moving with it: they — and their names — come
+// from an audience that is no longer reading it, as a pin comes from a scope it left (ADR 0006).
 export async function moveMemo(db: DatabaseInstance, authorId: string, destination: MemoDestination, input: MoveMemoInput) {
   return db.transaction(async (tx) => {
     // Locked against a comment being written while the memo moves: either the comment
@@ -601,6 +614,13 @@ export async function moveMemo(db: DatabaseInstance, authorId: string, destinati
       .update(memo)
       .set({ ...placement, pinnedAt: null, featuredAt: null })
       .where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id)));
+
+    await tx.delete(reaction).where(
+      inArray(
+        reaction.memoId,
+        tx.select({ id: memo.id }).from(memo).where(or(eq(memo.id, existing.id), eq(memo.parentId, existing.id))),
+      ),
+    );
 
     return { success: true };
   });

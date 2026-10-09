@@ -8,11 +8,13 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSpace } from '@/features/spaces/hooks/use-space';
 import { renderWithRouter } from '@/tests/render-with-router';
 
-const { pin, unpin, feature, unfeature } = vi.hoisted(() => ({
+const { pin, unpin, feature, unfeature, react, unreact } = vi.hoisted(() => ({
   pin: vi.fn(),
   unpin: vi.fn(),
   feature: vi.fn(),
   unfeature: vi.fn(),
+  react: vi.fn(),
+  unreact: vi.fn(),
 }));
 
 // The card is rendered outside any space's URL, as on a memo's own page: whatever it knows
@@ -26,6 +28,8 @@ vi.mock('../hooks', async (importOriginal) => ({
   useUnpinMemo: () => ({ mutate: unpin, isPending: false }),
   useFeatureMemo: () => ({ mutate: feature, isPending: false }),
   useUnfeatureMemo: () => ({ mutate: unfeature, isPending: false }),
+  useReactToMemo: () => ({ mutate: react, isPending: false }),
+  useUnreactToMemo: () => ({ mutate: unreact, isPending: false }),
   useMemoTags: vi.fn(),
   useLatestComments: vi.fn(),
 }));
@@ -409,5 +413,101 @@ describe('MemoCard, the strip of its latest comments', () => {
 
     expect(screen.getByText('I bring the wine')).toBeInTheDocument();
     expect(screen.getByText('See the menu')).toBeInTheDocument();
+  });
+});
+
+describe('MemoCard, reacting to a memo', () => {
+  const reacted = (reactions: unknown[]): Memo =>
+    ({ ...publicMemo(), reactions }) as unknown as Memo;
+
+  const thumbsUpByAliceAndMe = {
+    emoji: '👍',
+    count: 2,
+    reactedByMe: true,
+    reactors: [{ id: ALICE, name: 'Alice' }, { id: BOB, name: 'Bob' }],
+  };
+  const partyByAlice = { emoji: '🎉', count: 1, reactedByMe: false, reactors: [{ id: ALICE, name: 'Alice' }] };
+
+  const reactionRow = () => screen.queryByRole('group', { name: 'Reactions' });
+
+  beforeEach(() => {
+    react.mockClear();
+    unreact.mockClear();
+  });
+
+  it('shows no row on a memo nobody reacted to', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([])} />);
+
+    expect(reactionRow()).not.toBeInTheDocument();
+  });
+
+  it('shows one pill per emoji with its count, the reader’s own pressed', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
+
+    const row = within(reactionRow()!);
+    expect(row.getByRole('button', { name: '👍 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(row.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('takes the reaction back on the reader’s own pill, and moves it on another', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: '👍 2' }));
+    expect(unreact).toHaveBeenCalledWith({ memoId: 'memo-1' });
+
+    await user.click(screen.getByRole('button', { name: '🎉 1' }));
+    expect(react).toHaveBeenCalledWith({ memoId: 'memo-1', emoji: '🎉' });
+  });
+
+  it('offers the seven emojis in order from the add control, the current one pressed', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe])} />);
+    const user = userEvent.setup();
+
+    await user.click(within(reactionRow()!).getByRole('button', { name: 'Add a reaction' }));
+
+    const picker = within(await screen.findByRole('dialog'));
+    const emojis = picker.getAllByRole('button');
+    expect(emojis.map((button) => button.textContent)).toEqual(['👍', '❤️', '😂', '🎉', '💡', '🙏', '😢']);
+    expect(emojis.filter((button) => button.getAttribute('aria-pressed') === 'true').map((b) => b.textContent)).toEqual(['👍']);
+  });
+
+  it('reacts from the header’s button, the picker closing on the pick', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([])} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '💡' }));
+
+    expect(react).toHaveBeenCalledWith({ memoId: 'memo-1', emoji: '💡' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('takes the reaction back when the reader picks their current emoji', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe])} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '👍' }));
+
+    expect(unreact).toHaveBeenCalledWith({ memoId: 'memo-1' });
+    expect(react).not.toHaveBeenCalled();
+  });
+
+  it('shows an anonymous reader the pills, not as buttons, and offers no way to react', async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null } as any);
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
+
+    const row = within(reactionRow()!);
+    expect(row.getByText('👍')).toBeInTheDocument();
+    expect(row.getByText('🎉')).toBeInTheDocument();
+    expect(row.queryAllByRole('button')).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'React' })).not.toBeInTheDocument();
   });
 });

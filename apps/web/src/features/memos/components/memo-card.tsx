@@ -6,8 +6,10 @@ import { CommentStrip } from './comment-strip';
 import { MemoActionsMenu } from './memo-actions-menu';
 import { EnterFocusModeButton, MemoEditForm, useMemoEditing } from './memo-edit-form';
 import { MemoHeader } from './memo-header';
+import { ReactButton, ReactionRow } from './reactions';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
 import { AttachmentList } from '@/features/attachments';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 interface MemoCardProps {
   memo: Memo | Comment;
@@ -36,7 +38,10 @@ export const MemoCard = ({
 }: MemoCardProps) => {
   const editing = useMemoEditing();
   const { isEditing } = editing;
+  const { user } = useAuth();
   const savedAttachments = memo.attachments;
+  // A comment read as a conversation carries no reactions yet.
+  const reactions = 'reactions' in memo ? memo.reactions : null;
   const hasCommentStrip =
     'commentCount' in memo && memo.commentCount > 0 && !hideCommentStrip;
 
@@ -60,8 +65,11 @@ export const MemoCard = ({
               ignorePins={ignorePins}
               markFeatured={markFeatured}
               actions={
-                isEditing && (
+                isEditing ? (
                   <EnterFocusModeButton onClick={editing.enterFocusMode} />
+                ) : (
+                  user &&
+                  reactions && <ReactButton memoId={memo.id} reactions={reactions} />
                 )
               }
               menu={
@@ -83,6 +91,9 @@ export const MemoCard = ({
                 <ExpandableMarkdown content={memo.content} maxHeight={500} />
                 {savedAttachments.length > 0 && (
                   <AttachmentList savedAttachments={savedAttachments} />
+                )}
+                {reactions && (
+                  <ReactionRow memoId={memo.id} reactions={reactions} canReact={!!user} />
                 )}
               </MemoContext.Provider>
             )}

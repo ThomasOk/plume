@@ -27,6 +27,8 @@ export type MemoWithAuthor = RouterOutputs['memos']['listPublic'][number];
 export type Author = MemoWithAuthor['author'];
 export type Attachment = RouterOutputs['attachments']['list'][number];
 export type Comment = RouterOutputs['memos']['listComments'][number];
+// One emoji a memo received, with how many chose it, whether the reader did, and who.
+export type Reaction = RouterOutputs['memos']['getById']['reactions'][number];
 export type Notification = RouterOutputs['notifications']['list'][number];
 export type Space = RouterOutputs['spaces']['list'][number];
 // One space as read from inside it: a `Space`, plus its headcount.
