@@ -28,8 +28,11 @@ export const moveMemoSchema = z.object({
   visibility: z.enum(['private', 'public']),
 });
 
+// Without a limit, the whole conversation; with one, only where it stands now: the `limit`
+// most recent comments, as the strip under a card in the list shows them.
 export const listCommentsSchema = z.object({
   memoId: z.string().min(1, 'Memo ID is required'),
+  limit: z.number().int().positive().optional(),
 });
 
 export const updateMemoSchema = insertMemoSchema.extend({

@@ -1,8 +1,8 @@
-import { screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Memo } from '@/lib/types';
-import { useMemoTags } from '../hooks';
+import { useLatestComments, useMemoTags } from '../hooks';
 import { MemoCard } from './memo-card';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSpace } from '@/features/spaces/hooks/use-space';
@@ -27,6 +27,7 @@ vi.mock('../hooks', async (importOriginal) => ({
   useFeatureMemo: () => ({ mutate: feature, isPending: false }),
   useUnfeatureMemo: () => ({ mutate: unfeature, isPending: false }),
   useMemoTags: vi.fn(),
+  useLatestComments: vi.fn(),
 }));
 vi.mock('../hooks/use-move-memo', () => ({
   useMoveMemo: () => ({ mutate: vi.fn(), isPending: false }),
@@ -304,5 +305,95 @@ describe('MemoCard, an operator deleting a public memo', () => {
     await openActions();
 
     expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+});
+
+// The strip hangs under a commented memo in every list; it asks for its comments only once
+// the card nears the viewport, so a long list does not load the comments of every memo.
+describe('MemoCard, the strip of its latest comments', () => {
+  let nearViewport: () => void;
+
+  beforeEach(() => {
+    signedIn({ isOperator: false });
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          nearViewport = () =>
+            callback([{ isIntersecting: true } as IntersectionObserverEntry], this as any);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    // Comments come back only once asked for, as the query does when it is enabled.
+    vi.mocked(useLatestComments).mockImplementation(
+      (_memoId, { enabled }) => ({ data: enabled ? latestComments : undefined }) as any,
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const comment = (id: string, name: string, content: string) => ({
+    id,
+    parentId: 'memo-1',
+    content,
+    createdAt: new Date(),
+    author: { name, image: null },
+  });
+
+  const latestComments = [
+    comment('c-2', 'Bob', 'I bring **the wine**'),
+    comment('c-3', 'Carol', 'Count me in'),
+    comment('c-4', 'Dan', 'See [the menu](https://example.com)'),
+  ];
+
+  const commented = (commentCount: number) => ({ ...publicMemo(), commentCount }) as unknown as Memo;
+
+  it('is absent under a memo without comments', async () => {
+    await renderWithRouter(<MemoCard memo={commented(0)} />);
+
+    expect(screen.queryByRole('region', { name: /^Comments/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the total count, and leads to the comment section', async () => {
+    await renderWithRouter(<MemoCard memo={commented(5)} />);
+
+    const strip = screen.getByRole('region', { name: /^Comments/ });
+    expect(within(strip).getByText('5')).toBeInTheDocument();
+    expect(within(strip).getByRole('link', { name: /View all/ })).toHaveAttribute(
+      'href',
+      '/memos/memo-1#comments',
+    );
+  });
+
+  it('asks for its comments only once the card nears the viewport', async () => {
+    await renderWithRouter(<MemoCard memo={commented(5)} />);
+
+    expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+    act(() => nearViewport());
+
+    expect(useLatestComments).toHaveBeenLastCalledWith('memo-1', { enabled: true });
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+
+  it('shows the latest comments, each leading to its own anchor on the memo’s page', async () => {
+    await renderWithRouter(<MemoCard memo={commented(5)} />);
+    act(() => nearViewport());
+
+    const rows = within(screen.getByRole('region', { name: /^Comments/ })).getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]!).getByRole('link')).toHaveAttribute('href', '/memos/memo-1#c-2');
+    expect(within(rows[2]!).getByRole('link')).toHaveAttribute('href', '/memos/memo-1#c-4');
+  });
+
+  it('shows each comment’s text without its Markdown', async () => {
+    await renderWithRouter(<MemoCard memo={commented(5)} />);
+    act(() => nearViewport());
+
+    expect(screen.getByText('I bring the wine')).toBeInTheDocument();
+    expect(screen.getByText('See the menu')).toBeInTheDocument();
   });
 });

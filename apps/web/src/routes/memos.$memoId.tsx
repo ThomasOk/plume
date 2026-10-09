@@ -43,7 +43,7 @@ function MemoDetailPage() {
         {/* Main — memo card */}
         <div className="flex-1 min-w-0 space-y-8">
           <MemoContext.Provider value={{ memo }}>
-            <MemoCard memo={memo} author={memo.author} hideCommentPreview markFeatured />
+            <MemoCard memo={memo} author={memo.author} hideCommentStrip markFeatured />
           </MemoContext.Provider>
 
           {!memo.parentId && <CommentSection memoId={memo.id} />}

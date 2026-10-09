@@ -242,6 +242,40 @@ describe('memos.update', () => {
   });
 });
 
+// The comment section reads the whole conversation in the order it happened; the strip under
+// a card in the list asks only for where it stands now.
+describe('memos.listComments', () => {
+  let memoId: string;
+
+  beforeEach(async () => {
+    await db.insert(user).values(testUser);
+    const caller = createAuthenticatedCaller(db);
+    memoId = (await caller.memos.create({ content: 'Pasta night', visibility: 'public' })).id;
+
+    // Each comment a minute after the last, so their order never rests on a shared instant.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    for (const [minute, content] of ['First', 'Second', 'Third', 'Fourth'].entries()) {
+      vi.setSystemTime(new Date(2026, 0, 1, 12, minute));
+      await caller.memos.create({ content, parentId: memoId });
+    }
+    vi.useRealTimers();
+  });
+
+  const contents = (comments: Array<{ content: string }>) => comments.map((c) => c.content);
+
+  it('returns every comment, oldest first', async () => {
+    const comments = await createTestCaller(db).memos.listComments({ memoId });
+
+    expect(contents(comments)).toEqual(['First', 'Second', 'Third', 'Fourth']);
+  });
+
+  it('returns only the most recent comments when asked for a few, oldest first', async () => {
+    const comments = await createTestCaller(db).memos.listComments({ memoId, limit: 3 });
+
+    expect(contents(comments)).toEqual(['Second', 'Third', 'Fourth']);
+  });
+});
+
 // A comment has no audience of its own: it takes its memo's, and an edit of the memo's
 // visibility carries its comments along (ADR 0001), as a move does.
 describe('a comment, when its memo is edited', () => {
