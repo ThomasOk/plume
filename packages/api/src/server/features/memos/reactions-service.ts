@@ -1,4 +1,4 @@
-import { alias, and, eq, inArray, sql } from '@repo/db';
+import { and, eq, inArray, sql } from '@repo/db';
 import { memo, reaction, user } from '@repo/db/schema';
 import { nanoid } from 'nanoid';
 import type { DatabaseInstance } from '@repo/db/client';
@@ -11,16 +11,13 @@ type ReactInput = z.infer<typeof reactSchema>;
 type UnreactInput = z.infer<typeof unreactSchema>;
 
 // Reacting is open to whoever may read the memo, its author included — for a comment, whoever
-// may read its parent. The parent decides, not the comment: the comment's own author is in its
-// personal scope even once the parent has turned private. A memo the reader cannot read answers
-// like a missing one, as every other memo procedure does.
+// may read its parent, which the readability condition already asks. A memo the reader cannot
+// read answers like a missing one, as every other memo procedure does.
 async function assertReadable(db: DatabaseInstance, readerId: string, memoId: string) {
-  const target = alias(memo, 'target');
   const [found] = await db
-    .select({ id: target.id })
-    .from(target)
-    .innerJoin(memo, eq(memo.id, sql`COALESCE(${target.parentId}, ${target.id})`))
-    .where(and(eq(target.id, memoId), readableMemoCondition(readerId)))
+    .select({ id: memo.id })
+    .from(memo)
+    .where(and(eq(memo.id, memoId), readableMemoCondition(readerId)))
     .limit(1);
 
   if (!found) throw new MemoNotFoundError();
