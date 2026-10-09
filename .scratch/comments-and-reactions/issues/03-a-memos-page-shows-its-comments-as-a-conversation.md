@@ -16,11 +16,11 @@ admin deletes, an operator deletes a comment on a public memo. See the spec, sec
 
 **Status:** ready-for-agent
 
-- [ ] The comment form is closed by default and opened by "Write a comment"; it closes on save and on cancel (seam 2).
-- [ ] With no comments, a signed-in reader sees the button alone; an anonymous reader sees no button (seam 2).
-- [ ] The heading shows the number of comments.
-- [ ] Comments read oldest first, each with its id as anchor (seam 2).
-- [ ] A long comment is clamped and can be expanded.
-- [ ] The author can edit and delete their comment; a space admin and an operator (on a public memo) can delete it; nobody else is offered either (seam 2).
-- [ ] An unsent comment survives navigation as a draft, as today.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [x] The comment form is closed by default and opened by "Write a comment"; it closes on save and on cancel (seam 2).
+- [x] With no comments, a signed-in reader sees the button alone; an anonymous reader sees no button (seam 2).
+- [x] The heading shows the number of comments.
+- [x] Comments read oldest first, each with its id as anchor (seam 2).
+- [x] A long comment is clamped and can be expanded.
+- [x] The author can edit and delete their comment; a space admin and an operator (on a public memo) can delete it; nobody else is offered either (seam 2).
+- [x] An unsent comment survives navigation as a draft, as today.
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.

@@ -10,11 +10,11 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip';
 import { Link } from '@tanstack/react-router';
-import { formatDistanceToNow, format } from 'date-fns';
 import { IoEarthOutline } from 'react-icons/io5';
 import { MdAutoAwesome, MdPushPin } from 'react-icons/md';
 import type { Author, Comment, Memo } from '@/lib/types';
 import type { ReactNode } from 'react';
+import { RelativeDate } from './relative-date';
 
 interface MemoHeaderProps {
   memo: Memo | Comment;
@@ -62,33 +62,17 @@ export const MemoHeader = ({
                 {author.name}
               </span>
             )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {isComment ? (
-                    <time
-                      dateTime={memo.createdAt.toISOString()}
-                      className="text-xs text-muted-foreground leading-tight"
-                    >
-                      {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
-                    </time>
-                  ) : (
-                    <Link
-                      to="/memos/$memoId"
-                      params={{ memoId: memo.id }}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
-                    >
-                      <time dateTime={memo.createdAt.toISOString()}>
-                        {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
-                      </time>
-                    </Link>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">{format(memo.createdAt, 'PPpp')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {isComment ? (
+              <RelativeDate date={memo.createdAt} className="leading-tight" />
+            ) : (
+              <Link
+                to="/memos/$memoId"
+                params={{ memoId: memo.id }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
+              >
+                <RelativeDate date={memo.createdAt} className="text-inherit" />
+              </Link>
+            )}
           </div>
         </div>
       ) : (
