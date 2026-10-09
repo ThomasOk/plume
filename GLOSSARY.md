@@ -17,6 +17,15 @@ cannot comment on a comment) and have neither a visibility nor a space of their 
 share the parent memo's.
 _Avoid_: reply, thread, response.
 
+**Reaction**:
+An emoji a user leaves on a memo or a comment, chosen from a fixed set. A user has at most
+one reaction per memo: choosing another replaces it. Any signed-in reader may react, the
+author included, and every reader of the memo sees who reacted. Reacting sends no
+notification. A reaction is a gesture, not content: it does not outlive its user, and a
+move clears the memo's reactions, since the audience that left them is no longer the one
+reading it.
+_Avoid_: like, emoji, vote.
+
 **Hashtag**:
 A tag as the user writes it inside a memo's Markdown content, with the leading `#`
 (`#cooking/italian`). Hashtags are the source; tags are what gets extracted from them.
