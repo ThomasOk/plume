@@ -95,8 +95,10 @@ const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
       </AlertDialogHeader>
 
       <div className="space-y-2">
-        <Label htmlFor="delete-account-email">
-          Type your email, <span className="font-semibold">{email}</span>, to confirm
+        {/* `block`: the Label is a flex row, which would set the sentence and the email
+            side by side as columns. */}
+        <Label htmlFor="delete-account-email" className="block leading-normal">
+          Type your email, <span className="font-semibold break-all">{email}</span>, to confirm
         </Label>
         <Input
           id="delete-account-email"
