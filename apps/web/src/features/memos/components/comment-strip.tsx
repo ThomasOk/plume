@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { LATEST_COMMENTS_SHOWN, useLatestComments } from '../hooks';
+import { toPlainText } from '@/utils/markdown-manipulation';
 
 interface CommentStripProps {
   memoId: string;
@@ -11,19 +12,6 @@ interface CommentStripProps {
 // How far below the viewport a card starts asking for its comments, so they are there by
 // the time it scrolls into view.
 const NEAR_VIEWPORT = '300px';
-
-function stripMarkdown(text: string) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '$1')    // **bold**
-    .replace(/\*(.+?)\*/g, '$1')         // *italic*
-    .replace(/__(.+?)__/g, '$1')         // __bold__
-    .replace(/_(.+?)_/g, '$1')           // _italic_
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // [link](url) → link
-    .replace(/`(.+?)`/g, '$1')           // `code`
-    .replace(/#{1,6}\s/g, '')            // ## headers (not #tags)
-    .replace(/\n+/g, ' ')               // newlines → space
-    .trim();
-}
 
 /** Whether the element has come near the viewport once; it stays true after. */
 function useHasNearedViewport() {
@@ -109,7 +97,7 @@ export const CommentStrip = ({ memoId, commentCount }: CommentStripProps) => {
                   </AvatarFallback>
                 </Avatar>
                 <span className="shrink-0 font-medium text-foreground">{comment.author.name}</span>
-                <span className="truncate">{stripMarkdown(comment.content)}</span>
+                <span className="truncate">{toPlainText(comment.content)}</span>
               </Link>
             </li>
           ))}

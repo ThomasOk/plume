@@ -1,7 +1,7 @@
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
-import { visit } from 'unist-util-visit';
+import { SKIP, visit } from 'unist-util-visit';
 
 interface TaskInfo {
   line: number;
@@ -22,6 +22,38 @@ export function extractTasksFromAst(markdown: string): TaskInfo[] {
   });
 
   return tasks;
+}
+
+// The words of a run of inline content, as they read: emphasis, links and code give up their
+// text, an image gives up nothing, a line break becomes a space.
+function inlineText(node: any): string {
+  if (node.type === 'image' || node.type === 'imageReference') return '';
+  if (node.type === 'break') return ' ';
+  if (typeof node.value === 'string') return node.value;
+  return (node.children ?? []).map(inlineText).join('');
+}
+
+/**
+ * The words of a Markdown text on one line, without the Markdown: each block (paragraph,
+ * heading, list item, quote, code block, table cell) gives its text, and the blocks are
+ * joined by a space. Hashtags stay: they are words of the text.
+ */
+export function toPlainText(markdown: string): string {
+  const blocks: string[] = [];
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown);
+
+  visit(tree, (node: any) => {
+    if (node.type === 'code') {
+      blocks.push(node.value);
+      return SKIP;
+    }
+    if (node.type === 'paragraph' || node.type === 'heading' || node.type === 'tableCell') {
+      blocks.push(inlineText(node));
+      return SKIP;
+    }
+  });
+
+  return blocks.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 export function toggleTaskAtLine(
