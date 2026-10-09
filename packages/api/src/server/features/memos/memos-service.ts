@@ -1,4 +1,4 @@
-import { desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
+import { asc, desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
 import { memo, user, attachment, spaceMember } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
@@ -302,7 +302,7 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
 
   // The comments themselves take no scope: they carry no audience of their own, so the
   // parent's readability, resolved just above, is the whole answer for all of them.
-  const rows = await db
+  const query = db
     .select({
       id: memo.id,
       userId: memo.userId,
@@ -321,7 +321,13 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
     .from(memo)
     .leftJoin(user, eq(memo.userId, user.id))
     .where(eq(memo.parentId, input.memoId))
-    .orderBy(desc(memo.createdAt));
+    .$dynamic();
+
+  // Either way the comments read oldest first, as a conversation does: a limit takes the
+  // most recent ones newest first, then turns them back.
+  const rows = input.limit === undefined
+    ? await query.orderBy(asc(memo.createdAt))
+    : (await query.orderBy(desc(memo.createdAt)).limit(input.limit)).reverse();
 
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
 

@@ -8,7 +8,8 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 
-export async function renderWithRouter(component: React.ReactNode) {
+/** Renders the component at `/`, or at `path` when its hash matters, as `/#comment-1`. */
+export async function renderWithRouter(component: React.ReactNode, { path = '/' } = {}) {
   const rootRoute = createRootRoute({
     component: () => <Outlet />,
   });
@@ -21,7 +22,7 @@ export async function renderWithRouter(component: React.ReactNode) {
 
   const router = createRouter({
     routeTree: rootRoute.addChildren([testRoute]),
-    history: createMemoryHistory(),
+    history: createMemoryHistory({ initialEntries: [path] }),
     defaultPendingMinMs: 0,
   });
 
