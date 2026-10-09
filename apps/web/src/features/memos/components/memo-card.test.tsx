@@ -379,6 +379,20 @@ describe('MemoCard, the strip of its latest comments', () => {
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
+  it('holds the room of the lines it will show before its comments arrive, so nothing jumps', async () => {
+    await renderWithRouter(<MemoCard memo={commented(5)} />);
+    expect(screen.getAllByTestId('comment-placeholder')).toHaveLength(3);
+
+    act(() => nearViewport());
+    expect(screen.queryByTestId('comment-placeholder')).not.toBeInTheDocument();
+  });
+
+  it('holds no more room than the memo has comments', async () => {
+    await renderWithRouter(<MemoCard memo={commented(2)} />);
+
+    expect(screen.getAllByTestId('comment-placeholder')).toHaveLength(2);
+  });
+
   it('shows the latest comments, each leading to its own anchor on the memo’s page', async () => {
     await renderWithRouter(<MemoCard memo={commented(5)} />);
     act(() => nearViewport());

@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { useLatestComments } from '../hooks';
+import { LATEST_COMMENTS_SHOWN, useLatestComments } from '../hooks';
 
 interface CommentStripProps {
   memoId: string;
@@ -52,7 +52,10 @@ function useHasNearedViewport() {
  */
 export const CommentStrip = ({ memoId, commentCount }: CommentStripProps) => {
   const { ref, hasNeared } = useHasNearedViewport();
-  const { data: comments = [] } = useLatestComments(memoId, { enabled: hasNeared });
+  const { data: comments, isError } = useLatestComments(memoId, { enabled: hasNeared });
+  // The strip knows how many lines it will show before it has them: holding their room
+  // keeps the list below from jumping when they arrive, however fast the reader scrolls.
+  const placeholders = Math.min(commentCount, LATEST_COMMENTS_SHOWN);
 
   return (
     <section
@@ -74,7 +77,22 @@ export const CommentStrip = ({ memoId, commentCount }: CommentStripProps) => {
         </Link>
       </div>
 
-      {comments.length > 0 && (
+      {!comments && !isError && (
+        <ul aria-hidden="true" className="mt-1.5 space-y-0.5">
+          {Array.from({ length: placeholders }, (_, index) => (
+            <li
+              key={index}
+              data-testid="comment-placeholder"
+              className="flex items-center gap-1.5 py-1 motion-safe:animate-pulse"
+            >
+              <div className="size-4 shrink-0 rounded-full bg-muted" />
+              <div className="h-3 w-1/2 rounded bg-muted" />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {comments && comments.length > 0 && (
         <ul className="mt-1.5 space-y-0.5">
           {comments.map((comment) => (
             <li key={comment.id}>
