@@ -186,12 +186,12 @@ describe('CompactComment, reacting to a comment', () => {
     const user = userEvent.setup();
 
     const row = within(reactionRow()!);
-    expect(row.getByRole('button', { name: '👍 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(row.getByRole('button', { name: 'You and Bob reacted with 👍' })).toHaveAttribute('aria-pressed', 'true');
 
-    await user.click(row.getByRole('button', { name: '👍 2' }));
+    await user.click(row.getByRole('button', { name: 'You and Bob reacted with 👍' }));
     expect(unreact).toHaveBeenCalledWith({ memoId: 'c-1' });
 
-    await user.click(row.getByRole('button', { name: '🎉 1' }));
+    await user.click(row.getByRole('button', { name: 'Bob reacted with 🎉' }));
     expect(react).toHaveBeenCalledWith({ memoId: 'c-1', emoji: '🎉' });
   });
 
