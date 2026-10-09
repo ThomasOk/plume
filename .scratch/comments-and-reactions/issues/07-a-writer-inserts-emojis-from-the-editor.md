@@ -16,11 +16,11 @@ See the spec, sections *Emojis in the editor* and *Interface — emojis in the e
 
 **Status:** ready-for-agent
 
-- [ ] The button is present when writing a memo, writing a comment, editing either, and in focus mode (seam 2, memo form).
-- [ ] A pick inserts the emoji at the caret in the middle of existing text, and replaces a selection (seam 2, with a test double for the picker).
-- [ ] The picker stays open after a pick; closing it returns focus to the text field (seam 2).
-- [ ] An inserted emoji is part of what is saved and of the draft.
-- [ ] The picker is absent from the initial bundle and loads on first use.
-- [ ] Opening the picker makes no request to a third-party domain.
+- [x] The button is present when writing a memo, writing a comment, editing either, and in focus mode (seam 2, memo form).
+- [x] A pick inserts the emoji at the caret in the middle of existing text, and replaces a selection (seam 2, with a test double for the picker).
+- [x] The picker stays open after a pick; closing it returns focus to the text field (seam 2).
+- [x] An inserted emoji is part of what is saved and of the draft.
+- [x] The picker is absent from the initial bundle and loads on first use.
+- [x] Opening the picker makes no request to a third-party domain.
 - [ ] The picker is usable with the keyboard alone.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
