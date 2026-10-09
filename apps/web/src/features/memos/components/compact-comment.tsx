@@ -59,7 +59,7 @@ export const CompactComment = ({ comment }: CompactCommentProps) => {
             {comment.attachments.length > 0 && (
               <AttachmentList savedAttachments={comment.attachments} />
             )}
-            <ReactionRow memoId={comment.id} reactions={comment.reactions} canReact={!!user} />
+            <ReactionRow memoId={comment.id} reactions={comment.reactions} readerId={user?.id ?? null} />
           </MemoContext.Provider>
         )}
       </div>

@@ -430,6 +430,8 @@ describe('MemoCard, reacting to a memo', () => {
   };
   const partyByAlice = { emoji: '🎉', count: 1, reactedByMe: false, reactors: [{ id: ALICE, name: 'Alice' }] };
 
+  const people = (...names: string[]) => names.map((name) => ({ id: name.toLowerCase(), name }));
+
   const reactionRow = () => screen.queryByRole('group', { name: 'Reactions' });
 
   beforeEach(() => {
@@ -449,8 +451,8 @@ describe('MemoCard, reacting to a memo', () => {
     await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
 
     const row = within(reactionRow()!);
-    expect(row.getByRole('button', { name: '👍 2' })).toHaveAttribute('aria-pressed', 'true');
-    expect(row.getByRole('button', { name: '🎉 1' })).toHaveAttribute('aria-pressed', 'false');
+    expect(row.getByRole('button', { name: 'You and Alice reacted with 👍' })).toHaveAttribute('aria-pressed', 'true');
+    expect(row.getByRole('button', { name: 'Alice reacted with 🎉' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('takes the reaction back on the reader’s own pill, and moves it on another', async () => {
@@ -458,10 +460,10 @@ describe('MemoCard, reacting to a memo', () => {
     await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole('button', { name: '👍 2' }));
+    await user.click(screen.getByRole('button', { name: 'You and Alice reacted with 👍' }));
     expect(unreact).toHaveBeenCalledWith({ memoId: 'memo-1' });
 
-    await user.click(screen.getByRole('button', { name: '🎉 1' }));
+    await user.click(screen.getByRole('button', { name: 'Alice reacted with 🎉' }));
     expect(react).toHaveBeenCalledWith({ memoId: 'memo-1', emoji: '🎉' });
   });
 
@@ -500,6 +502,75 @@ describe('MemoCard, reacting to a memo', () => {
 
     expect(unreact).toHaveBeenCalledWith({ memoId: 'memo-1' });
     expect(react).not.toHaveBeenCalled();
+  });
+
+  it('names the reader first, as “You”, and four reactors at most', async () => {
+    signedIn({ isOperator: false });
+    const reactors = [...people('Alice', 'Carol', 'Dan', 'Erin', 'Frank'), { id: BOB, name: 'Bob' }];
+    await renderWithRouter(<MemoCard memo={reacted([{ emoji: '👍', count: 6, reactedByMe: true, reactors }])} />);
+
+    expect(screen.getByRole('button', { name: 'You, Alice, Carol, Dan and 2 others reacted with 👍' })).toBeInTheDocument();
+  });
+
+  it('names only others when the reader did not react, and counts the rest past four', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(
+      <MemoCard
+        memo={reacted([
+          { emoji: '❤️', count: 5, reactedByMe: false, reactors: people('Alice', 'Carol', 'Dan', 'Erin', 'Frank') },
+          { emoji: '🎉', count: 4, reactedByMe: false, reactors: people('Alice', 'Carol', 'Dan', 'Erin') },
+        ])}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice, Carol, Dan, Erin and 1 other reacted with ❤️' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alice, Carol, Dan and Erin reacted with 🎉' })).toBeInTheDocument();
+  });
+
+  it('names who reacted when a pill is hovered or focused', async () => {
+    signedIn({ isOperator: false });
+    await renderWithRouter(<MemoCard memo={reacted([thumbsUpByAliceAndMe, partyByAlice])} />);
+    const user = userEvent.setup();
+
+    await user.hover(screen.getByRole('button', { name: 'You and Alice reacted with 👍' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('You and Alice reacted with 👍');
+    await user.unhover(screen.getByRole('button', { name: 'You and Alice reacted with 👍' }));
+
+    act(() => screen.getByRole('button', { name: 'Alice reacted with 🎉' }).focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Alice reacted with 🎉');
+  });
+
+  it('lists everyone who reacted on a long press by touch, while a tap still reacts', async () => {
+    signedIn({ isOperator: false });
+    const reactors = people('Alice', 'Carol', 'Dan', 'Erin', 'Frank');
+    await renderWithRouter(<MemoCard memo={reacted([{ emoji: '❤️', count: 5, reactedByMe: false, reactors }])} />);
+    const user = userEvent.setup();
+    const pill = screen.getByRole('button', { name: /reacted with ❤️/ });
+
+    await user.pointer({ keys: '[TouchA>]', target: pill });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
+    await user.pointer({ keys: '[/TouchA]', target: pill });
+
+    const list = within(await screen.findByRole('dialog', { name: 'Reacted with ❤️' }));
+    expect(list.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Alice',
+      'Carol',
+      'Dan',
+      'Erin',
+      'Frank',
+    ]);
+    expect(react).not.toHaveBeenCalled();
+
+    await user.keyboard('{Escape}');
+    await user.pointer({ keys: '[TouchA]', target: pill });
+    expect(react).toHaveBeenCalledWith({ memoId: 'memo-1', emoji: '❤️' });
+  });
+
+  it('tells an anonymous reader who reacted', async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null } as any);
+    await renderWithRouter(<MemoCard memo={reacted([partyByAlice])} />);
+
+    expect(screen.getByRole('img', { name: 'Alice reacted with 🎉' })).toBeInTheDocument();
   });
 
   it('shows an anonymous reader the pills, not as buttons, and offers no way to react', async () => {

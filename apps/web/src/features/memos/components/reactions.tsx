@@ -1,7 +1,16 @@
 import { REACTION_EMOJIS, type ReactionEmoji } from '@repo/api/schemas';
-import { Popover, PopoverContent, PopoverTrigger } from '@repo/ui/components/popover';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@repo/ui/components/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@repo/ui/components/tooltip';
 import { cn } from '@repo/ui/lib/utils';
-import { useState, type ReactElement } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type RefObject,
+  type ReactElement,
+} from 'react';
 import { MdOutlineAddReaction } from 'react-icons/md';
 import type { ReactionSummary } from '@/lib/types';
 import { useReactToMemo, useUnreactToMemo } from '../hooks';
@@ -87,69 +96,190 @@ export const ReactButton = ({ memoId, reactions }: ReactButtonProps) => (
 interface ReactionRowProps {
   memoId: string;
   reactions: ReactionSummary[];
-  /** Whether the reader may react: signed in. Otherwise the pills only tell. */
-  canReact: boolean;
+  /** The signed-in reader, who may react, or null for an anonymous one, whom the pills only tell. */
+  readerId: string | null;
 }
 
-const PillContent = ({ emoji, count }: Pick<ReactionSummary, 'emoji' | 'count'>) => (
-  <>
-    <span>{emoji}</span>
-    <span className="text-xs text-muted-foreground">{count}</span>
-  </>
-);
+/** How many reactors a pill's sentence names before it counts the rest. */
+const NAMED_REACTORS = 4;
+
+/** Who chose an emoji, the reader first as "You", so they find themselves without reading on. */
+const reactorsReaderFirst = ({ reactors }: ReactionSummary, readerId: string | null) => [
+  ...reactors.filter(({ id }) => id === readerId).map(({ id }) => ({ id, name: 'You' })),
+  ...reactors.filter(({ id }) => id !== readerId),
+];
+
+/** "You, Alice and 3 others reacted with 👍": four names at most, then how many more. */
+const whoReacted = (reaction: ReactionSummary, readerId: string | null) => {
+  const named = reactorsReaderFirst(reaction, readerId)
+    .slice(0, NAMED_REACTORS)
+    .map(({ name }) => name);
+  const others = reaction.count - named.length;
+  const parts = others > 0 ? [...named, others === 1 ? '1 other' : `${others} others`] : named;
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
+  return `${list} reacted with ${reaction.emoji}`;
+};
+
+/** How long a touch must rest on a pill to list its reactors rather than react. */
+const LONG_PRESS_MS = 500;
+/** How far a finger may drift during a long press before it counts as a drag, in pixels. */
+const LONG_PRESS_SLOP = 10;
+
+/**
+ * A long press by touch, where there is no hover to show a tooltip. `isLongPress` tells the
+ * click that ends a press whether it was one, so lifting the finger does not also react.
+ */
+const useLongPress = (onLongPress: () => void) => {
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const longPressed = useRef(false);
+  const cancel = () => {
+    clearTimeout(timer.current);
+    start.current = null;
+  };
+
+  useEffect(() => cancel, []);
+
+  return {
+    handlers: {
+      onPointerDown: (event: PointerEvent) => {
+        longPressed.current = false;
+        if (event.pointerType !== 'touch') return;
+        start.current = { x: event.clientX, y: event.clientY };
+        timer.current = setTimeout(() => {
+          longPressed.current = true;
+          onLongPress();
+        }, LONG_PRESS_MS);
+      },
+      onPointerMove: (event: PointerEvent) => {
+        if (!start.current) return;
+        const drift = Math.hypot(event.clientX - start.current.x, event.clientY - start.current.y);
+        if (drift > LONG_PRESS_SLOP) cancel();
+      },
+      onPointerUp: cancel,
+      onPointerLeave: cancel,
+      onPointerCancel: cancel,
+      // The browser's own long-press menu would cover the list, and may come before it.
+      onContextMenu: (event: MouseEvent) => {
+        if (start.current || longPressed.current) event.preventDefault();
+      },
+    },
+    isLongPress: () => longPressed.current,
+  };
+};
+
+interface ReactionPillProps {
+  memoId: string;
+  reaction: ReactionSummary;
+  readerId: string | null;
+}
 
 const pillClassName =
-  'inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums transition-[background-color,border-color,transform] duration-150 ease-out';
+  'inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none [-webkit-touch-callout:none] transition-[background-color,border-color,transform] duration-150 ease-out';
+
+/**
+ * One emoji and how many chose it. Hovering or focusing it names who did; on touch, a long
+ * press lists them all while a tap keeps reacting. For an anonymous reader it only tells.
+ */
+const ReactionPill = ({ memoId, reaction, readerId }: ReactionPillProps) => {
+  const { emoji, count, reactedByMe } = reaction;
+  const setReaction = useSetReaction(memoId);
+  const [listOpen, setListOpen] = useState(false);
+  const longPress = useLongPress(() => setListOpen(true));
+  const label = whoReacted(reaction, readerId);
+  const pill = useRef<HTMLElement>(null);
+
+  const content = (
+    <>
+      <span>{emoji}</span>
+      <span className="text-xs text-muted-foreground">{count}</span>
+    </>
+  );
+
+  return (
+    <Popover open={listOpen} onOpenChange={setListOpen}>
+      <Tooltip>
+        <PopoverAnchor asChild>
+          <TooltipTrigger asChild>
+            {readerId !== null ? (
+              <button
+                ref={pill as RefObject<HTMLButtonElement>}
+                type="button"
+                aria-label={label}
+                aria-pressed={reactedByMe}
+                {...longPress.handlers}
+                onClick={(event) => {
+                  if (longPress.isLongPress()) return;
+                  // The second click of a double click would take back what the first set: a
+                  // stutter should leave the reaction meant, not none.
+                  if (event.detail > 1) return;
+                  setReaction(reactedByMe ? null : emoji);
+                }}
+                className={cn(
+                  pillClassName,
+                  'hover:bg-accent active:scale-95',
+                  reactedByMe && 'border-primary/50 bg-primary/10 hover:bg-primary/20',
+                )}
+              >
+                {content}
+              </button>
+            ) : (
+              <span ref={pill} role="img" aria-label={label} tabIndex={0} {...longPress.handlers} className={pillClassName}>
+                {content}
+              </span>
+            )}
+          </TooltipTrigger>
+        </PopoverAnchor>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        aria-label={`Reacted with ${emoji}`}
+        // Lifting the finger that opened the list lands on the pill: that is no reason to close it.
+        onInteractOutside={(event) => {
+          if (pill.current?.contains(event.target as Node)) event.preventDefault();
+        }}
+        // Focus sent back to the pill would open its tooltip over the list just closed.
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        className="w-auto min-w-40 max-w-64 p-2"
+      >
+        <p className="px-1 pb-1 text-xs text-muted-foreground">Reacted with {emoji}</p>
+        <ul className="max-h-60 overflow-y-auto text-sm">
+          {reactorsReaderFirst(reaction, readerId).map(({ id, name }) => (
+            <li key={id} className="px-1 py-0.5 truncate">
+              {name}
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 /**
  * The reactions a memo received, one pill per emoji with how many chose it, under its body.
  * Nothing at all when it has none, so a memo nobody reacted to stays quiet.
  */
-export const ReactionRow = ({ memoId, reactions, canReact }: ReactionRowProps) => {
-  const setReaction = useSetReaction(memoId);
-
+export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) => {
   if (reactions.length === 0) return null;
 
   return (
-    <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5 mt-3">
-      {reactions.map(({ emoji, count, reactedByMe }) =>
-        canReact ? (
-          <button
-            key={emoji}
-            type="button"
-            aria-label={`${emoji} ${count}`}
-            aria-pressed={reactedByMe}
-            onClick={(event) => {
-              // The second click of a double click would take back what the first set: a
-              // stutter should leave the reaction meant, not none.
-              if (event.detail > 1) return;
-              setReaction(reactedByMe ? null : emoji);
-            }}
-            className={cn(
-              pillClassName,
-              'hover:bg-accent active:scale-95',
-              reactedByMe && 'border-primary/50 bg-primary/10 hover:bg-primary/20',
-            )}
-          >
-            <PillContent emoji={emoji} count={count} />
-          </button>
-        ) : (
-          <span key={emoji} className={pillClassName}>
-            <PillContent emoji={emoji} count={count} />
-          </span>
-        ),
-      )}
-      {canReact && (
-        <ReactionPicker memoId={memoId} reactions={reactions}>
-          <button
-            type="button"
-            aria-label="Add a reaction"
-            className="inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
-          >
-            <MdOutlineAddReaction className="size-4" />
-          </button>
-        </ReactionPicker>
-      )}
-    </div>
+    <TooltipProvider>
+      <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5 mt-3">
+        {reactions.map((reaction) => (
+          <ReactionPill key={reaction.emoji} memoId={memoId} reaction={reaction} readerId={readerId} />
+        ))}
+        {readerId !== null && (
+          <ReactionPicker memoId={memoId} reactions={reactions}>
+            <button
+              type="button"
+              aria-label="Add a reaction"
+              className="inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
+            >
+              <MdOutlineAddReaction className="size-4" />
+            </button>
+          </ReactionPicker>
+        )}
+      </div>
+    </TooltipProvider>
   );
 };

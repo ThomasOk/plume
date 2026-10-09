@@ -89,7 +89,7 @@ export const MemoCard = ({
                 {savedAttachments.length > 0 && (
                   <AttachmentList savedAttachments={savedAttachments} />
                 )}
-                <ReactionRow memoId={memo.id} reactions={memo.reactions} canReact={!!user} />
+                <ReactionRow memoId={memo.id} reactions={memo.reactions} readerId={user?.id ?? null} />
               </MemoContext.Provider>
             )}
           </div>
