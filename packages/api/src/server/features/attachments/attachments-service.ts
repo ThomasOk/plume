@@ -71,15 +71,16 @@ export async function confirmUpload(
   userId: string,
   input: ConfirmUploadInput,
 ) {
-  // A file is attached to a memo by writing that memo, which only its author does. Without
-  // this, anyone holding a memo id could put a file into it — in a space, a file every
-  // member would then be served under someone else's memo. Any other memo answers like a
-  // missing one.
+  // A file is attached to a memo by writing that memo, which only its author does, and only
+  // while they may still read it. Without this, anyone holding a memo id could put a file
+  // into it — in a space, a file every member would then be served under someone else's
+  // memo — and an author who left the space, or whose comment sits under a memo turned
+  // private, could keep adding to it. Any other memo answers like a missing one.
   if (input.memoId) {
     const [ownMemo] = await db
       .select({ id: memo.id })
       .from(memo)
-      .where(and(eq(memo.id, input.memoId), eq(memo.userId, userId)))
+      .where(and(eq(memo.id, input.memoId), eq(memo.userId, userId), readableMemoCondition(userId)))
       .limit(1);
     if (!ownMemo) throw new MemoNotFoundError();
   }
