@@ -2,8 +2,6 @@
 
 Plume is a place to write **short notes in Markdown**, called memos. Keep them to yourself, share them with a group, or publish them here, on Explore.
 
-It is also a portfolio project: a full-stack TypeScript app built the way I would build one at work, with tests, migrations, architecture decision records and a real deployment.
-
 The memos featured below are a quick tour:
 
 1. **What you can do** in Plume
