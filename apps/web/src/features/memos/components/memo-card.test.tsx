@@ -71,6 +71,7 @@ const spaceMemo = (authorId: string, pinnedAt: Date | null = null): Memo => ({
   commentCount: 0,
   author: { name: 'Alice', image: null },
   attachments: [],
+  reactions: [],
 } as unknown as Memo);
 
 const signedInAs = (userId: string, role: 'admin' | 'member') => {
@@ -197,6 +198,7 @@ const publicMemo = ({ featuredAt = null, visibility = 'public' }: { featuredAt?:
   commentCount: 0,
   author: { name: 'Alice', image: null },
   attachments: [],
+  reactions: [],
 } as unknown as Memo);
 
 const signedIn = ({ isOperator }: { isOperator: boolean }) => {

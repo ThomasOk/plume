@@ -237,3 +237,78 @@ describe('reactions over time', () => {
     expect(await db.select().from(outbox)).toEqual([]);
   });
 });
+
+// A comment is a memo (ADR 0001): a reader reacts to it as to any memo, and whoever may read
+// its parent may react to it.
+describe('reacting to a comment', () => {
+  const commentOn = (author: { id: string }, parentId: string, content = 'A comment') =>
+    as(author).memos.create({ content, parentId });
+
+  it('lets a reader of the parent react to its comment, the summary carried by listComments', async () => {
+    const { id: parentId } = await writePublic(alice);
+    const comment = await commentOn(bob, parentId);
+
+    await as(carol).memos.react({ memoId: comment.id, emoji: '🙏' });
+
+    const [read] = await as(carol).memos.listComments({ memoId: parentId });
+    expect(read!.reactions).toEqual([
+      { emoji: '🙏', count: 1, reactedByMe: true, reactors: [{ id: carol.id, name: 'Carol' }] },
+    ]);
+  });
+
+  it('lets a member react to a comment in their space', async () => {
+    const { id: parentId } = await as(alice).memos.space.create({ spaceId: club.id, content: 'Menu' });
+    const comment = await commentOn(bob, parentId);
+
+    await as(carol).memos.react({ memoId: comment.id, emoji: '👍' });
+
+    const [read] = await as(alice).memos.listComments({ memoId: parentId });
+    expect(read!.reactions.map(({ emoji, count }) => ({ emoji, count }))).toEqual([{ emoji: '👍', count: 1 }]);
+  });
+
+  it('answers NOT_FOUND on a comment whose parent the caller cannot read, to react and to unreact', async () => {
+    const privateMemo = await as(alice).memos.create({ content: 'Diary', visibility: 'private' });
+    const clubMemo = await as(alice).memos.space.create({ spaceId: club.id, content: 'Menu' });
+    const onPrivate = await commentOn(alice, privateMemo.id);
+    const onClub = await commentOn(bob, clubMemo.id);
+
+    for (const memoId of [onPrivate.id, onClub.id]) {
+      expect(await refusal(as(outsider).memos.react({ memoId, emoji: '👍' }))).toBe('NOT_FOUND');
+      expect(await refusal(as(outsider).memos.unreact({ memoId }))).toBe('NOT_FOUND');
+    }
+  });
+
+  it('answers NOT_FOUND to the author of a comment once its parent turns private', async () => {
+    const { id: parentId } = await writePublic(alice);
+    const comment = await commentOn(bob, parentId);
+
+    await as(alice).memos.update({ id: parentId, content: 'A memo', visibility: 'private' });
+
+    expect(await refusal(as(bob).memos.react({ memoId: comment.id, emoji: '👍' }))).toBe('NOT_FOUND');
+    expect(await refusal(as(bob).memos.unreact({ memoId: comment.id }))).toBe('NOT_FOUND');
+  });
+
+  it('shows an anonymous reader the summary on each comment, none of it theirs', async () => {
+    const { id: parentId } = await writePublic(alice);
+    const first = await commentOn(bob, parentId, 'First');
+    await commentOn(carol, parentId, 'Second');
+    await as(alice).memos.react({ memoId: first.id, emoji: '❤️' });
+
+    const comments = await anonymous().memos.listComments({ memoId: parentId });
+
+    expect(comments.map(({ content, reactions }) => ({ content, reactions }))).toEqual([
+      { content: 'First', reactions: [{ emoji: '❤️', count: 1, reactedByMe: false, reactors: [{ id: alice.id, name: 'Alice' }] }] },
+      { content: 'Second', reactions: [] },
+    ]);
+  });
+
+  it('removes the comments’ reactions with their deleted memo', async () => {
+    const { id: parentId } = await writePublic(alice);
+    const comment = await commentOn(bob, parentId);
+    await as(carol).memos.react({ memoId: comment.id, emoji: '👍' });
+
+    await as(alice).memos.delete({ id: parentId });
+
+    expect(await db.select().from(reaction)).toEqual([]);
+  });
+});

@@ -340,12 +340,15 @@ export async function listMemoComments(db: DatabaseInstance, storage: StorageSer
     ? await query.orderBy(asc(memo.createdAt))
     : (await query.orderBy(desc(memo.createdAt)).limit(input.limit)).reverse();
 
-  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, rows.map((r) => r.id));
+  const commentIds = rows.map((r) => r.id);
+  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, commentIds);
+  const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, commentIds);
 
   return rows.map(({ authorName, authorImage, ...memoData }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
+    reactions: reactionsByMemoId.get(memoData.id) ?? [],
   }));
 }
 

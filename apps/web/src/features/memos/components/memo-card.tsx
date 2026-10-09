@@ -40,8 +40,6 @@ export const MemoCard = ({
   const { isEditing } = editing;
   const { user } = useAuth();
   const savedAttachments = memo.attachments;
-  // A comment read as a conversation carries no reactions yet.
-  const reactions = 'reactions' in memo ? memo.reactions : null;
   const hasCommentStrip =
     'commentCount' in memo && memo.commentCount > 0 && !hideCommentStrip;
 
@@ -68,8 +66,7 @@ export const MemoCard = ({
                 isEditing ? (
                   <EnterFocusModeButton onClick={editing.enterFocusMode} />
                 ) : (
-                  user &&
-                  reactions && <ReactButton memoId={memo.id} reactions={reactions} />
+                  user && <ReactButton memoId={memo.id} reactions={memo.reactions} />
                 )
               }
               menu={
@@ -92,9 +89,7 @@ export const MemoCard = ({
                 {savedAttachments.length > 0 && (
                   <AttachmentList savedAttachments={savedAttachments} />
                 )}
-                {reactions && (
-                  <ReactionRow memoId={memo.id} reactions={reactions} canReact={!!user} />
-                )}
+                <ReactionRow memoId={memo.id} reactions={memo.reactions} canReact={!!user} />
               </MemoContext.Provider>
             )}
           </div>

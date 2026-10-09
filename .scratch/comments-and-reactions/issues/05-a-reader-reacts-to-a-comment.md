@@ -12,9 +12,9 @@ memo removes its comments' reactions with them. See the spec, sections *Reacting
 
 **Status:** ready-for-agent
 
-- [ ] A reader reacts to a comment of a memo they can read; a caller who cannot read the parent gets `NOT_FOUND` (seam 1).
-- [ ] `listComments` carries the summary on each comment, for signed-in and anonymous readers (seam 1).
-- [ ] Deleting a memo removes its comments' reactions (seam 1).
-- [ ] The compact comment shows the react button and the row of pills with the same behaviour as a memo (seam 2).
-- [ ] Reacting to a comment updates the comment section at once, and rolls back on failure.
-- [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.
+- [x] A reader reacts to a comment of a memo they can read; a caller who cannot read the parent gets `NOT_FOUND` (seam 1).
+- [x] `listComments` carries the summary on each comment, for signed-in and anonymous readers (seam 1).
+- [x] Deleting a memo removes its comments' reactions (seam 1).
+- [x] The compact comment shows the react button and the row of pills with the same behaviour as a memo (seam 2).
+- [x] Reacting to a comment updates the comment section at once, and rolls back on failure.
+- [x] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass.

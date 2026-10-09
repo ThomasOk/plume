@@ -1,11 +1,13 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Comment } from '@/lib/types';
 import { CompactComment } from './compact-comment';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSpace } from '@/features/spaces/hooks/use-space';
 import { renderWithRouter } from '@/tests/render-with-router';
+
+const { react, unreact } = vi.hoisted(() => ({ react: vi.fn(), unreact: vi.fn() }));
 
 vi.mock('../hooks', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../hooks')>()),
@@ -16,6 +18,8 @@ vi.mock('../hooks', async (importOriginal) => ({
   useUnpinMemo: () => ({ mutate: vi.fn(), isPending: false }),
   useFeatureMemo: () => ({ mutate: vi.fn(), isPending: false }),
   useUnfeatureMemo: () => ({ mutate: vi.fn(), isPending: false }),
+  useReactToMemo: () => ({ mutate: react, isPending: false }),
+  useUnreactToMemo: () => ({ mutate: unreact, isPending: false }),
   useMemoTags: () => ({ data: [] }),
 }));
 vi.mock('@/features/auth/hooks/use-auth');
@@ -41,7 +45,8 @@ const BOB = 'bob';
 // Bob's comment on a memo, carrying its memo's visibility and space as a comment does.
 const bobsComment = ({
   visibility = 'space',
-}: { visibility?: 'space' | 'public' | 'private' } = {}): Comment =>
+  reactions = [],
+}: { visibility?: 'space' | 'public' | 'private'; reactions?: unknown[] } = {}): Comment =>
   ({
     id: 'c-1',
     userId: BOB,
@@ -56,6 +61,7 @@ const bobsComment = ({
     updatedAt: new Date(),
     author: { name: 'Bob', image: null },
     attachments: [],
+    reactions,
   }) as unknown as Comment;
 
 const signedInAs = (
@@ -148,5 +154,69 @@ describe('CompactComment', () => {
     await renderWithRouter(<CompactComment comment={bobsComment({ visibility: 'public' })} />);
 
     expect(screen.queryByRole('button', { name: 'Memo actions' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CompactComment, reacting to a comment', () => {
+  const thumbsUpByBobAndMe = {
+    emoji: '👍',
+    count: 2,
+    reactedByMe: true,
+    reactors: [{ id: ALICE, name: 'Alice' }, { id: BOB, name: 'Bob' }],
+  };
+  const partyByBob = { emoji: '🎉', count: 1, reactedByMe: false, reactors: [{ id: BOB, name: 'Bob' }] };
+
+  const reactionRow = () => screen.queryByRole('group', { name: 'Reactions' });
+
+  beforeEach(() => {
+    react.mockClear();
+    unreact.mockClear();
+  });
+
+  it('shows no row on a comment nobody reacted to', async () => {
+    signedInAs(ALICE);
+    await renderWithRouter(<CompactComment comment={bobsComment()} />);
+
+    expect(reactionRow()).not.toBeInTheDocument();
+  });
+
+  it('shows one pill per emoji under the text, takes back the reader’s own and moves to another', async () => {
+    signedInAs(ALICE);
+    await renderWithRouter(<CompactComment comment={bobsComment({ reactions: [thumbsUpByBobAndMe, partyByBob] })} />);
+    const user = userEvent.setup();
+
+    const row = within(reactionRow()!);
+    expect(row.getByRole('button', { name: '👍 2' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(row.getByRole('button', { name: '👍 2' }));
+    expect(unreact).toHaveBeenCalledWith({ memoId: 'c-1' });
+
+    await user.click(row.getByRole('button', { name: '🎉 1' }));
+    expect(react).toHaveBeenCalledWith({ memoId: 'c-1', emoji: '🎉' });
+  });
+
+  it('reacts from the header’s button, the picker closing on the pick', async () => {
+    signedInAs(ALICE);
+    await renderWithRouter(<CompactComment comment={bobsComment()} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '💡' }));
+
+    expect(react).toHaveBeenCalledWith({ memoId: 'c-1', emoji: '💡' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows an anonymous reader the pills, not as buttons, and offers no way to react', async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null } as any);
+    vi.mocked(useSpace).mockReturnValue({ data: undefined } as any);
+    await renderWithRouter(
+      <CompactComment comment={bobsComment({ visibility: 'public', reactions: [thumbsUpByBobAndMe] })} />,
+    );
+
+    const row = within(reactionRow()!);
+    expect(row.getByText('👍')).toBeInTheDocument();
+    expect(row.queryAllByRole('button')).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'React' })).not.toBeInTheDocument();
   });
 });
