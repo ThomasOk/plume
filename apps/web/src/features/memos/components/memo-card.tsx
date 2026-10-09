@@ -1,91 +1,12 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  updateMemoSchema,
-  MAX_MEMO_CHARACTERS,
-  mayDeleteMemo,
-  mayDeletePublicMemo,
-  mayEditMemo,
-  mayFeatureMemo,
-  mayPinMemo,
-} from '@repo/api/schemas';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@repo/ui/components/alert-dialog';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@repo/ui/components/avatar';
-import { Button } from '@repo/ui/components/button';
 import { Card, CardContent } from '@repo/ui/components/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@repo/ui/components/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@repo/ui/components/tooltip';
-import { Link } from '@tanstack/react-router';
-import { formatDistanceToNow, format } from 'date-fns';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useForm } from 'react-hook-form';
-import { IoEarthOutline } from 'react-icons/io5';
-import {
-  MdAutoAwesome,
-  MdMoreVert,
-  MdOutlineCloseFullscreen,
-  MdOutlineAutoAwesome,
-  MdOutlineDelete,
-  MdOutlineEdit,
-  MdOutlineOpenInFull,
-  MdOutlineOpenInNew,
-  MdOutlinePushPin,
-  MdPushPin,
-} from 'react-icons/md';
-import { toast } from 'sonner';
 import type { Author, Comment, Memo } from '@/lib/types';
-import type z from 'zod';
 import { MemoContext } from '../contexts/memo-context';
-import type { MemoViewScope } from '../types';
-import {
-  useDeleteComment,
-  useDeleteMemo,
-  useFeatureMemo,
-  usePinMemo,
-  useUnfeatureMemo,
-  useUnpinMemo,
-  useUpdateMemo,
-} from '../hooks';
-import { AudienceSelector, SpaceAudience } from './audience-selector';
 import { CommentPreview } from './comment-preview';
-import { MemoFooter } from './memo-footer';
-import { MemoTextarea } from './memo-textarea';
-import { MoveMemoSubmenu } from './move-memo-submenu';
+import { MemoActionsMenu } from './memo-actions-menu';
+import { EnterFocusModeButton, MemoEditForm, useMemoEditing } from './memo-edit-form';
+import { MemoHeader } from './memo-header';
 import { ExpandableMarkdown } from '@/components/markdown/expandable-markdown';
-import {
-  AttachmentList,
-  useDeleteAttachment,
-  useFileUpload,
-} from '@/features/attachments';
-import { useAuth } from '@/features/auth/hooks/use-auth';
-// The hook's own module, not the feature's index: `spaces` already imports from `memos`.
-import { useSpace } from '@/features/spaces/hooks/use-space';
-import { sounds } from '@/lib/sounds';
+import { AttachmentList } from '@/features/attachments';
 
 interface MemoCardProps {
   memo: Memo | Comment;
@@ -103,7 +24,6 @@ interface MemoCardProps {
    */
   markFeatured?: boolean;
 }
-type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 
 export const MemoCard = ({
   memo,
@@ -112,546 +32,52 @@ export const MemoCard = ({
   ignorePins = false,
   markFeatured = false,
 }: MemoCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
+  const editing = useMemoEditing();
+  const { isEditing } = editing;
   const savedAttachments = memo.attachments;
-  const deleteAttachment = useDeleteAttachment();
-  const {
-    localFiles,
-    fileInputRef,
-    triggerFileSelect,
-    handleFilesSelected,
-    removeLocalFile,
-    isUploading,
-    clearAll,
-  } = useFileUpload({ memoId: memo.id });
-  const [isFocusMode, setIsFocusMode] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { isValid },
-    reset,
-    watch,
-    setValue,
-  } = useForm<UpdateMemoInput>({
-    resolver: zodResolver(updateMemoSchema),
-    defaultValues: {
-      id: memo.id,
-      content: memo.content,
-      visibility: memo.visibility,
-    },
-  });
-
-  const content = watch('content');
-  const visibility = watch('visibility') ?? 'private';
-  const charCount = content.length;
-  const isOverLimit = charCount > MAX_MEMO_CHARACTERS;
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { ref: registerRef, ...rest } = register('content');
-
-  const onInsert = (text: string, startIndex: number, length: number) => {
-    const currentValue = textareaRef.current?.value ?? '';
-    const newValue =
-      currentValue.slice(0, startIndex) +
-      text +
-      currentValue.slice(startIndex + length);
-    setValue('content', newValue);
-  };
-
-  const { user } = useAuth();
-  const isAuthor = user?.id === memo.userId;
-  // The memo names its space, so the card knows it wherever the memo is shown — in its
-  // space's list or on its own page. The role there decides what the user may do: an admin
-  // may delete another member's memo, never edit it. On the space's page, the query is
-  // already in the cache.
-  const space = useSpace(memo.spaceId ?? undefined);
-  const actor = { isAuthor, role: space.data?.role ?? null };
-  // Whether the user runs the instance, for what the operator policy decides apart.
-  const operator = { isOperator: user?.isOperator ?? false };
-  const isPublic = memo.visibility === 'public';
-  // Editing suggests the tags of the scope the memo lives in, not of the page showing it.
-  const memoScope: MemoViewScope = memo.spaceId
-    ? { kind: 'space', spaceId: memo.spaceId }
-    : { kind: 'personal' };
-  const mayEdit = mayEditMemo(actor);
-  const isComment = !!memo.parentId;
-  // An operator may also delete any memo Explore shows, or a comment on one, which carries
-  // its memo's visibility. Asked of each policy apart, as the server does (ADR 0007).
-  const mayDelete = mayDeleteMemo(actor) || mayDeletePublicMemo(operator, { isPublic });
-  const updateMemo = useUpdateMemo();
-  const deleteMemo = useDeleteMemo();
-  const deleteComment = useDeleteComment(memo.parentId ?? '');
-  const deleteAction = isComment ? deleteComment : deleteMemo;
-
-  // A pin is decided by whoever governs the memo's scope — an admin in a space, the author
-  // out of one — and a comment has no scope of its own to be pinned in.
-  const isPinned = memo.pinnedAt !== null;
-  const mayPin = !isComment && !ignorePins && mayPinMemo(actor);
-  const pinMemo = usePinMemo();
-  const unpinMemo = useUnpinMemo();
-  // Each call names the state it wants, so a double click cannot toggle the pin back. The
-  // memo changes place in the list, out of sight perhaps: the toast says it happened.
-  const togglePin = () => {
-    sounds.tick();
-    const [mutation, done] = isPinned ? [unpinMemo, 'Memo unpinned'] : [pinMemo, 'Memo pinned'];
-    mutation.mutate(
-      { id: memo.id },
-      {
-        onSuccess: () => toast.success(done),
-        onError: (error) => toast.error(error.message),
-      },
-    );
-  };
-
-  // Featuring is the operator's decision, whoever wrote the memo, and only a public memo
-  // that is not a comment stands on Explore to be featured. Offered wherever the memo is
-  // shown, so an operator features a memo right where they wrote it.
-  const isFeatured = memo.featuredAt !== null;
-  const mayFeature = !isComment && isPublic && mayFeatureMemo(operator);
-  const featureMemo = useFeatureMemo();
-  const unfeatureMemo = useUnfeatureMemo();
-  const toggleFeatured = () => {
-    sounds.tick();
-    const [mutation, done] = isFeatured
-      ? [unfeatureMemo, 'Memo unfeatured']
-      : [featureMemo, 'Memo featured on Explore'];
-    mutation.mutate(
-      { id: memo.id },
-      {
-        onSuccess: () => toast.success(done),
-        onError: (error) => toast.error(error.message),
-      },
-    );
-  };
-
-  // An edit leaves a memo where it is: a personal memo switches between private and
-  // public, a memo in a space shows its space. A comment takes its parent's audience.
-  // Outside its space's page, the memo's space is not known, and the label reads "Space".
-  const audienceControl = isComment ? undefined : visibility === 'space' ? (
-    <SpaceAudience title={space.data?.title} />
-  ) : (
-    <AudienceSelector
-      value={{ kind: visibility }}
-      onChange={(audience) => setValue('visibility', audience.kind)}
-    />
-  );
-
-  const closeFocusMode = () => {
-    setIsFocusMode(false);
-    sounds.collapse();
-  };
-
-  // Body scroll lock while in focus mode
-  useEffect(() => {
-    if (!isFocusMode) return;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isFocusMode]);
-
-  // Re-focus inline textarea when focus mode closes
-  const wasFocusModeRef = useRef(false);
-  useEffect(() => {
-    if (wasFocusModeRef.current && !isFocusMode && isEditing) {
-      textareaRef.current?.focus();
-    }
-    wasFocusModeRef.current = isFocusMode;
-  }, [isFocusMode, isEditing]);
-
-  // Escape key to exit focus mode
-  useEffect(() => {
-    if (!isFocusMode) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeFocusMode();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isFocusMode]);
-
-  const exitEdit = () => {
-    setIsEditing(false);
-    setIsFocusMode(false);
-    reset();
-    clearAll();
-  };
-
-  const onSubmit = (data: UpdateMemoInput) => {
-    updateMemo.mutate(data, {
-      onSuccess: () => {
-        setIsEditing(false);
-        setIsFocusMode(false);
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    });
-  };
-
-  const handleDelete = () => {
-    deleteAction.mutate(
-      { id: memo.id },
-      {
-        onSuccess: () => {
-          setIsDeleteDialogOpen(false);
-          toast.success(isComment ? 'Comment deleted successfully' : 'Memo deleted successfully');
-        },
-        onError: (error) => {
-          toast.error(error.message);
-        },
-      },
-    );
-  };
 
   return (
-    <>
-      <Card
-        data-testid="memo-card"
-        className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50"
-      >
-        <CardContent>
-          <div>
-            {/* Header with actions menu */}
-            <div className="flex justify-between items-center gap-1">
-              {/* Header left — hidden while editing */}
-              {!isEditing ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  {author && (
-                    <Avatar className="size-7 shrink-0">
-                      <AvatarImage src={author.image ?? undefined} />
-                      <AvatarFallback className="text-xs">
-                        {author.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="flex flex-col min-w-0">
-                    {author && (
-                      <span className="text-xs font-medium truncate leading-tight">
-                        {author.name}
-                      </span>
-                    )}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          {isComment ? (
-                            <time
-                              dateTime={memo.createdAt.toISOString()}
-                              className="text-xs text-muted-foreground leading-tight"
-                            >
-                              {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
-                            </time>
-                          ) : (
-                            <Link
-                              to="/memos/$memoId"
-                              params={{ memoId: memo.id }}
-                              className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
-                            >
-                              <time dateTime={memo.createdAt.toISOString()}>
-                                {formatDistanceToNow(memo.createdAt, { addSuffix: true })}
-                              </time>
-                            </Link>
-                          )}
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">{format(memo.createdAt, 'PPpp')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex items-center gap-1">
-              {isEditing && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFocusMode(true);
-                    sounds.expand();
-                  }}
-                  aria-label="Enter focus mode"
-                  className="text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
-                >
-                  <MdOutlineOpenInFull className="size-4" />
-                </button>
-              )}
-              {isPinned && !ignorePins && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="flex items-center" role="img" aria-label="Pinned">
-                        <MdPushPin className="size-4 text-muted-foreground" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Pinned</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {isFeatured && markFeatured && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="flex items-center" role="img" aria-label="Featured">
-                        <MdAutoAwesome className="size-4 text-primary" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Featured</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {memo.visibility === 'public' && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="flex items-center">
-                        <IoEarthOutline className="size-4 text-muted-foreground" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Public</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {!isEditing && (!isComment || mayDelete) && (
-                <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      aria-label="Memo actions"
-                    >
-                      <MdMoreVert className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {!isComment && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/memos/$memoId" params={{ memoId: memo.id }}>
-                          <MdOutlineOpenInNew className="size-4" />
-                          Open
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {mayPin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={pinMemo.isPending || unpinMemo.isPending}
-                          onClick={togglePin}
-                        >
-                          <MdOutlinePushPin className="size-4" />
-                          {isPinned ? 'Unpin' : 'Pin'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {mayFeature && (
-                      <>
-                        {!mayPin && <DropdownMenuSeparator />}
-                        <DropdownMenuItem
-                          disabled={featureMemo.isPending || unfeatureMemo.isPending}
-                          onClick={toggleFeatured}
-                        >
-                          <MdOutlineAutoAwesome className="size-4" />
-                          {isFeatured ? 'Unfeature' : 'Feature'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {mayDelete && (
-                      <>
-                        {!isComment && <DropdownMenuSeparator />}
-                        {mayEdit && (
-                          <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                            <MdOutlineEdit className="size-4" />
-                            Edit
-                          </DropdownMenuItem>
-                        )}
-                        {/* Only the author moves a memo: it changes who reads their words. */}
-                        {isAuthor && !isComment && <MoveMemoSubmenu memo={memo} />}
-                        <DropdownMenuItem
-                          onClick={() => { sounds.warning(); setIsDeleteDialogOpen(true); }}
-                        >
-                          <MdOutlineDelete className="size-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              </div>
-            </div>
-
-            {/* Memo content or edit form */}
-            {isEditing ? (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
+    <Card
+      data-testid="memo-card"
+      className="py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-primary/50"
+    >
+      <CardContent>
+        <div>
+          {/* The author and date make way for the form while editing. */}
+          <MemoHeader
+            memo={memo}
+            author={author}
+            hideByline={isEditing}
+            ignorePins={ignorePins}
+            markFeatured={markFeatured}
+            actions={isEditing && <EnterFocusModeButton onClick={editing.enterFocusMode} />}
+            menu={
+              !isEditing && (
+                <MemoActionsMenu
+                  memo={memo}
+                  author={author}
+                  ignorePins={ignorePins}
+                  onEdit={editing.startEditing}
                 />
-                <MemoTextarea
-                  textareaRef={textareaRef}
-                  registerRef={registerRef}
-                  fieldProps={rest}
-                  isPending={updateMemo.isPending}
-                  onSubmit={handleSubmit(onSubmit)}
-                  onInsert={onInsert}
-                  autoFocus={!isFocusMode}
-                  scope={memoScope}
-                />
-                <AttachmentList
-                  localFiles={localFiles}
-                  savedAttachments={savedAttachments}
-                  onRemoveLocalFile={removeLocalFile}
-                  onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
-                />
-                <MemoFooter
-                  charCount={charCount}
-                  isOverLimit={isOverLimit}
-                  isPending={updateMemo.isPending || isUploading}
-                  isValid={isValid}
-                  audienceControl={audienceControl}
-                  onCancel={exitEdit}
-                  onAttachFile={triggerFileSelect}
-                />
-              </form>
-            ) : (
-              <MemoContext.Provider value={{ memo }}>
-                <ExpandableMarkdown content={memo.content} maxHeight={500} />
-                {savedAttachments.length > 0 && (
-                  <AttachmentList savedAttachments={savedAttachments} />
-                )}
-                {'commentCount' in memo && memo.commentCount > 0 && !hideCommentPreview && (
-                  <CommentPreview memoId={memo.id} commentCount={memo.commentCount} />
-                )}
-              </MemoContext.Provider>
-            )}
+              )
+            }
+          />
 
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Focus mode overlay for edit */}
-      {createPortal(
-        <AnimatePresence>
-          {isFocusMode && isEditing && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: prefersReducedMotion ? 0 : 0.2,
-                  ease: 'easeOut',
-                }}
-                onClick={closeFocusMode}
-              />
-
-              {/* Card */}
-              <div className="fixed inset-4 z-50 flex items-center justify-center pointer-events-none">
-                <motion.div
-                  className="w-full max-w-5xl h-full pointer-events-auto"
-                  initial={{
-                    opacity: 0,
-                    scale: prefersReducedMotion ? 1 : 0.98,
-                  }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
-                  transition={{
-                    type: 'spring',
-                    bounce: 0.1,
-                    duration: prefersReducedMotion ? 0 : 0.3,
-                  }}
-                >
-                  <Card className="rounded-xl h-full flex flex-col py-0 relative">
-                    <button
-                      type="button"
-                      onClick={closeFocusMode}
-                      aria-label="Exit focus mode"
-                      className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
-                    >
-                      <MdOutlineCloseFullscreen className="size-4" />
-                    </button>
-                    <CardContent className="px-4 pr-10 pt-3 pb-4 flex flex-col flex-1 overflow-hidden">
-                      <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="flex flex-col flex-1 overflow-hidden gap-3"
-                      >
-                        <div className="flex-1 overflow-y-auto min-h-0">
-                          <MemoTextarea
-                            textareaRef={textareaRef}
-                            registerRef={registerRef}
-                            fieldProps={rest}
-                            isPending={updateMemo.isPending}
-                            onSubmit={handleSubmit(onSubmit)}
-                            onInsert={onInsert}
-                            autoFocus
-                            scope={memoScope}
-                          />
-                        </div>
-                        <AttachmentList
-                          localFiles={localFiles}
-                          savedAttachments={savedAttachments}
-                          onRemoveLocalFile={removeLocalFile}
-                          onRemoveSavedAttachment={(id) => deleteAttachment.mutate({ id })}
-                        />
-                        <MemoFooter
-                          charCount={charCount}
-                          isOverLimit={isOverLimit}
-                          isPending={updateMemo.isPending || isUploading}
-                          isValid={isValid}
-                          audienceControl={audienceControl}
-                          onCancel={exitEdit}
-                          onAttachFile={triggerFileSelect}
-                        />
-                      </form>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-            </>
+          {/* Memo content or edit form */}
+          <MemoEditForm memo={memo} editing={editing} />
+          {!isEditing && (
+            <MemoContext.Provider value={{ memo }}>
+              <ExpandableMarkdown content={memo.content} maxHeight={500} />
+              {savedAttachments.length > 0 && (
+                <AttachmentList savedAttachments={savedAttachments} />
+              )}
+              {'commentCount' in memo && memo.commentCount > 0 && !hideCommentPreview && (
+                <CommentPreview memoId={memo.id} commentCount={memo.commentCount} />
+              )}
+            </MemoContext.Provider>
           )}
-        </AnimatePresence>,
-        document.body,
-      )}
-
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isComment ? 'Are you sure you want to delete this comment?' : 'Are you sure you want to delete this memo?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete{' '}
-              {isAuthor ? 'your' : `${author?.name ?? 'this member'}’s`}{' '}
-              {isComment ? 'comment' : 'memo'}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                sounds.click();
-                handleDelete();
-              }}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
