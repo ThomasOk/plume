@@ -59,9 +59,5 @@ export const buildShowcase = (
         },
       ],
     },
-    {
-      content: read('06-under-the-hood.md'),
-      reactions: [{ userId: secondReader, emoji: '💡' }],
-    },
   ],
 });

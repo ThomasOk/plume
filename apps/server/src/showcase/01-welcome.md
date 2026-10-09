@@ -10,7 +10,6 @@ The memos featured below are a quick tour:
 2. **Markdown**, as it renders here
 3. **Hashtags and tags**, to organise memos
 4. **A conversation**, with comments and reactions
-5. **Under the hood**, for the curious developer
 
 Sign up to write your own, or just keep scrolling. The code is on [GitHub](https://github.com/ThomasOk/plume).
 
