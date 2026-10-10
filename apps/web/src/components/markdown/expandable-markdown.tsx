@@ -35,7 +35,7 @@ export const ExpandableMarkdown = ({
         transition={
           shouldReduceMotion
             ? { duration: 0 }
-            : { duration: 0.3, ease: [0.455, 0.03, 0.515, 0.955] }
+            : { duration: 0.25, ease: [0.23, 1, 0.32, 1] }
         }
         style={
           !isExpanded && needsExpansion
@@ -56,8 +56,9 @@ export const ExpandableMarkdown = ({
           >
             <button
               type="button"
+              aria-expanded={isExpanded}
               onClick={() => setIsExpanded(!isExpanded)}
-              className="inline-flex items-center gap-1 px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="hit-area relative inline-flex items-center gap-1 px-1 py-0.5 rounded text-xs text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <span>{isExpanded ? 'Show less' : 'Show more'}</span>
               {isExpanded ? (

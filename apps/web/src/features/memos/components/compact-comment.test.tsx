@@ -76,7 +76,7 @@ const signedInAs = (
 
 const openActions = async () => {
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Memo actions' }));
+  await user.click(screen.getByRole('button', { name: 'Comment actions' }));
   await screen.findByRole('menuitem', { name: 'Delete' });
 };
 
@@ -138,14 +138,14 @@ describe('CompactComment', () => {
     signedInAs(ALICE, { isOperator: true });
     await renderWithRouter(<CompactComment comment={bobsComment({ visibility: 'private' })} />);
 
-    expect(screen.queryByRole('button', { name: 'Memo actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Comment actions' })).not.toBeInTheDocument();
   });
 
   it('offers another member nothing', async () => {
     signedInAs(ALICE);
     await renderWithRouter(<CompactComment comment={bobsComment()} />);
 
-    expect(screen.queryByRole('button', { name: 'Memo actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Comment actions' })).not.toBeInTheDocument();
   });
 
   it('offers an anonymous reader nothing', async () => {
@@ -153,7 +153,7 @@ describe('CompactComment', () => {
     vi.mocked(useSpace).mockReturnValue({ data: undefined } as any);
     await renderWithRouter(<CompactComment comment={bobsComment({ visibility: 'public' })} />);
 
-    expect(screen.queryByRole('button', { name: 'Memo actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Comment actions' })).not.toBeInTheDocument();
   });
 });
 

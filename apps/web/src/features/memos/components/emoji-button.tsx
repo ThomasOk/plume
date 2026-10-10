@@ -91,7 +91,7 @@ export const EmojiButton = ({ editorRef, onInsert }: EmojiButtonProps) => {
           onClick={sounds.click}
           onPointerEnter={loadEmojiPicker}
           onFocus={loadEmojiPicker}
-          className="size-6 text-muted-foreground"
+          className="hit-area relative size-6 text-muted-foreground"
           aria-label="Insert emoji"
         >
           <MdOutlineEmojiEmotions className="size-4" />

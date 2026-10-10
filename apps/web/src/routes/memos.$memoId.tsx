@@ -4,6 +4,7 @@ import { RiGroupLine } from 'react-icons/ri';
 import { useMemoById } from '@/features/memos';
 import { CommentSection } from '@/features/memos/components/comment-section';
 import { MemoCard } from '@/features/memos/components/memo-card';
+import { MemoCardSkeleton } from '@/features/memos/components/memo-list-skeleton';
 import { MemoContext } from '@/features/memos/contexts/memo-context';
 import { useSpace } from '@/features/spaces';
 
@@ -19,11 +20,9 @@ function MemoDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 pt-8 max-w-5xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-muted rounded w-32" />
-          <div className="h-4 bg-muted rounded w-full" />
-          <div className="h-4 bg-muted rounded w-3/4" />
+      <div className="container mx-auto px-4 pt-6 pb-12 max-w-5xl">
+        <div className="md:mr-58">
+          <MemoCardSkeleton index={2} />
         </div>
       </div>
     );

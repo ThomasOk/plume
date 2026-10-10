@@ -23,6 +23,7 @@
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/inter": "^5.2.6",
     "@hookform/resolvers": "catalog:",
+    "@radix-ui/react-dialog": "catalog:",
     "@radix-ui/react-icons": "catalog:",
     "@repo/auth": "workspace:*",
     "@repo/ui": "workspace:*",

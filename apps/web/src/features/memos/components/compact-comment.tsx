@@ -45,7 +45,7 @@ export const CompactComment = ({ comment }: CompactCommentProps) => {
           {isEditing ? (
             <EnterFocusModeButton onClick={editing.enterFocusMode} />
           ) : (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 pointer-coarse:gap-4 shrink-0">
               {user && <ReactButton memoId={comment.id} reactions={comment.reactions} />}
               <MemoActionsMenu memo={comment} author={author} onEdit={editing.startEditing} />
             </div>

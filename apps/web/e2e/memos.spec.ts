@@ -27,7 +27,7 @@ test('creates a memo then deletes it', async ({ page }) => {
 
   await memoCard.getByRole('button', { name: 'Memo actions' }).click();
   await page.getByText('Delete').click();
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Delete' }).click();
 
   await expect(page.getByText(memoContent)).not.toBeVisible();
 });

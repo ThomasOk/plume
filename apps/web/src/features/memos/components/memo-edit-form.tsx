@@ -1,17 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateMemoSchema, MAX_MEMO_CHARACTERS } from '@repo/api/schemas';
-import { Card, CardContent } from '@repo/ui/components/card';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { CardContent } from '@repo/ui/components/card';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
-import { MdOutlineCloseFullscreen, MdOutlineOpenInFull } from 'react-icons/md';
+import { MdOutlineOpenInFull } from 'react-icons/md';
 import { toast } from 'sonner';
 import type { MemoViewScope } from '../types';
 import type { Comment, Memo } from '@/lib/types';
 import type z from 'zod';
 import { useUpdateMemo } from '../hooks';
 import { AudienceSelector, SpaceAudience } from './audience-selector';
+import { FocusModeDialog } from './focus-mode-dialog';
 import { MemoFooter } from './memo-footer';
 import { MemoTextarea } from './memo-textarea';
 import { AttachmentList, useDeleteAttachment, useFileUpload } from '@/features/attachments';
@@ -52,7 +51,7 @@ export const EnterFocusModeButton = ({ onClick }: { onClick: () => void }) => (
     type="button"
     onClick={onClick}
     aria-label="Enter focus mode"
-    className="text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
+    className="hit-area relative text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded outline-none focus-visible:ring-1 focus-visible:ring-ring"
   >
     <MdOutlineOpenInFull className="size-4" />
   </button>
@@ -80,7 +79,6 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
     isUploading,
     clearAll,
   } = useFileUpload({ memoId: memo.id });
-  const prefersReducedMotion = useReducedMotion();
   const {
     register,
     handleSubmit,
@@ -134,15 +132,6 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
     />
   );
 
-  // Body scroll lock while in focus mode
-  useEffect(() => {
-    if (!isFocusMode) return;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isFocusMode]);
-
   // Re-focus inline textarea when focus mode closes
   const wasFocusModeRef = useRef(false);
   useEffect(() => {
@@ -151,16 +140,6 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
     }
     wasFocusModeRef.current = isFocusMode;
   }, [isFocusMode, isEditing]);
-
-  // Escape key to exit focus mode
-  useEffect(() => {
-    if (!isFocusMode) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') exitFocusMode();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isFocusMode, exitFocusMode]);
 
   // Back to the memo as it stands now, which a save since the form mounted may have changed.
   const exitEdit = () => {
@@ -226,78 +205,29 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
         </form>
       )}
 
-      {/* Focus mode overlay for edit */}
-      {createPortal(
-        <AnimatePresence>
-          {isFocusMode && isEditing && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: prefersReducedMotion ? 0 : 0.2,
-                  ease: 'easeOut',
-                }}
-                onClick={exitFocusMode}
+      <FocusModeDialog open={isFocusMode && isEditing} onClose={exitFocusMode}>
+        <CardContent className="px-4 pr-10 pt-3 pb-4 flex flex-col flex-1 overflow-hidden">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col flex-1 overflow-hidden gap-3"
+          >
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <MemoTextarea
+                textareaRef={textareaRef}
+                registerRef={registerRef}
+                fieldProps={rest}
+                isPending={updateMemo.isPending}
+                onSubmit={handleSubmit(onSubmit)}
+                onInsert={onInsert}
+                autoFocus
+                scope={memoScope}
               />
-
-              {/* Card */}
-              <div className="fixed inset-4 z-50 flex items-center justify-center pointer-events-none">
-                <motion.div
-                  className="w-full max-w-5xl h-full pointer-events-auto"
-                  initial={{
-                    opacity: 0,
-                    scale: prefersReducedMotion ? 1 : 0.98,
-                  }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
-                  transition={{
-                    type: 'spring',
-                    bounce: 0.1,
-                    duration: prefersReducedMotion ? 0 : 0.3,
-                  }}
-                >
-                  <Card className="rounded-xl h-full flex flex-col py-0 relative">
-                    <button
-                      type="button"
-                      onClick={exitFocusMode}
-                      aria-label="Exit focus mode"
-                      className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors duration-150 p-1 rounded"
-                    >
-                      <MdOutlineCloseFullscreen className="size-4" />
-                    </button>
-                    <CardContent className="px-4 pr-10 pt-3 pb-4 flex flex-col flex-1 overflow-hidden">
-                      <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="flex flex-col flex-1 overflow-hidden gap-3"
-                      >
-                        <div className="flex-1 overflow-y-auto min-h-0">
-                          <MemoTextarea
-                            textareaRef={textareaRef}
-                            registerRef={registerRef}
-                            fieldProps={rest}
-                            isPending={updateMemo.isPending}
-                            onSubmit={handleSubmit(onSubmit)}
-                            onInsert={onInsert}
-                            autoFocus
-                            scope={memoScope}
-                          />
-                        </div>
-                        {attachmentList}
-                        {footer}
-                      </form>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>
+            {attachmentList}
+            {footer}
+          </form>
+        </CardContent>
+      </FocusModeDialog>
     </>
   );
 };
