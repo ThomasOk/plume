@@ -58,7 +58,7 @@ export const MemoHeader = ({
           )}
           <div className="flex flex-col min-w-0">
             {author && (
-              <span className="text-xs font-medium truncate leading-tight">
+              <span className="text-sm font-medium truncate leading-tight">
                 {author.name}
               </span>
             )}
@@ -68,7 +68,7 @@ export const MemoHeader = ({
               <Link
                 to="/memos/$memoId"
                 params={{ memoId: memo.id }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
+                className="hit-area relative self-start text-xs text-muted-foreground hover:text-foreground transition-colors leading-tight"
               >
                 <RelativeDate date={memo.createdAt} className="text-inherit" />
               </Link>
@@ -79,7 +79,8 @@ export const MemoHeader = ({
         <div />
       )}
 
-      <div className="flex items-center gap-1">
+      {/* On touch, the gap keeps the react button's and the menu's targets apart. */}
+      <div className="flex items-center gap-1 pointer-coarse:gap-4">
         {actions}
         {isPinned && !ignorePins && (
           <TooltipProvider>
@@ -109,7 +110,7 @@ export const MemoHeader = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="flex items-center">
+                <span className="flex items-center" role="img" aria-label="Public">
                   <IoEarthOutline className="size-4 text-muted-foreground" />
                 </span>
               </TooltipTrigger>

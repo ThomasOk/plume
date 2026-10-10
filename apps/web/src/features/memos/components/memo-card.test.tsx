@@ -252,7 +252,7 @@ describe('MemoCard, featuring a memo on Explore', () => {
     await renderWithRouter(<MemoCard memo={comment} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Memo actions' }));
+    await user.click(screen.getByRole('button', { name: 'Comment actions' }));
     await screen.findByRole('menuitem', { name: 'Delete' });
 
     expect(screen.queryByRole('menuitem', { name: 'Feature' })).not.toBeInTheDocument();
@@ -289,7 +289,7 @@ describe('MemoCard, an operator deleting a public memo', () => {
     await renderWithRouter(<MemoCard memo={{ ...publicMemo(), parentId: 'parent-1' } as unknown as Memo} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Memo actions' }));
+    await user.click(screen.getByRole('button', { name: 'Comment actions' }));
 
     // A comment has no Open item to wait for, as the featuring tests' comment case does.
     expect(await screen.findByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();

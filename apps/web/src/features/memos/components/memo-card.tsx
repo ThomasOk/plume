@@ -44,12 +44,13 @@ export const MemoCard = ({
     'commentCount' in memo && memo.commentCount > 0 && !hideCommentStrip;
 
   return (
-    // The card and its strip of comments hover as one, so the strip reads as part of it.
+    // The card and its strip of comments hover as one, so the strip reads as part of it. Only
+    // the border answers, and in no accent: the card is not a link, and must not look like one.
     <div className="group/memo">
       <Card
         data-testid="memo-card"
         className={cn(
-          'py-3 rounded-xl transition-[box-shadow,border-color] duration-200 ease-out group-hover/memo:shadow-md group-hover/memo:border-primary/50',
+          'py-3 rounded-xl transition-[border-color] duration-200 ease-out group-hover/memo:border-foreground/20',
           hasCommentStrip && 'rounded-b-none',
         )}
       >

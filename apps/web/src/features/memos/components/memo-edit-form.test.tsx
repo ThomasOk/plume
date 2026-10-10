@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import type { Memo } from '@/lib/types';
@@ -73,8 +73,9 @@ describe('MemoEditForm, outside a memo card', () => {
     await user.type(screen.getByRole('textbox'), ' too');
     await user.click(screen.getByRole('button', { name: 'Enter focus mode' }));
 
-    expect(await screen.findByRole('button', { name: 'Exit focus mode' })).toBeInTheDocument();
-    expect(screen.getAllByRole('textbox')).toHaveLength(2);
+    // A modal dialog: the inline form behind it is hidden, and only the focus mode's text is there.
+    const focusMode = await screen.findByRole('dialog', { name: 'Focus mode' });
+    expect(screen.getAllByRole('textbox')).toEqual([within(focusMode).getByRole('textbox')]);
 
     await user.keyboard('{Escape}');
 
@@ -110,9 +111,8 @@ describe('MemoEditForm, outside a memo card', () => {
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     await user.click(screen.getByRole('button', { name: 'Enter focus mode' }));
-    await screen.findByRole('button', { name: 'Exit focus mode' });
-    const [, inFocusMode] = screen.getAllByRole('button', { name: 'Insert emoji' });
-    await user.click(inFocusMode!);
+    const focusMode = await screen.findByRole('dialog', { name: 'Focus mode' });
+    await user.click(within(focusMode).getByRole('button', { name: 'Insert emoji' }));
     await user.click(await screen.findByRole('button', { name: '🔥' }));
     await user.keyboard('{Escape}');
 
@@ -123,6 +123,6 @@ describe('MemoEditForm, outside a memo card', () => {
     await expect(
       vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Exit focus mode' })).not.toBeInTheDocument()),
     ).rejects.toThrow();
-    expect(screen.getAllByRole('textbox')[1]).toHaveValue('Count me in🔥');
+    expect(within(focusMode).getByRole('textbox')).toHaveValue('Count me in🔥');
   });
 });

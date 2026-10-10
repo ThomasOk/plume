@@ -9,6 +9,26 @@
  * https://github.com/tailwindlabs/tailwindcss/issues/16733
  */
 @source '../../../packages/ui';
+
+/**
+ * Gives a control drawn smaller than a finger a 44px target on touch, without changing how it
+ * looks. Only on a coarse pointer: a mouse is precise, and wider targets would overlap their
+ * neighbours. Where two such controls sit side by side, their gap must keep the targets apart.
+ * The control must be positioned (`relative`, or already `absolute`) to hold the target.
+ */
+@utility hit-area {
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      translate: -50% -50%;
+    }
+  }
+}
 @layer base {
   body {
     font-family:

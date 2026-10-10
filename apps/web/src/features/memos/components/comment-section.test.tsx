@@ -9,16 +9,15 @@ import { renderWithRouter } from '@/tests/render-with-router';
 
 vi.mock('../hooks/use-comments');
 vi.mock('@/features/auth/hooks/use-auth');
-vi.mock('./memo-list-skeleton', () => ({ MemoListSkeleton: () => <p>Loading comments</p> }));
+vi.mock('./memo-list-skeleton', () => ({ CommentListSkeleton: () => <p>Loading comments</p> }));
 vi.mock('./compact-comment', () => ({
   CompactComment: ({ comment }: any) => <p id={comment.id}>{comment.content}</p>,
 }));
-// The form itself is the memo form's to test: here it only saves or cancels.
+// The form itself is the memo form's to test: here it is only a text field.
 vi.mock('./memo-form', () => ({
-  MemoForm: ({ onSuccess, onCancel }: any) => (
+  MemoForm: () => (
     <form aria-label="New comment">
-      <button type="button" onClick={onSuccess}>Save</button>
-      <button type="button" onClick={onCancel}>Cancel</button>
+      <textarea aria-label="Comment" />
     </form>
   ),
 }));
@@ -66,44 +65,48 @@ describe('CommentSection, reached by a link to one comment', () => {
 });
 
 describe('CommentSection, writing a comment', () => {
+  const scrollIntoView = vi.fn();
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+  afterEach(() => {
+    scrollIntoView.mockReset();
+  });
+
   const withComments = (...comments: ReturnType<typeof comment>[]) =>
     vi.mocked(useComments).mockReturnValue({ data: comments, isLoading: false } as any);
   const signedIn = () => vi.mocked(useAuth).mockReturnValue({ user: { id: 'alice' } } as any);
   const anonymous = () => vi.mocked(useAuth).mockReturnValue({ user: null } as any);
+  const isAfter = (element: Node, reference: Node) =>
+    Boolean(reference.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-  it('keeps the form closed until the reader asks to write', async () => {
+  it('shows the form under the comments, where the new one will land', async () => {
     signedIn();
-    withComments(comment('c-1', 'First'));
+    withComments(comment('c-1', 'First'), comment('c-2', 'Second'));
     await renderWithRouter(<CommentSection memoId="memo-1" />);
 
-    expect(screen.queryByRole('form', { name: 'New comment' })).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Write a comment' }));
-
-    expect(screen.getByRole('form', { name: 'New comment' })).toBeInTheDocument();
+    expect(isAfter(screen.getByRole('form', { name: 'New comment' }), screen.getByText('Second'))).toBe(true);
   });
 
-  it('closes the form once the comment is saved', async () => {
+  it('leaves the focus where it is on arrival', async () => {
     signedIn();
     withComments(comment('c-1', 'First'));
     await renderWithRouter(<CommentSection memoId="memo-1" />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Write a comment' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-
-    expect(screen.queryByRole('form', { name: 'New comment' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Write a comment' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Comment' })).not.toHaveFocus();
   });
 
-  it('closes the form when the reader cancels', async () => {
+  it('puts the caret in the form from the shortcut in the heading, the whole form in view', async () => {
     signedIn();
     withComments(comment('c-1', 'First'));
     await renderWithRouter(<CommentSection memoId="memo-1" />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Write a comment' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.queryByRole('form', { name: 'New comment' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Comment' })).toHaveFocus();
+    expect(scrollIntoView.mock.contexts).toContain(
+      screen.getByRole('form', { name: 'New comment' }).parentElement,
+    );
   });
 
   it('heads the comments with their number', async () => {
@@ -123,12 +126,12 @@ describe('CommentSection, writing a comment', () => {
     expect(texts).toEqual(['First', 'Second', 'Third']);
   });
 
-  it('is only the button to write one when there are no comments', async () => {
+  it('is only the form to write one when there are no comments', async () => {
     signedIn();
     withComments();
     await renderWithRouter(<CommentSection memoId="memo-1" />);
 
-    expect(screen.getByRole('button', { name: 'Write a comment' })).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'New comment' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Comments/ })).not.toBeInTheDocument();
   });
 
@@ -138,6 +141,7 @@ describe('CommentSection, writing a comment', () => {
     await renderWithRouter(<CommentSection memoId="memo-1" />);
 
     expect(screen.getByText('First')).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'New comment' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Write a comment' })).not.toBeInTheDocument();
   });
 });

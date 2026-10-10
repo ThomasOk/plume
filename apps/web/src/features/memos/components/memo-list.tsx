@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Author, Memo } from '@/lib/types';
 import { MemoCard } from './memo-card';
 
@@ -22,6 +22,8 @@ export const MemoList = ({
   ignorePins = false,
   markFeatured = false,
 }: MemoListProps) => {
+  const prefersReducedMotion = useReducedMotion();
+
   if (memos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -35,11 +37,13 @@ export const MemoList = ({
         {memos.map((memo) => (
           <motion.div
             key={memo.id}
-            layout
-            initial={{ opacity: 0, y: -8 }}
+            layout={!prefersReducedMotion}
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.2, ease: [0.215, 0.61, 0.355, 1] }}
+            // popLayout takes the leaving card out of the flow, and the cards below slide up
+            // through `layout`: fading it is enough, without animating its height.
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.215, 0.61, 0.355, 1] }}
           >
             <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} ignorePins={ignorePins} markFeatured={markFeatured} />
           </motion.div>

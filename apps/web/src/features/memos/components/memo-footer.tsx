@@ -30,13 +30,17 @@ const CharacterIndicator = ({ charCount }: { charCount: number }) => {
         'flex items-center gap-1.5 transition-opacity duration-200',
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none',
       )}
-      role={isVisible ? 'status' : undefined}
-      aria-label={
-        isVisible
-          ? `${charCount} of ${MAX_MEMO_CHARACTERS} characters used`
-          : undefined
-      }
     >
+      {/* Read out when the writer crosses a threshold, not at every keystroke: the count
+          itself is for the eye. Always in the DOM, so the live region is there to announce. */}
+      <span className="sr-only" aria-live="polite">
+        {isOverLimit
+          ? 'Over the character limit'
+          : isWarning
+            ? 'Approaching the character limit'
+            : ''}
+      </span>
+
       {/* Number — always in DOM to avoid layout shift, toggled via opacity */}
       <span
         className={cn(
@@ -48,7 +52,7 @@ const CharacterIndicator = ({ charCount }: { charCount: number }) => {
             ? 'opacity-100'
             : 'pointer-events-none select-none opacity-0',
         )}
-        aria-hidden={!showNumber}
+        aria-hidden="true"
       >
         {isOverLimit
           ? `-${Math.abs(remaining).toLocaleString()}`
@@ -127,14 +131,15 @@ export const MemoFooter = ({
 }: MemoFooterProps) => {
   return (
     <div className="flex items-center justify-between gap-2 pt-3">
-      <div className="flex items-center gap-1">
+      {/* On touch, the gap keeps the two small buttons' targets apart. */}
+      <div className="flex items-center gap-1 pointer-coarse:gap-5">
         {onAttachFile && (
           <Button
             type="button"
             variant="outline"
             size="icon"
             onClick={() => { sounds.click(); onAttachFile(); }}
-            className="size-6 text-muted-foreground"
+            className="hit-area relative size-6 text-muted-foreground"
             aria-label="Attach file"
           >
             <MdOutlineAttachFile className="size-4" />
@@ -162,7 +167,15 @@ export const MemoFooter = ({
           disabled={!isValid || isPending || isOverLimit}
           onClick={sounds.click}
         >
-          {isPending ? 'Saving...' : 'Save'}
+          {/* Both labels share one cell, so the button keeps the wider one's width. */}
+          <span className="grid justify-items-center">
+            <span className={cn('[grid-area:1/1]', isPending && 'invisible')} aria-hidden={isPending}>
+              Save
+            </span>
+            <span className={cn('[grid-area:1/1]', !isPending && 'invisible')} aria-hidden={!isPending}>
+              Saving…
+            </span>
+          </span>
         </Button>
       </div>
     </div>

@@ -43,7 +43,7 @@ function RouteComponent() {
         <SearchFilterBadge />
       </div>
       <div className="mt-4">
-        {isLoading && <MemoListSkeleton />}
+        {isLoading && <MemoListSkeleton hideAuthors />}
         {error && (
           <p className="text-destructive">
             Something went wrong. Please try again.

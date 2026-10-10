@@ -155,8 +155,8 @@ export const MemoActionsMenu = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
-            aria-label="Memo actions"
+            className="hit-area relative h-8 w-8"
+            aria-label={isComment ? 'Comment actions' : 'Memo actions'}
           >
             <MdMoreVert className="h-4 w-4" />
           </Button>
@@ -234,13 +234,15 @@ export const MemoActionsMenu = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              disabled={deleteAction.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault();
                 sounds.click();
                 handleDelete();
               }}
             >
-              Continue
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

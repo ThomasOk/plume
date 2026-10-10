@@ -49,17 +49,17 @@ export const CommentStrip = ({ memoId, commentCount }: CommentStripProps) => {
     <section
       ref={ref}
       aria-labelledby={`comments-of-${memoId}`}
-      className="rounded-b-xl border border-t-0 bg-muted/40 px-6 py-2.5 text-xs transition-[border-color] duration-200 ease-out group-hover/memo:border-primary/50"
+      className="rounded-b-xl border border-t-0 bg-muted/40 px-6 py-2.5 text-xs transition-[border-color] duration-200 ease-out group-hover/memo:border-foreground/20"
     >
       <div className="flex items-center justify-between gap-2">
         <h3 id={`comments-of-${memoId}`} className="font-medium text-muted-foreground">
-          Comments <span className="tabular-nums">{commentCount}</span>
+          Comments (<span className="tabular-nums">{commentCount}</span>)
         </h3>
         <Link
           to="/memos/$memoId"
           params={{ memoId }}
           hash="comments"
-          className="text-muted-foreground transition-colors hover:text-foreground"
+          className="hit-area relative text-muted-foreground transition-colors hover:text-foreground"
         >
           View all
         </Link>

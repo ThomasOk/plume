@@ -59,7 +59,7 @@ const ReactionPicker = ({ memoId, reactions, children }: ReactionPickerProps) =>
             aria-pressed={emoji === current}
             onClick={() => pick(emoji)}
             className={cn(
-              'size-9 rounded-full text-xl leading-none transition-[background-color,transform] duration-150 ease-out hover:bg-accent active:scale-90',
+              'size-9 pointer-coarse:size-11 rounded-full text-xl leading-none transition-[background-color,transform] duration-150 ease-out hover:bg-accent active:scale-90 outline-none focus-visible:ring-1 focus-visible:ring-ring',
               emoji === current && 'bg-primary/15 hover:bg-primary/25',
             )}
           >
@@ -86,7 +86,7 @@ export const ReactButton = ({ memoId, reactions }: ReactButtonProps) => (
     <button
       type="button"
       aria-label="React"
-      className="text-muted-foreground hover:text-foreground p-1 rounded opacity-0 transition-[opacity,color] duration-150 group-hover/memo:opacity-100 group-focus-within/memo:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
+      className="hit-area relative text-muted-foreground hover:text-foreground p-1 rounded outline-none focus-visible:ring-1 focus-visible:ring-ring opacity-0 transition-[opacity,color] duration-150 group-hover/memo:opacity-100 group-focus-within/memo:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
     >
       <MdOutlineAddReaction className="size-4" />
     </button>
@@ -175,7 +175,7 @@ interface ReactionPillProps {
 }
 
 const pillClassName =
-  'inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none [-webkit-touch-callout:none] transition-[background-color,border-color,transform] duration-150 ease-out';
+  'hit-area relative inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none outline-none focus-visible:ring-1 focus-visible:ring-ring [-webkit-touch-callout:none] transition-[background-color,border-color,transform] duration-150 ease-out';
 
 /**
  * One emoji and how many chose it. Hovering or focusing it names who did; on touch, a long
@@ -264,7 +264,8 @@ export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) =
 
   return (
     <TooltipProvider>
-      <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5 mt-3">
+      {/* On touch, the wider gap keeps each pill's target apart from its neighbours'. */}
+      <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5 pointer-coarse:gap-4 mt-3">
         {reactions.map((reaction) => (
           <ReactionPill key={reaction.emoji} memoId={memoId} reaction={reaction} readerId={readerId} />
         ))}
@@ -273,7 +274,7 @@ export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) =
             <button
               type="button"
               aria-label="Add a reaction"
-              className="inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
+              className="hit-area relative inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring transition-[background-color,color,transform] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
             >
               <MdOutlineAddReaction className="size-4" />
             </button>
