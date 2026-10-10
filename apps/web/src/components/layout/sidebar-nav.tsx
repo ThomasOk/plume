@@ -14,7 +14,7 @@ import { GiFeather } from 'react-icons/gi';
 import { GoBell } from 'react-icons/go';
 import { GrAttachment } from 'react-icons/gr';
 import { IoEarthOutline } from 'react-icons/io5';
-import { LuPalette, LuCircleUser } from 'react-icons/lu';
+import { LuPalette, LuCircleUser, LuVolume2 } from 'react-icons/lu';
 import {
   RiCheckLine,
   RiHome4Line,
@@ -23,6 +23,8 @@ import {
   RiUserLine,
 } from 'react-icons/ri';
 import { useNotifications } from '@/features/notifications/hooks/use-notifications';
+import { useMenuSounds } from '@/hooks/use-menu-sounds';
+import { useSoundPreference } from '@/hooks/use-sound-preference';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/authClient';
 import { sounds } from '@/lib/sounds';
@@ -38,6 +40,8 @@ export const SidebarNav = ({
 }: SidebarNavProps) => {
   const { data: sessionData } = authClient.useSession();
   const { theme, setTheme } = useTheme();
+  const { enabled: soundEnabled, setEnabled: setSoundEnabled } = useSoundPreference();
+  const menuSounds = useMenuSounds();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { data: notifications } = useNotifications();
@@ -133,7 +137,7 @@ export const SidebarNav = ({
       </nav>
       {sessionData && (
         <div className="mt-auto">
-          <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
+          <DropdownMenu onOpenChange={menuSounds.onOpenChange}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -155,7 +159,7 @@ export const SidebarNav = ({
                   Theme
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('light'); }}>
+                  <DropdownMenuItem onClick={() => { menuSounds.choose(); setTheme('light'); }}>
                     <RiCheckLine
                       className={
                         theme === 'light' ? 'opacity-100' : 'opacity-0'
@@ -163,13 +167,13 @@ export const SidebarNav = ({
                     />
                     Light
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('dark'); }}>
+                  <DropdownMenuItem onClick={() => { menuSounds.choose(); setTheme('dark'); }}>
                     <RiCheckLine
                       className={theme === 'dark' ? 'opacity-100' : 'opacity-0'}
                     />
                     Dark
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { sounds.tick(); setTheme('paper'); }}>
+                  <DropdownMenuItem onClick={() => { menuSounds.choose(); setTheme('paper'); }}>
                     <RiCheckLine
                       className={
                         theme === 'paper' ? 'opacity-100' : 'opacity-0'
@@ -179,14 +183,31 @@ export const SidebarNav = ({
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem
+                // Switched first, so turning sounds on ticks and turning them off stays silent.
+                onClick={() => {
+                  setSoundEnabled(!soundEnabled);
+                  menuSounds.choose();
+                }}
+                className="flex items-center gap-2"
+              >
+                <LuVolume2 className="w-4 h-4" />
+                Sounds
+                <RiCheckLine
+                  className={cn('ml-auto', soundEnabled ? 'opacity-100' : 'opacity-0')}
+                />
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild onClick={menuSounds.choose}>
                 <Link to="/settings" className="flex items-center gap-2">
                   <RiSettings4Line className="w-4 h-4" />
                   Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={handleLogout}
+                onClick={() => {
+                  menuSounds.choose();
+                  handleLogout();
+                }}
                 className="flex items-center gap-2 text-destructive"
               >
                 <RiLogoutBoxLine className="w-4 h-4" />

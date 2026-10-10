@@ -3,12 +3,14 @@ import { Switch } from '@repo/ui/components/switch';
 import { toast } from 'sonner';
 import { usePreferences } from '../hooks/use-preferences';
 import { useUpdatePreferences } from '../hooks/use-update-preferences';
+import { sounds } from '@/lib/sounds';
 
 export const CommentEmailsSection = () => {
   const { data: preferences, isError } = usePreferences();
   const updatePreferences = useUpdatePreferences();
 
   const onCheckedChange = (commentEmails: boolean) => {
+    sounds.tick();
     updatePreferences.mutate(
       { commentEmails },
       { onError: () => toast.error('Failed to save your preference') },

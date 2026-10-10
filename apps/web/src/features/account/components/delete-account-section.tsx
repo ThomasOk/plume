@@ -17,6 +17,7 @@ import { deletionRefusal, type DeletionRefusal } from '../deletion-refusal';
 import { useDeleteAccount } from '../hooks/use-delete-account';
 import { useLinkedAccounts } from '../hooks/use-linked-accounts';
 import { useSpaces } from '@/features/spaces';
+import { sounds } from '@/lib/sounds';
 
 interface DeleteAccountSectionProps {
   email: string;
@@ -34,7 +35,7 @@ export const DeleteAccountSection = ({ email }: DeleteAccountSectionProps) => (
     </div>
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive">Delete account</Button>
+        <Button variant="destructive" onClick={sounds.warning}>Delete account</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <DeleteAccountConfirmation email={email} />
@@ -59,6 +60,7 @@ const DeleteAccountConfirmation = ({ email }: DeleteAccountSectionProps) => {
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    sounds.click();
     setRefusal(null);
     try {
       await deleteAccount.mutateAsync(hasPassword ? { email: typedEmail, password } : { email: typedEmail });

@@ -1,5 +1,6 @@
 import { cn } from '@repo/ui/lib/utils';
 import { Link } from '@tanstack/react-router';
+import { sounds } from '@/lib/sounds';
 
 const sections = [
   { to: '/settings/account', label: 'Account' },
@@ -17,6 +18,7 @@ export const SettingsNav = ({ className }: { className?: string }) => (
         <li key={to} className="shrink-0">
           <Link
             to={to}
+            onClick={sounds.click}
             className={cn(
               'block whitespace-nowrap px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground',
               'border-b-2 border-transparent -mb-px md:mb-0 md:border-b-0 md:rounded-md md:hover:bg-accent',

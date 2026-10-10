@@ -1,5 +1,6 @@
 import { Button } from '@repo/ui/components/button';
 import { env } from '@/env';
+import { sounds } from '@/lib/sounds';
 
 // The server mounts its routes at its root, beside `/api/auth`.
 const exportUrl = new URL('/api/export', env.PUBLIC_SERVER_URL).href;
@@ -17,7 +18,7 @@ export const ExportSection = () => (
       </p>
     </div>
     <Button asChild variant="outline">
-      <a href={exportUrl}>
+      <a href={exportUrl} onClick={sounds.click}>
         Export memos
       </a>
     </Button>

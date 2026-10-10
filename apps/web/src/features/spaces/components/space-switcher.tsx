@@ -14,8 +14,8 @@ import { RiCheckLine } from 'react-icons/ri';
 import { useSpaces } from '../hooks/use-spaces';
 import { CreateSpaceDialog } from './create-space-dialog';
 import { useMemoScope } from '@/features/memos';
+import { useMenuSounds } from '@/hooks/use-menu-sounds';
 import { authClient } from '@/lib/authClient';
-import { sounds } from '@/lib/sounds';
 
 /**
  * Moves between the user's personal memos and each space they are a member of. It sits
@@ -28,6 +28,7 @@ export const SpaceSwitcher = () => {
   const scope = useMemoScope();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
+  const { onOpenChange, choose } = useMenuSounds();
   const { data: spaces } = useSpaces({ enabled: !!session && !isExplore });
 
   // Explore is outside every scope: there is nothing to switch between.
@@ -40,7 +41,7 @@ export const SpaceSwitcher = () => {
 
   return (
     <>
-      <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
+      <DropdownMenu onOpenChange={onOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -52,7 +53,7 @@ export const SpaceSwitcher = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild onClick={choose}>
             <Link to="/" className="flex items-center gap-2">
               <RiCheckLine className={currentSpaceId ? 'opacity-0' : 'opacity-100'} />
               Personal
@@ -63,7 +64,7 @@ export const SpaceSwitcher = () => {
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs text-muted-foreground">Spaces</DropdownMenuLabel>
               {spaces.map((space) => (
-                <DropdownMenuItem key={space.id} asChild>
+                <DropdownMenuItem key={space.id} asChild onClick={choose}>
                   <Link
                     to="/spaces/$spaceId"
                     params={{ spaceId: space.id }}
