@@ -95,8 +95,10 @@ _Avoid_: alert, message.
 
 **Preference**:
 A choice a user makes about how Plume behaves toward them. Every preference has a
-default, so a user who never touches it keeps the default. The only one today is whether
-they are emailed when someone comments on their memos. Distinct from the account (name,
+default, so a user who never touches it keeps the default. A preference follows the
+account or stays on the device: whether they are emailed when someone comments on their
+memos follows the account; whether Plume plays sounds stays on the device, since the
+same person may want them at home and not in a meeting. Distinct from the account (name,
 password, sessions), which describes who the user is rather than how Plume treats them.
 _Avoid_: setting (Settings is the page that shows them), option, config.
 

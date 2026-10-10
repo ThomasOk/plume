@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useRevokeOtherSessions } from '../hooks/use-revoke-other-sessions';
 import { useRevokeSession } from '../hooks/use-revoke-session';
 import { useSessions } from '../hooks/use-sessions';
+import { sounds } from '@/lib/sounds';
 
 interface SessionsSectionProps {
   currentSessionId: string;
@@ -19,6 +20,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
 
   // A revoked session leaves the list when the hooks refetch it.
   const onRevoke = async (token: string) => {
+    sounds.click();
     try {
       await revokeSession.mutateAsync(token);
     } catch (error) {
@@ -27,6 +29,7 @@ export const SessionsSection = ({ currentSessionId }: SessionsSectionProps) => {
   };
 
   const onRevokeOthers = async () => {
+    sounds.click();
     try {
       await revokeOtherSessions.mutateAsync();
     } catch (error) {

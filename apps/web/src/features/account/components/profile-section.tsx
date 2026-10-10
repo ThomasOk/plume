@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useUpdateName } from '../hooks/use-update-name';
+import { sounds } from '@/lib/sounds';
 
 const profileSchema = z.object({ name: accountNameSchema });
 
@@ -83,6 +84,7 @@ export const ProfileSection = ({ name, email }: ProfileSectionProps) => {
           <Button
             type="submit"
             disabled={form.formState.isSubmitting || !form.formState.isDirty}
+            onClick={sounds.click}
           >
             Save
           </Button>

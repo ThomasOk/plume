@@ -39,7 +39,11 @@ export const TagTreeItem = ({ node }: { node: TagNode }) => {
         </button>
         {node.children.length > 0 && (
           <button
-            onClick={() => { sounds.pop(); setIsOpen(!isOpen); }}
+            onClick={() => {
+              if (isOpen) sounds.fold();
+              else sounds.unfold();
+              setIsOpen(!isOpen);
+            }}
             aria-label={isOpen ? 'Collapse tag' : 'Expand tag'}
             className="ml-1 cursor-pointer hover:opacity-80"
           >

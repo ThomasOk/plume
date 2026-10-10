@@ -14,6 +14,7 @@ import {
 import { MdOutlineAddReaction } from 'react-icons/md';
 import type { ReactionSummary } from '@/lib/types';
 import { useReactToMemo, useUnreactToMemo } from '../hooks';
+import { sounds } from '@/lib/sounds';
 
 /**
  * Sets the reader's reaction on a memo to `emoji`, or takes it back with `null`. Each call
@@ -23,8 +24,15 @@ const useSetReaction = (memoId: string) => {
   const react = useReactToMemo();
   const unreact = useUnreactToMemo();
 
-  return (emoji: ReactionEmoji | null) =>
-    emoji === null ? unreact.mutate({ memoId }) : react.mutate({ memoId, emoji });
+  return (emoji: ReactionEmoji | null) => {
+    if (emoji === null) {
+      sounds.unreact();
+      unreact.mutate({ memoId });
+    } else {
+      sounds.react();
+      react.mutate({ memoId, emoji });
+    }
+  };
 };
 
 interface ReactionPickerProps {

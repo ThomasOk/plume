@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { useChangePassword } from '../hooks/use-change-password';
 import { useLinkedAccounts } from '../hooks/use-linked-accounts';
+import { sounds } from '@/lib/sounds';
 
 const passwordChangeSchema = z
   .object({
@@ -153,9 +154,10 @@ const PasswordForm = () => {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
-                    }
+                    onCheckedChange={(checked) => {
+                      sounds.tick();
+                      field.onChange(checked === true);
+                    }}
                   />
                 </FormControl>
                 <FormLabel className="font-normal">
@@ -169,7 +171,7 @@ const PasswordForm = () => {
               {form.formState.errors.root.message}
             </p>
           )}
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+          <Button type="submit" disabled={form.formState.isSubmitting} onClick={sounds.click}>
             Change password
           </Button>
         </form>

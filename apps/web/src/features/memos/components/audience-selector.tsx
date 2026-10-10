@@ -8,7 +8,7 @@ import {
 import { IoEarthOutline } from 'react-icons/io5';
 import { RiCheckLine, RiGroupLine, RiLockLine } from 'react-icons/ri';
 import type { IconType } from 'react-icons';
-import { sounds } from '@/lib/sounds';
+import { useMenuSounds } from '@/hooks/use-menu-sounds';
 
 /**
  * Who reads a memo, as one value: private, public, or one of the user's spaces. Visibility
@@ -46,9 +46,10 @@ interface AudienceSelectorProps {
 export const AudienceSelector = ({ value, onChange }: AudienceSelectorProps) => {
   const current = personalOptions[value.kind];
   const Icon = current.icon;
+  const { onOpenChange, choose } = useMenuSounds();
 
   return (
-    <DropdownMenu onOpenChange={(open) => { if (open) sounds.pop(); }}>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -67,7 +68,10 @@ export const AudienceSelector = ({ value, onChange }: AudienceSelectorProps) => 
             <DropdownMenuItem
               key={option.audience.kind}
               className="gap-2 cursor-pointer"
-              onClick={() => { sounds.tick(); onChange(option.audience); }}
+              onClick={() => {
+                choose();
+                onChange(option.audience);
+              }}
             >
               <OptionIcon className="size-4" />
               <span className="flex-1">{option.label}</span>
