@@ -24,7 +24,8 @@
     "test": "vitest run",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "bench:lists": "NODE_ENV=production tsx bench/memo-lists.ts"
   },
   "prettier": "@repo/prettier-config",
   "dependencies": {
@@ -48,6 +49,7 @@
     "drizzle-orm": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

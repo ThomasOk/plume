@@ -1,0 +1,245 @@
+# Memo lists: performance
+
+What each memo list costs (the personal scope, a space, Explore): how big its response
+is, how long it takes, and how Postgres executes its query. Measured before the lists were
+paginated (ADR 0008), then again after each step (the comment count indexed, then each
+list paginated with its index), so every change is judged against the same numbers.
+
+## Method
+
+`pnpm bench:lists` (source: `packages/api/bench/`) does the following:
+
+1. starts a disposable `postgres:17` through Testcontainers, the image the integration
+   tests use, and applies the migrations. It reads no connection string, so it cannot
+   touch a database it did not start. Docker must be running.
+2. seeds the data set below. The seed is deterministic (counters for identifiers, a fixed
+   instant for dates, a seeded generator for every choice), so every run measures the same
+   rows. It ends with `ANALYZE`, so the planner sees the data it reads.
+3. calls each list procedure through the tRPC router, as its reader would: the personal
+   scope as its writer, the space as a member, Explore as an anonymous visitor. No filter.
+   It runs with `NODE_ENV=production`, and refuses to run otherwise: in development every
+   procedure waits a random 100 to 500 ms to mimic latency.
+4. per list, makes 3 warm-up calls, then 30 measured calls, and reports their median and
+   p95. The response size is the procedure's result serialized with superjson, as tRPC
+   sends it.
+5. records the SQL of the list query as it was sent and runs `EXPLAIN (ANALYZE, BUFFERS)`
+   on it. Only the list query is explained: the queries that follow fetch the
+   attachments and reactions of its rows by identifier.
+
+The benchmark is a tool, not a test: it asserts nothing, is not part of `pnpm test` and
+does not run in CI, so timing noise never fails a build. A run takes about ten minutes
+before pagination, most of it in Explore's 33 calls. A run prints Markdown; the
+sections below are pasted from it. Absolute times depend on the machine; compare columns
+measured on the same one.
+
+## Data set
+
+- 220 users: one writer, 19 other members of one space, 200 authors on Explore.
+- Personal scope: 2,000 memos by the writer, 20% of them public, 5 pinned.
+- Space: 2,000 memos by its 20 members, 3 pinned.
+- Explore: 10,000 public memos by the 200 authors, plus the writer's 411 public memos,
+  6 featured.
+- Around them: 20,916 comments (0 to 3 per memo), 32,426 reactions (0 to 5 per memo, by
+  readers of the memo), 2,079 active attachments (on about 10% of memos), and 0 to 2
+  hashtags per memo.
+- 34,916 rows in `memo` in all, root memos and comments.
+
+## Machine
+
+Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, PostgreSQL
+17.9 in Docker with its default configuration.
+
+## Results
+
+### Personal scope (read by its writer)
+
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 2,000 | | |
+| Response size | 1,642 KB | | |
+| Median | 2,350 ms | | |
+| p95 | 2,424 ms | | |
+| Queries | 3 | | |
+
+### Space (read by a member)
+
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 2,000 | | |
+| Response size | 1,928 KB | | |
+| Median | 2,468 ms | | |
+| p95 | 2,620 ms | | |
+| Queries | 4 | | |
+
+### Explore (read by an anonymous visitor)
+
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 10,411 | | |
+| Response size | 9,957 KB | | |
+| Median | 12,965 ms | | |
+| p95 | 13,083 ms | | |
+| Queries | 3 | | |
+
+## Reading the "before" plans
+
+- **The comment count dominates every list.** Each listed memo runs the `comment_count`
+  subquery, and with no index on `memo.parent_id` each run is a sequential scan of the
+  whole `memo` table: about 1.2 ms, repeated 2,000 times in a scope and 10,411 times on
+  Explore. That is 3.5 million buffer hits for a scope and 18 million for Explore, and over
+  95% of each list's execution time. Reading and sorting the rows themselves takes 60 to
+  85 ms.
+- **No index serves a list's order.** The personal scope and Explore read `memo` by a
+  sequential scan, and all three sort the whole scope on `pinned_at` or `featured_at`
+  then `created_at`. Explore's sort spills to disk (`external merge`, 4 MB). The space
+  uses `memo_space_id_created_at_idx` only to find the space's rows, then sorts them, since
+  the index ignores pins and comments.
+- **The response grows with the list.** Explore sends 10 MB to a visitor who reads the
+  first few memos.
+
+Paginating would bound the subquery to the 20 memos of a page, but each run would stay a
+scan of the whole table until `memo.parent_id` is indexed. That index comes first, before
+pagination, so that each step is measured alone: until the comment count is cheap, it
+hides the effect of everything else.
+
+## "Before" query plans
+
+Run of 2026-10-11, data set and machine above.
+
+### Personal scope
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image" from "memo" left join "user" on "memo"."user_id" = "user"."id" where (("memo"."user_id" = $1 and "memo"."space_id" is null) and "memo"."parent_id" is null) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc
+```
+
+```
+Nested Loop Left Join  (cost=3050.90..3540479.90 rows=1620 width=436) (actual time=63.976..2395.316 rows=2000 loops=1)
+  Buffers: shared hit=3495785
+  ->  Gather Merge  (cost=3050.90..3235.53 rows=1620 width=390) (actual time=62.092..63.148 rows=2000 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=1783
+        ->  Sort  (cost=2050.89..2053.27 rows=953 width=390) (actual time=55.666..55.903 rows=1000 loops=2)
+              Sort Key: memo.pinned_at DESC NULLS LAST, memo.created_at DESC
+              Sort Method: quicksort  Memory: 779kB
+              Buffers: shared hit=1783
+              Worker 0:  Sort Method: quicksort  Memory: 40kB
+              ->  Parallel Seq Scan on memo  (cost=0.00..2003.74 rows=953 width=390) (actual time=54.068..55.117 rows=1000 loops=2)
+                    Filter: ((space_id IS NULL) AND (parent_id IS NULL) AND (user_id = 'bench-writer'::text))
+                    Rows Removed by Filter: 16458
+                    Buffers: shared hit=1747
+  ->  Materialize  (cost=0.00..6.77 rows=1 width=58) (actual time=0.000..0.000 rows=1 loops=2000)
+        Buffers: shared hit=2
+        ->  Seq Scan on "user"  (cost=0.00..6.76 rows=1 width=58) (actual time=0.029..0.029 rows=1 loops=1)
+              Filter: (id = 'bench-writer'::text)
+              Rows Removed by Filter: 1
+              Buffers: shared hit=2
+  SubPlan 1
+    ->  Aggregate  (cost=2183.45..2183.47 rows=1 width=4) (actual time=1.165..1.165 rows=1 loops=2000)
+          Buffers: shared hit=3494000
+          ->  Seq Scan on memo comments  (cost=0.00..2183.45 rows=2 width=0) (actual time=0.648..1.164 rows=2 loops=2000)
+                Filter: (parent_id = memo.id)
+                Rows Removed by Filter: 34914
+                Buffers: shared hit=3494000
+Planning Time: 0.071 ms
+JIT:
+  Functions: 19
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.558 ms (Deform 0.289 ms), Inlining 36.015 ms, Optimization 40.401 ms, Emission 31.737 ms, Total 108.711 ms
+Execution Time: 2396.037 ms
+```
+
+### Space
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."space_id" = $1 and "memo"."parent_id" is null) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc
+```
+
+```
+Gather Merge  (cost=3008.76..4459698.54 rows=2041 width=436) (actual time=95.801..2647.392 rows=2000 loops=1)
+  Workers Planned: 1
+  Workers Launched: 1
+  Buffers: shared hit=3494360
+  ->  Sort  (cost=2008.75..2011.75 rows=1201 width=432) (actual time=82.152..82.382 rows=1000 loops=2)
+        Sort Key: memo.pinned_at DESC NULLS LAST, memo.created_at DESC
+        Sort Method: quicksort  Memory: 850kB
+        Buffers: shared hit=360
+        Worker 0:  Sort Method: quicksort  Memory: 25kB
+        ->  Hash Left Join  (cost=159.81..1947.32 rows=1201 width=432) (actual time=81.277..81.533 rows=1000 loops=2)
+              Hash Cond: (memo.user_id = "user".id)
+              Buffers: shared hit=353
+              ->  Parallel Bitmap Heap Scan on memo  (cost=150.84..1935.13 rows=1201 width=390) (actual time=81.191..81.351 rows=1000 loops=2)
+                    Recheck Cond: (space_id = 'bench-space'::text)
+                    Filter: (parent_id IS NULL)
+                    Rows Removed by Filter: 1518
+                    Heap Blocks: exact=275
+                    Buffers: shared hit=312
+                    ->  Bitmap Index Scan on memo_space_id_created_at_idx  (cost=0.00..150.33 rows=5072 width=0) (actual time=0.245..0.245 rows=5036 loops=1)
+                          Index Cond: (space_id = 'bench-space'::text)
+                          Buffers: shared hit=36
+              ->  Hash  (cost=6.21..6.21 rows=221 width=58) (actual time=0.045..0.046 rows=221 loops=2)
+                    Buckets: 1024  Batches: 1  Memory Usage: 21kB
+                    Buffers: shared hit=8
+                    ->  Seq Scan on "user"  (cost=0.00..6.21 rows=221 width=58) (actual time=0.016..0.028 rows=221 loops=2)
+                          Buffers: shared hit=8
+  SubPlan 1
+    ->  Aggregate  (cost=2183.45..2183.47 rows=1 width=4) (actual time=1.276..1.276 rows=1 loops=2000)
+          Buffers: shared hit=3494000
+          ->  Seq Scan on memo comments  (cost=0.00..2183.45 rows=2 width=0) (actual time=0.787..1.275 rows=2 loops=2000)
+                Filter: (parent_id = memo.id)
+                Rows Removed by Filter: 34914
+                Buffers: shared hit=3494000
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.158 ms
+JIT:
+  Functions: 36
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.798 ms (Deform 0.479 ms), Inlining 34.457 ms, Optimization 70.604 ms, Emission 57.035 ms, Total 162.894 ms
+Execution Time: 2648.144 ms
+```
+
+### Explore
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."visibility" = $1 and "memo"."parent_id" is null) order by "memo"."featured_at" DESC NULLS LAST, "memo"."created_at" desc
+```
+
+```
+Gather Merge  (cost=3414.39..22741048.24 rows=10413 width=436) (actual time=89.778..12961.639 rows=10411 loops=1)
+  Workers Planned: 1
+  Workers Launched: 1
+  Buffers: shared hit=18189841, temp read=499 written=500
+  ->  Sort  (cost=2414.38..2429.69 rows=6125 width=432) (actual time=79.845..81.566 rows=5206 loops=2)
+        Sort Key: memo.featured_at DESC NULLS LAST, memo.created_at DESC
+        Sort Method: external merge  Disk: 3992kB
+        Buffers: shared hit=1824, temp read=499 written=500
+        Worker 0:  Sort Method: quicksort  Memory: 28kB
+        ->  Hash Left Join  (cost=8.97..2029.10 rows=6125 width=432) (actual time=74.124..75.879 rows=5206 loops=2)
+              Hash Cond: (memo.user_id = "user".id)
+              Buffers: shared hit=1788
+              ->  Parallel Seq Scan on memo  (cost=0.00..2003.74 rows=6125 width=390) (actual time=74.035..75.286 rows=5206 loops=2)
+                    Filter: ((parent_id IS NULL) AND (visibility = 'public'::visibility))
+                    Rows Removed by Filter: 12252
+                    Buffers: shared hit=1747
+              ->  Hash  (cost=6.21..6.21 rows=221 width=58) (actual time=0.047..0.048 rows=221 loops=2)
+                    Buckets: 1024  Batches: 1  Memory Usage: 21kB
+                    Buffers: shared hit=8
+                    ->  Seq Scan on "user"  (cost=0.00..6.21 rows=221 width=58) (actual time=0.017..0.031 rows=221 loops=2)
+                          Buffers: shared hit=8
+  SubPlan 1
+    ->  Aggregate  (cost=2183.45..2183.47 rows=1 width=4) (actual time=1.236..1.236 rows=1 loops=10411)
+          Buffers: shared hit=18188017
+          ->  Seq Scan on memo comments  (cost=0.00..2183.45 rows=2 width=0) (actual time=1.010..1.234 rows=1 loops=10411)
+                Filter: (parent_id = memo.id)
+                Rows Removed by Filter: 34915
+                Buffers: shared hit=18188017
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.168 ms
+JIT:
+  Functions: 32
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.785 ms (Deform 0.478 ms), Inlining 35.478 ms, Optimization 62.100 ms, Emission 50.492 ms, Total 148.855 ms
+Execution Time: 12963.414 ms
+```

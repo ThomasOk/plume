@@ -193,6 +193,10 @@ The results are committed to the repository.
   migrate.
 - Each index is justified by an `EXPLAIN ANALYZE` before and after, recorded in the
   performance note.
+- First, outside pagination: an index on `memo.parent_id`. The "before" plans show the
+  comment count of each listed memo scanning the whole `memo` table, over 95% of every
+  list's time, because the foreign key has no index. It comes first so that it does not
+  hide the effect of pagination and of the list indexes in their own measurements.
 
 ### Web client
 
@@ -236,9 +240,10 @@ The results are committed to the repository.
 ### Delivery
 
 - The work is split into tickets, written separately: first the measurement baseline
-  (seed, benchmark, "before" numbers, no behavior change); then Explore paginated end to
-  end, which builds the shared mechanism; then the personal scope
-  and spaces on the same mechanism.
+  (seed, benchmark, "before" numbers, no behavior change); then the index on
+  `memo.parent_id` the baseline showed was missing; then Explore paginated end to end,
+  which builds the shared mechanism; then the personal scope and spaces on the same
+  mechanism.
 
 ## Testing Decisions
 

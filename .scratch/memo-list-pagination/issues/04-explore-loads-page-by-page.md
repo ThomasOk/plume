@@ -1,11 +1,11 @@
-# 03: Explore loads page by page as the reader scrolls
+# 04: Explore loads page by page as the reader scrolls
 
 **What to build:** Explore shows its first 20 memos, then loads the next ones as the reader
 nears the end, in the order it already has: featured first, latest featured on top, then
 newest first. Nothing repeats or goes missing when someone publishes, features or deletes
 a memo meanwhile. Opening a memo and coming back returns the reader to where they were.
 The list works with a keyboard and a screen reader. This ticket builds the mechanism the
-personal scope and spaces reuse in 04 and 05. See the spec,
+personal scope and spaces reuse in 05 and 06. See the spec,
 `.scratch/memo-list-pagination/spec.md`, and ADR 0008.
 
 - **Contract**: the public list accepts an optional opaque `cursor` beside its filters and
@@ -26,14 +26,14 @@ personal scope and spaces reuse in 04 and 05. See the spec,
   composition.
 - **Reactions**: the optimistic reaction rewrite recognises the paginated cache shape
   (pages of items) in addition to the flat list, which the personal scope and spaces still
-  use until 04 and 05, and still rolls back on error.
+  use until 05 and 06, and still rolls back on error.
 - **Position**: coming back to Explore from a memo restores the loaded pages and the
   scroll position.
 - **Mutations** keep invalidating memo queries as today.
-- **Measurement**: run `pnpm bench:lists` and fill Explore's "after" column and plan in the
+- **Measurement**: run `pnpm bench:lists` and fill Explore's "Paginated" column and plan in the
   performance note; cite the numbers in the PR.
 
-**Blocked by:** 01 (The memo lists are measured), 02 (Scopes and Explore share one list query).
+**Blocked by:** 01 (The memo lists are measured), 02 (Comments are counted through an index), 03 (Scopes and Explore share one list query).
 
 **Status:** ready-for-agent
 
@@ -45,7 +45,7 @@ personal scope and spaces reuse in 04 and 05. See the spec,
 - [ ] A malformed cursor and a cursor from another list are refused as a bad request
 - [ ] A cursor never yields a memo that is not public
 - [ ] Explore paginates for a reader who is not signed in
-- [ ] The query plan shows the new index used, recorded in the performance note with the "after" numbers
+- [ ] The query plan shows the new index used, recorded in the performance note with the "Paginated" numbers
 - [ ] E2E: scrolling to the end loads the next page; a clear end of list shows at the end
 - [ ] E2E: a failed page load shows "Load more", reachable by keyboard, and using it loads the page
 - [ ] E2E: opening a memo then going back restores the loaded memos and the scroll position
