@@ -28,9 +28,8 @@ list paginated with its index), so every change is judged against the same numbe
 
 The benchmark is a tool, not a test: it asserts nothing, is not part of `pnpm test` and
 does not run in CI, so timing noise never fails a build. A run took about ten minutes
-before the comment count was indexed, most of it in Explore's 33 calls, and takes well
-under a minute since. A run prints Markdown; the
-sections below are pasted from it. Absolute times depend on the machine; compare columns
+before the comment count was indexed, most of it in Explore's 33 calls. A run prints
+Markdown; the sections below are pasted from it. Absolute times depend on the machine; compare columns
 measured on the same one.
 
 ## Data set
@@ -250,21 +249,26 @@ Execution Time: 12963.414 ms
 - **Every comment count goes through `memo_parent_id_idx`.** Each run of the subquery is
   an index-only scan of the memo's comments: 0.002 to 0.003 ms instead of 1.2 ms, and
   about 3 buffer hits instead of 1,750. The buffers of a whole list fall from 3.5 million
-  to 6,300 for a scope and from 18 million to 31,000 for Explore. Its `Heap Fetches` come
-  from a visibility map the seed leaves unset (`ANALYZE` does not vacuum); a vacuumed
-  table would read the index alone.
-- **Execution time falls from 2.4 to 2.6 s to 9 to 11 ms in a scope, and from 13 s to
+  to 6,300 for a scope and from 18 million to 31,000 for Explore. The scan's
+  `Heap Fetches` are most likely the visibility map the seed leaves unset (`ANALYZE`
+  does not vacuum); a vacuumed table should read the index alone.
+- **Execution time falls from about 2.5 s to about 10 ms in a scope, and from 13 s to
   35 ms on Explore.** At these costs the planner no longer compiles the query with JIT,
   which cost 110 to 160 ms per run before.
-- **The plain index also finds the root memos.** The personal scope and the space now
-  read their rows through it (`Index Cond: (parent_id IS NULL)`), then filter on the
-  author or the space. A partial index on `parent_id IS NOT NULL`, about 40% smaller,
-  could serve the comment count but not this, so the plain one is kept. The space's
-  planner prefers it to `memo_space_id_created_at_idx`, which matches 5,036 rows of which
-  2,000 are roots, against 2,000 roots among 14,000. Explore still scans the table: 10,411
-  of its 14,000 root memos are public.
-- **What is left is the list itself.** The query takes 9 to 35 ms; the rest of the 40 to
-  390 ms median is fetching attachments and reactions for every row and serializing up to
+- **The planner also uses the plain index to find the root memos.** The personal scope
+  and the space now read their rows through it (`Index Cond: (parent_id IS NULL)`), all
+  14,000 root memos, then filter on the author or the space. For the personal scope this
+  replaces a scan of the whole table (707 buffers against 1,747). For the space it is a
+  planner choice, not a gain: it reads 707 buffers where `memo_space_id_created_at_idx`
+  read 348, a cost the new plan hides behind a much cheaper subquery. Neither is the
+  index a list should be read through; that is what the list indexes of tickets 04 to 06
+  are for. A partial index on `parent_id IS NOT NULL`, about 40% smaller, would serve the
+  comment count just as well; the plans show no difference worth the extra clause, so the
+  plain one is kept. Explore still scans the table: 10,411 of the table's 14,000 root
+  memos are public.
+- **What is left is the list itself.** The query takes 9 to 35 ms. The rest of the 40 to
+  390 ms median is not explained here, since only the list query is; it can only be the
+  queries for the attachments and reactions of every row and the serialization of up to
   10 MB of response. That is what pagination bounds. The sorts of the whole scope remain,
   now in memory (Explore's no longer spills to disk), and are what the list indexes of
   tickets 04 to 06 have to beat.
