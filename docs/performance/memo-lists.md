@@ -2,8 +2,8 @@
 
 What each memo list costs (the personal scope, a space, Explore): how big its response
 is, how long it takes, and how Postgres executes its query. Measured before the lists were
-paginated (ADR 0008), then again after each step, so every change is judged against the
-same numbers.
+paginated (ADR 0008), then again after each step (the comment count indexed, then each
+list paginated with its index), so every change is judged against the same numbers.
 
 ## Method
 
@@ -53,33 +53,33 @@ Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, Postg
 
 ### Personal scope (read by its writer)
 
-| | Before (unpaginated) | After |
-| --- | ---: | ---: |
-| Memos returned | 2,000 | |
-| Response size | 1,642 KB | |
-| Median | 2,350 ms | |
-| p95 | 2,424 ms | |
-| Queries | 3 | |
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 2,000 | | |
+| Response size | 1,642 KB | | |
+| Median | 2,350 ms | | |
+| p95 | 2,424 ms | | |
+| Queries | 3 | | |
 
 ### Space (read by a member)
 
-| | Before (unpaginated) | After |
-| --- | ---: | ---: |
-| Memos returned | 2,000 | |
-| Response size | 1,928 KB | |
-| Median | 2,468 ms | |
-| p95 | 2,620 ms | |
-| Queries | 4 | |
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 2,000 | | |
+| Response size | 1,928 KB | | |
+| Median | 2,468 ms | | |
+| p95 | 2,620 ms | | |
+| Queries | 4 | | |
 
 ### Explore (read by an anonymous visitor)
 
-| | Before (unpaginated) | After |
-| --- | ---: | ---: |
-| Memos returned | 10,411 | |
-| Response size | 9,957 KB | |
-| Median | 12,965 ms | |
-| p95 | 13,083 ms | |
-| Queries | 3 | |
+| | Before | Comments indexed | Paginated |
+| --- | ---: | ---: | ---: |
+| Memos returned | 10,411 | | |
+| Response size | 9,957 KB | | |
+| Median | 12,965 ms | | |
+| p95 | 13,083 ms | | |
+| Queries | 3 | | |
 
 ## Reading the "before" plans
 
@@ -97,9 +97,10 @@ Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, Postg
 - **The response grows with the list.** Explore sends 10 MB to a visitor who reads the
   first few memos.
 
-Paginating bounds the subquery to the 20 memos of a page, which already caps its cost.
-The subquery itself stays a scan of the whole table per memo until `memo.parent_id` is
-indexed, which the spec's indexes do not cover.
+Paginating would bound the subquery to the 20 memos of a page, but each run would stay a
+scan of the whole table until `memo.parent_id` is indexed. That index comes first, before
+pagination, so that each step is measured alone: until the comment count is cheap, it
+hides the effect of everything else.
 
 ## "Before" query plans
 
