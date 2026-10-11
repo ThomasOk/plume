@@ -65,6 +65,10 @@ export const memo = pgTable(
       table.spaceId,
       table.createdAt.desc(),
     ),
+    // A memo's comments: the comment count of every listed memo, listing them, carrying a
+    // memo's visibility over to them on edit, deleting a memo with them, and the
+    // `ON DELETE CASCADE` of `parent_id`, which Postgres does not index on its own.
+    index('memo_parent_id_idx').on(table.parentId),
     // The equivalence `visibility = 'space' <=> space_id IS NOT NULL`, in both
     // directions, which is what makes `space + private` and `space + public`
     // unrepresentable (ADR 0003). The implication alone would not.
