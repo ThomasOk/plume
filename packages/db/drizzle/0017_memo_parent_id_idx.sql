@@ -1,0 +1,1 @@
+CREATE INDEX "memo_parent_id_idx" ON "memo" USING btree ("parent_id");
