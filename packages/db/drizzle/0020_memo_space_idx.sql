@@ -1,0 +1,1 @@
+CREATE INDEX "memo_space_idx" ON "memo" USING btree ("space_id","pinned_at" DESC NULLS LAST,"created_at" DESC NULLS FIRST,"id" DESC NULLS FIRST) WHERE "memo"."parent_id" IS NULL;

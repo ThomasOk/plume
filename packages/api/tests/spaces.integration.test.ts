@@ -193,7 +193,7 @@ describe('the memos of a space', () => {
   it('are empty in a new space, whatever the member writes elsewhere', async () => {
     const caller = createAuthenticatedCaller(db, creator.id);
 
-    expect(await caller.memos.space.list({ spaceId })).toEqual([]);
+    expect((await caller.memos.space.list({ spaceId })).items).toEqual([]);
     expect(await caller.memos.space.tags({ spaceId })).toEqual({});
     expect(await caller.memos.space.stats({ spaceId })).toEqual({});
   });
@@ -210,7 +210,7 @@ describe('the memos of a space', () => {
     );
     const caller = createAuthenticatedCaller(db, creator.id);
 
-    expect((await caller.memos.space.list({ spaceId })).map((m) => m.id)).toEqual([
+    expect((await caller.memos.space.list({ spaceId })).items.map((m) => m.id)).toEqual([
       'space-memo',
     ]);
     expect(await caller.memos.space.tags({ spaceId })).toEqual({ baking: 1 });

@@ -98,11 +98,9 @@ const percentile = (sorted: number[], p: number) => sorted[Math.min(sorted.lengt
 interface ListUnderTest {
   name: string;
   reader: string;
-  // A whole list, or one page of a paginated one.
-  call: () => Promise<unknown[] | { items: unknown[] }>;
+  // One page of the list.
+  call: () => Promise<{ items: unknown[] }>;
 }
-
-const memosOf = (result: unknown[] | { items: unknown[] }) => (Array.isArray(result) ? result : result.items);
 
 type Page = { nextCursor: string | null };
 
@@ -131,14 +129,17 @@ async function main() {
     const counts = await seedLists(db);
     const queriesOf = recordQueries(db);
     const readPersonal = (cursor: string | undefined) => callerFor(db, WRITER_ID).memos.list({ cursor });
+    const readSpace = (cursor: string | undefined) => callerFor(db, WRITER_ID).memos.space.list({ spaceId: SPACE_ID, cursor });
     const readExplore = (cursor: string | undefined) => callerFor(db, null).memos.listPublic({ cursor });
     const deepPersonalCursor = await cursorAt('The personal scope', readPersonal, DEEP_PAGE);
+    const deepSpaceCursor = await cursorAt('The space', readSpace, DEEP_PAGE);
     const deepExploreCursor = await cursorAt('Explore', readExplore, DEEP_PAGE);
 
     const lists: ListUnderTest[] = [
       { name: 'Personal scope', reader: 'the writer', call: () => readPersonal(undefined) },
       { name: `Personal scope, page ${DEEP_PAGE}`, reader: 'the writer', call: () => readPersonal(deepPersonalCursor) },
-      { name: 'Space', reader: 'a member (the writer)', call: () => callerFor(db, WRITER_ID).memos.space.list({ spaceId: SPACE_ID }) },
+      { name: 'Space', reader: 'a member (the writer)', call: () => readSpace(undefined) },
+      { name: `Space, page ${DEEP_PAGE}`, reader: 'a member (the writer)', call: () => readSpace(deepSpaceCursor) },
       { name: 'Explore', reader: 'an anonymous visitor', call: () => readExplore(undefined) },
       { name: `Explore, page ${DEEP_PAGE}`, reader: 'an anonymous visitor', call: () => readExplore(deepExploreCursor) },
     ];
@@ -149,7 +150,7 @@ async function main() {
       for (let i = 0; i < WARMUP_RUNS; i++) await list.call();
 
       const times: number[] = [];
-      let result: unknown[] | { items: unknown[] } = [];
+      let result: { items: unknown[] } = { items: [] };
       for (let i = 0; i < MEASURED_RUNS; i++) {
         const start = performance.now();
         result = await list.call();
@@ -169,7 +170,7 @@ async function main() {
 
       results.push({
         ...list,
-        rows: memosOf(result).length,
+        rows: result.items.length,
         bytes,
         median: percentile(times, 50),
         p95: percentile(times, 95),

@@ -66,9 +66,9 @@ export const listMemosSchema = z.object({
   query: z.string().optional(),
 });
 
-// A list read a page at a time (the personal scope, Explore): the filters, and where the
-// previous page ended. The cursor is opaque, issued by the server; without one, the first
-// page. The page size is the server's.
+// A list read a page at a time (the personal scope, a space, Explore): the filters, and
+// where the previous page ended. The cursor is opaque, issued by the server; without one,
+// the first page. The page size is the server's.
 export const listMemoPageSchema = listMemosSchema.extend({
   cursor: z.string().optional(),
 });

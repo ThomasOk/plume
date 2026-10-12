@@ -15,10 +15,10 @@ const isPages = (value: unknown): value is Pages =>
   Array.isArray((value as Pages).pages) &&
   (value as Pages).pages.every((page) => typeof page === 'object' && page !== null && Array.isArray(page.items));
 
-// A cached read as it stands once the memo is rewritten: a list holding it, whole or in
-// pages, or the memo itself on its page. Anything else (stats, tags, a list without it, a
-// memo the rewrite leaves as it is) comes back as it was, the same object, so the caller can
-// tell which reads it touched.
+// A cached read as it stands once the memo is rewritten: a list holding it, in pages (the
+// memo lists) or whole (a memo's comments), or the memo itself on its page. Anything else
+// (stats, tags, a list without it, a memo the rewrite leaves as it is) comes back as it was,
+// the same object, so the caller can tell which reads it touched.
 const rewriteMemoIn = (data: unknown, memoId: string, rewrite: (memo: CachedMemo) => CachedMemo): unknown => {
   if (isPages(data)) {
     let touched = false;

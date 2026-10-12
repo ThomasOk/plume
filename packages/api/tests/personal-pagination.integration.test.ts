@@ -284,11 +284,19 @@ describe('a cursor the personal scope did not issue', () => {
     expect(await refusal(listAt(ofExplore!))).toEqual({ code: 'BAD_REQUEST', message: 'Invalid cursor' });
   });
 
-  // Forged until a space issues cursors of its own (ticket 06).
   it('is refused as a bad request when it comes from a space', async () => {
-    const ofASpace = forge('space', [null, '2026-01-01 00:00:00', 'memo-001']);
+    await db.insert(memo).values(Array.from({ length: 25 }, (_, i) => ({
+      id: `club-${i}`,
+      userId: alice.id,
+      spaceId: club.id,
+      content: `In the club ${i}`,
+      visibility: 'space' as const,
+      createdAt: new Date(START + i * MINUTE),
+      updatedAt: new Date(START + i * MINUTE),
+    })));
+    const { nextCursor: ofASpace } = await as(alice).memos.space.list({ spaceId: club.id });
 
-    expect((await refusal(listAt(ofASpace))).code).toBe('BAD_REQUEST');
+    expect(await refusal(listAt(ofASpace!))).toEqual({ code: 'BAD_REQUEST', message: 'Invalid cursor' });
   });
 });
 

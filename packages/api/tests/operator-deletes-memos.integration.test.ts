@@ -157,7 +157,7 @@ describe('an operator who is a member of a space', () => {
     await as(olivia).memos.delete({ id: own });
 
     expect((await refusal(as(olivia).memos.delete({ id: alices }))).code).toBe('FORBIDDEN');
-    expect(ids(await as(alice).memos.space.list({ spaceId: club.id }))).toEqual([alices]);
+    expect(ids((await as(alice).memos.space.list({ spaceId: club.id })).items)).toEqual([alices]);
   });
 
   it('as an admin there, deletes another member’s memo by their role', async () => {
@@ -166,7 +166,7 @@ describe('an operator who is a member of a space', () => {
 
     await as(olivia).memos.delete({ id: bobs });
 
-    expect(ids(await as(bob).memos.space.list({ spaceId: choir.id }))).toEqual([]);
+    expect(ids((await as(bob).memos.space.list({ spaceId: choir.id })).items)).toEqual([]);
   });
 });
 

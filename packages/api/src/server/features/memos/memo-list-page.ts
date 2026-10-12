@@ -15,8 +15,11 @@ export const PAGE_SIZE = 20;
 // The column that puts some memos first in a list: the pin in a scope, the featuring on Explore.
 export type LeadingColumn = typeof memo.pinnedAt | typeof memo.featuredAt;
 
-// Which list a cursor was issued for, so that it is refused by any other.
-export type ListName = 'personal' | 'explore';
+// Which list a cursor was issued for, so that it is refused by any other. A space's names
+// the space: every space is a list of its own.
+export type ListName = 'personal' | 'explore' | `space:${string}`;
+
+export const spaceList = (spaceId: string): ListName => `space:${spaceId}`;
 
 // The sort key of a memo, as Postgres holds it. Timestamps travel as Postgres prints them, to
 // the microsecond: a `Date` keeps milliseconds, and a cursor rounded below its own memo would

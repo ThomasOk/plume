@@ -54,13 +54,14 @@ function RouteComponent() {
       </div>
       <div className="mt-4">
         {memos.isLoading && <MemoListSkeleton />}
-        {memos.error && !isNotFound(memos.error) && (
+        {/* A failed first page; a failed later one is the list's own to offer again. */}
+        {memos.isError && !memos.memos && !isNotFound(memos.error) && (
           <p className="text-destructive">
             Something went wrong. Please try again.
           </p>
         )}
-        {memos.data && (
-          <MemoList memos={memos.data} emptyMessage="No memos in this space yet." />
+        {memos.memos && (
+          <MemoList memos={memos.memos} pagination={memos} emptyMessage="No memos in this space yet." />
         )}
       </div>
     </div>

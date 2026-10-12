@@ -141,6 +141,13 @@
       "when": 1791812216072,
       "tag": "0019_memo_personal_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791819042537,
+      "tag": "0020_memo_space_idx",
+      "breakpoints": true
     }
   ]
 }
