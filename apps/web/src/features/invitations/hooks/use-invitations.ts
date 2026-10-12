@@ -8,9 +8,9 @@ export const useInvitations = (spaceId: string) => {
   return useQuery(
     trpc.invitations.list.queryOptions(
       { spaceId },
-      // Hands the fetch an abort signal. Without one, React Query cannot cancel a list fetch
-      // still in flight when an invitation is sent or revoked: the invalidation joins that
-      // fetch instead of starting a new one, and the list shows what it was before the change.
+      // Hands the fetch an abort signal, so the fetch the invitation hooks cancel before
+      // invalidating, when an invitation is sent or revoked, is aborted rather than left to
+      // run.
       { trpc: { abortOnUnmount: true } },
     ),
   );
