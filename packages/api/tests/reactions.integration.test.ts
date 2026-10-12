@@ -181,7 +181,7 @@ describe('reading reactions', () => {
     const emojisOf = (memos: { id: string; reactions: { emoji: string }[] }[], id: string) =>
       memos.find((m) => m.id === id)!.reactions.map(({ emoji }) => emoji);
 
-    expect(emojisOf(await as(alice).memos.list({}), personal.id)).toEqual(['💡']);
+    expect(emojisOf((await as(alice).memos.list({})).items, personal.id)).toEqual(['💡']);
     expect(emojisOf(await as(alice).memos.space.list({ spaceId: club.id }), shared.id)).toEqual(['🙏']);
     expect(emojisOf((await as(alice).memos.listPublic({})).items, published.id)).toEqual(['😂']);
     expect((await as(alice).memos.getById({ id: published.id })).reactions.map(({ emoji }) => emoji)).toEqual(['😂']);

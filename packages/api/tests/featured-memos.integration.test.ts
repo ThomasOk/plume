@@ -217,7 +217,7 @@ describe('the lists of a scope', () => {
     await as(alice).memos.pin({ id: pinned! });
     await as(olivia).memos.feature({ id: featured! });
 
-    expect(ids(await as(alice).memos.list({}))).toEqual([pinned, newest, featured]);
+    expect(ids((await as(alice).memos.list({})).items)).toEqual([pinned, newest, featured]);
   });
 
 });

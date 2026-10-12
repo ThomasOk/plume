@@ -104,13 +104,15 @@ interface ListUnderTest {
 
 const memosOf = (result: unknown[] | { items: unknown[] }) => (Array.isArray(result) ? result : result.items);
 
-// The cursor of Explore's page `page` (1 for the first), followed from the first page: a
+type Page = { nextCursor: string | null };
+
+// The cursor of a list's page `page` (1 for the first), followed from the first page: a
 // keyset seek should cost the same at any depth, which an offset would not.
-const exploreCursorAt = async (db: DatabaseInstance, page: number) => {
+const cursorAt = async (name: string, readPage: (cursor: string | undefined) => Promise<Page>, page: number) => {
   let cursor: string | undefined;
   for (let i = 1; i < page; i++) {
-    const { nextCursor } = await callerFor(db, null).memos.listPublic({ cursor });
-    if (!nextCursor) throw new Error(`Explore has fewer than ${page} pages`);
+    const { nextCursor } = await readPage(cursor);
+    if (!nextCursor) throw new Error(`${name} has fewer than ${page} pages`);
     cursor = nextCursor;
   }
   return cursor;
@@ -128,13 +130,17 @@ async function main() {
     console.error('Seeding…');
     const counts = await seedLists(db);
     const queriesOf = recordQueries(db);
-    const deepCursor = await exploreCursorAt(db, DEEP_PAGE);
+    const readPersonal = (cursor: string | undefined) => callerFor(db, WRITER_ID).memos.list({ cursor });
+    const readExplore = (cursor: string | undefined) => callerFor(db, null).memos.listPublic({ cursor });
+    const deepPersonalCursor = await cursorAt('The personal scope', readPersonal, DEEP_PAGE);
+    const deepExploreCursor = await cursorAt('Explore', readExplore, DEEP_PAGE);
 
     const lists: ListUnderTest[] = [
-      { name: 'Personal scope', reader: 'the writer', call: () => callerFor(db, WRITER_ID).memos.list({}) },
+      { name: 'Personal scope', reader: 'the writer', call: () => readPersonal(undefined) },
+      { name: `Personal scope, page ${DEEP_PAGE}`, reader: 'the writer', call: () => readPersonal(deepPersonalCursor) },
       { name: 'Space', reader: 'a member (the writer)', call: () => callerFor(db, WRITER_ID).memos.space.list({ spaceId: SPACE_ID }) },
-      { name: 'Explore', reader: 'an anonymous visitor', call: () => callerFor(db, null).memos.listPublic({}) },
-      { name: `Explore, page ${DEEP_PAGE}`, reader: 'an anonymous visitor', call: () => callerFor(db, null).memos.listPublic({ cursor: deepCursor }) },
+      { name: 'Explore', reader: 'an anonymous visitor', call: () => readExplore(undefined) },
+      { name: `Explore, page ${DEEP_PAGE}`, reader: 'an anonymous visitor', call: () => readExplore(deepExploreCursor) },
     ];
 
     const results = [];

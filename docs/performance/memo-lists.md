@@ -17,7 +17,7 @@ list paginated with its index), so every change is judged against the same numbe
    rows. It ends with `ANALYZE`, so the planner sees the data it reads.
 3. calls each list procedure through the tRPC router, as its reader would: the personal
    scope as its writer, the space as a member, Explore as an anonymous visitor. No filter.
-   Once a list is paginated, the call reads its first page, and Explore is measured a
+   Once a list is paginated, the call reads its first page, and the list is measured a
    second time at page 100, to show what a page costs deep in the list.
    It runs with `NODE_ENV=production`, and refuses to run otherwise: in development every
    procedure waits a random 100 to 500 ms to mimic latency.
@@ -57,11 +57,14 @@ Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, Postg
 
 | | Before | Comments indexed | Paginated |
 | --- | ---: | ---: | ---: |
-| Memos returned | 2,000 | 2,000 | |
-| Response size | 1,642 KB | 1,642 KB | |
-| Median | 2,350 ms | 39.9 ms | |
-| p95 | 2,424 ms | 44.2 ms | |
-| Queries | 3 | 3 | |
+| Memos returned | 2,000 | 2,000 | 20 |
+| Response size | 1,642 KB | 1,642 KB | 17 KB |
+| Median | 2,350 ms | 39.9 ms | 1.6 ms |
+| p95 | 2,424 ms | 44.2 ms | 1.9 ms |
+| Queries | 3 | 3 | 3 |
+
+"Paginated" is the first page. Page 100, the last, resumed from the cursor that follows
+1,980 memos, costs the same: 20 memos, 16 KB, 1.5 ms median, 1.6 ms p95, 3 queries.
 
 ### Space (read by a member)
 
@@ -492,4 +495,89 @@ Planning:
   Buffers: shared hit=4
 Planning Time: 0.085 ms
 Execution Time: 0.105 ms
+```
+
+## Reading the "paginated" plans: personal scope
+
+- **The personal scope reads its page through `memo_personal_idx`.** An index scan on
+  `user_id`, then the scope's order, `pinned_at DESC NULLS LAST, created_at DESC, id DESC`,
+  partial on root memos outside any space, stopped by the `LIMIT` after 21 rows. 77 buffer
+  hits and 0.08 ms, against reading all 14,000 root memos through `memo_parent_id_idx`
+  and sorting the writer's 2,000 before. The partial predicate is implied by the scope's
+  condition, so the planner applies it without a filter: `space_id IS NULL` comes from the
+  personal scope (ADR 0004), `parent_id IS NULL` from the list.
+- **Page 100 costs what the first does.** It seeks on the whole key,
+  `Index Cond: ((user_id = ...) AND (pinned_at IS NULL) AND (ROW(created_at, id) < ROW(...)))`:
+  80 buffer hits and 0.07 ms.
+- **A cursor inside the pinned block** resumes on the same `OR` condition as Explore's
+  featured block: served in order, filtered rather than sought, at most the writer's
+  pins to skip. Not measured: the 5 pins of this data set fit in the first page.
+- **The space** still reads its whole list (ticket 06): 2,000 memos, 1,928 KB, 61.8 ms
+  median on this run.
+
+## "Paginated" query plans: personal scope
+
+Run of 2026-10-12, data set and machine above, with `memo_personal_idx` (migration
+`0019_memo_personal_idx`).
+
+### Personal scope, first page
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."pinned_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where (("memo"."user_id" = $1 and "memo"."space_id" is null) and "memo"."parent_id" is null) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $2
+```
+
+```
+Limit  (cost=0.29..233.68 rows=21 width=499) (actual time=0.009..0.070 rows=21 loops=1)
+  Buffers: shared hit=77
+  ->  Nested Loop Left Join  (cost=0.29..18038.55 rows=1623 width=499) (actual time=0.009..0.069 rows=21 loops=1)
+        Buffers: shared hit=77
+        ->  Index Scan using memo_personal_idx on memo  (cost=0.29..4396.47 rows=1623 width=389) (actual time=0.003..0.006 rows=21 loops=1)
+              Index Cond: (user_id = 'bench-writer'::text)
+              Buffers: shared hit=19
+        ->  Materialize  (cost=0.00..6.77 rows=1 width=58) (actual time=0.000..0.000 rows=1 loops=21)
+              Buffers: shared hit=2
+              ->  Seq Scan on "user"  (cost=0.00..6.76 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=1)
+                    Filter: (id = 'bench-writer'::text)
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=2
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.003..0.003 rows=1 loops=21)
+                Buffers: shared hit=56
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.002..0.002 rows=1 loops=21)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 27
+                      Buffers: shared hit=56
+Planning Time: 0.037 ms
+Execution Time: 0.077 ms
+```
+
+### Personal scope, page 100
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."pinned_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where (("memo"."user_id" = $1 and "memo"."space_id" is null) and "memo"."parent_id" is null and ("memo"."pinned_at" is null and ("memo"."created_at", "memo"."id") < ($2::timestamp, $3))) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $4
+```
+
+```
+Limit  (cost=0.29..195.34 rows=15 width=499) (actual time=0.008..0.061 rows=20 loops=1)
+  Buffers: shared hit=80
+  ->  Nested Loop Left Join  (cost=0.29..195.34 rows=15 width=499) (actual time=0.008..0.060 rows=20 loops=1)
+        Buffers: shared hit=80
+        ->  Index Scan using memo_personal_idx on memo  (cost=0.29..62.56 rows=15 width=389) (actual time=0.002..0.007 rows=20 loops=1)
+              Index Cond: ((user_id = 'bench-writer'::text) AND (pinned_at IS NULL) AND (ROW(created_at, id) < ROW('2024-01-10 18:45:21.275'::timestamp without time zone, 'bench-memo-01710'::text)))
+              Buffers: shared hit=23
+        ->  Materialize  (cost=0.00..6.77 rows=1 width=58) (actual time=0.000..0.000 rows=1 loops=20)
+              Buffers: shared hit=2
+              ->  Seq Scan on "user"  (cost=0.00..6.76 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=1)
+                    Filter: (id = 'bench-writer'::text)
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=2
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.002..0.002 rows=1 loops=20)
+                Buffers: shared hit=55
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.002..0.002 rows=2 loops=20)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 31
+                      Buffers: shared hit=55
+Planning Time: 0.037 ms
+Execution Time: 0.067 ms
 ```

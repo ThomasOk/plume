@@ -83,7 +83,7 @@ describe('memos.list', () => {
     });
 
     const caller = createAuthenticatedCaller(db);
-    const result = await caller.memos.list({});
+    const result = (await caller.memos.list({})).items;
 
     expect(result).toHaveLength(2);
   });
@@ -115,7 +115,7 @@ describe('memos.list', () => {
     });
 
     const caller = createAuthenticatedCaller(db);
-    const result = await caller.memos.list({});
+    const result = (await caller.memos.list({})).items;
 
     expect(result).toHaveLength(1);
     expect(result[0]!.userId).toBe('test-user-id');
@@ -139,7 +139,7 @@ describe('memos.list', () => {
     });
 
     const caller = createAuthenticatedCaller(db);
-    const result = await caller.memos.list({ tag: 'cooking' });
+    const result = (await caller.memos.list({ tag: 'cooking' })).items;
 
     expect(result).toHaveLength(1);
     expect(result[0]!.tags).toContain('cooking');
@@ -162,7 +162,7 @@ describe('memos.list', () => {
     });
 
     const caller = createAuthenticatedCaller(db);
-    const result = await caller.memos.list({ date: '2024-06-15' });
+    const result = (await caller.memos.list({ date: '2024-06-15' })).items;
 
     expect(result).toHaveLength(1);
     expect(result[0]!.createdAt).toEqual(new Date('2024-06-15'));
@@ -185,7 +185,7 @@ describe('memos.list', () => {
     });
 
     const caller = createAuthenticatedCaller(db);
-    const result = await caller.memos.list({ query: 'first' });
+    const result = (await caller.memos.list({ query: 'first' })).items;
 
     expect(result).toHaveLength(1);
     expect(result[0]!.content).toContain('first');

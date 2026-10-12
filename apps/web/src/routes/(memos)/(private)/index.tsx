@@ -23,11 +23,7 @@ function RouteComponent() {
   const selectedTag = search.tag;
   const query = search.query;
 
-  const {
-    data: memos,
-    isLoading,
-    error,
-  } = usePrivateMemos({
+  const personal = usePrivateMemos({
     enabled: !!session?.user,
     date: selectedDate,
     tag: selectedTag,
@@ -43,13 +39,14 @@ function RouteComponent() {
         <SearchFilterBadge />
       </div>
       <div className="mt-4">
-        {isLoading && <MemoListSkeleton hideAuthors />}
-        {error && (
+        {personal.isLoading && <MemoListSkeleton hideAuthors />}
+        {/* A failed first page; a failed later one is the list's own to offer again. */}
+        {personal.isError && !personal.memos && (
           <p className="text-destructive">
             Something went wrong. Please try again.
           </p>
         )}
-        {memos && <MemoList memos={memos} hideAuthors />}
+        {personal.memos && <MemoList memos={personal.memos} pagination={personal} hideAuthors />}
       </div>
     </div>
   );

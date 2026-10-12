@@ -7,7 +7,7 @@ import type {
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
-  listPublicMemosSchema,
+  listMemoPageSchema,
   listCommentsSchema,
   getByIdSchema,
   moveSpaceMemoSchema,
@@ -24,7 +24,7 @@ import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/er
 import { removeDeletedObjects, type StorageService } from '../../shared/storage';
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
 import { afterCursor, decodeCursor, encodeCursor, listOrder, PAGE_SIZE, sortKeyColumns, type LeadingColumn, type ListName } from './memo-list-page';
-import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
+import { memoScopeCondition, personalScope, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 import { mayDeletePublicMemo, mayFeatureMemo, type OperatorActor } from './operator-policy';
 import { fetchReactionsForMemos } from './reactions-service';
@@ -33,7 +33,7 @@ type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 type DeleteMemoInput = z.infer<typeof deleteMemoSchema>;
 type ListMemosInput = z.infer<typeof listMemosSchema>;
-type ListPublicMemosInput = z.infer<typeof listPublicMemosSchema>;
+type ListMemoPageInput = z.infer<typeof listMemoPageSchema>;
 type ListCommentsInput = z.infer<typeof listCommentsSchema>;
 type GetByIdInput = z.infer<typeof getByIdSchema>;
 // Into a space names only the memo; out of one names the new visibility as well.
@@ -123,7 +123,7 @@ async function fetchAttachmentsForMemos(
 //
 // Given a page, the list is read a page at a time (ADR 0008): the memos after its cursor,
 // and the cursor of the next page, null once the list is exhausted. Without one, the whole
-// list, which the scopes still read until they are paginated.
+// list, which a space still reads until it is paginated.
 async function listRootMemos(
   db: DatabaseInstance,
   storage: StorageService,
@@ -194,9 +194,17 @@ async function listRootMemos(
   return { items, nextCursor };
 }
 
-// `readerId` is who reads the scope, which a space scope does not tell: it says whose memos
-// are listed, not who is looking at them.
-export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
+// A user's personal scope, a page at a time: the user is both whose memos are listed
+// and who reads them.
+export async function listPersonalMemos(db: DatabaseInstance, storage: StorageService, userId: string, input: ListMemoPageInput) {
+  const { cursor, ...filters } = input;
+  return listRootMemos(db, storage, userId, memoScopeCondition(personalScope(userId)), pinnedFirst, filters, { list: 'personal', cursor });
+}
+
+// A space's memos, the whole list until it is paginated. `readerId` is who reads the scope,
+// which a space scope does not tell: it says whose memos are listed, not who is looking at
+// them.
+export async function listSpaceMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
   const { items } = await listRootMemos(db, storage, readerId, memoScopeCondition(scope), pinnedFirst, input);
   return items;
 }
@@ -204,7 +212,7 @@ export async function listMemos(db: DatabaseInstance, storage: StorageService, s
 // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin there
 // would let any author take the top of the public page (ADR 0006). What comes first there is
 // the operator's decision.
-export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListPublicMemosInput) {
+export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListMemoPageInput) {
   const { cursor, ...filters } = input;
   return listRootMemos(db, storage, readerId, eq(memo.visibility, 'public'), featuredFirst, filters, { list: 'explore', cursor });
 }

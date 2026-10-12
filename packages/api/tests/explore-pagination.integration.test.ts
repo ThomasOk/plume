@@ -1,7 +1,7 @@
 import { type DatabaseInstance, eq, inArray, memo, sql, user } from '@repo/db';
 import { TRPCError } from '@trpc/server';
 import { startTestDatabase, stopTestDatabase } from './helpers/db';
-import { createTestCaller } from './helpers/trpc';
+import { createAuthenticatedCaller, createTestCaller } from './helpers/trpc';
 
 let db: DatabaseInstance;
 
@@ -262,11 +262,11 @@ describe('a cursor Explore did not issue', () => {
     expect((await refusal(listPublicAt(forged))).code).toBe('BAD_REQUEST');
   });
 
-  // Forged until the personal scope issues cursors of its own (ticket 05).
   it('is refused as a bad request when issued for another list', async () => {
-    const ofAnotherList = Buffer.from(JSON.stringify({ list: 'personal', key: [null, '2026-01-01 00:00:00', 'memo-001'] })).toString('base64url');
+    await publicMemos(25, { visibility: 'private' });
+    const { nextCursor: ofThePersonalScope } = await createAuthenticatedCaller(db, alice.id).memos.list({});
 
-    expect((await refusal(listPublicAt(ofAnotherList))).code).toBe('BAD_REQUEST');
+    expect(await refusal(listPublicAt(ofThePersonalScope!))).toEqual({ code: 'BAD_REQUEST', message: 'Invalid cursor' });
   });
 });
 

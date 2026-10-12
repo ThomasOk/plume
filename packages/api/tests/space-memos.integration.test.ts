@@ -274,7 +274,7 @@ describe('the memos of a space outside the space', () => {
   });
 
   it('are absent from the personal views of their author', async () => {
-    expect(await as(alice).memos.list({})).toEqual([]);
+    expect((await as(alice).memos.list({})).items).toEqual([]);
     expect(await as(alice).memos.tags()).toEqual({});
     expect(await as(alice).memos.stats()).toEqual({});
   });
@@ -345,7 +345,7 @@ describe('moving a personal memo into a space', () => {
   it('leaves the personal scope and joins the space', async () => {
     await as(alice).memos.space.move({ spaceId: club.id, id: memoId });
 
-    expect(await as(alice).memos.list({})).toEqual([]);
+    expect((await as(alice).memos.list({})).items).toEqual([]);
     expect(await as(alice).memos.tags()).toEqual({});
     expect(await as(alice).memos.stats()).toEqual({});
 
@@ -368,7 +368,7 @@ describe('moving a memo out of a space', () => {
     for (const visibility of ['private', 'public'] as const) {
       await as(alice).memos.move({ id: memoId, visibility });
 
-      expect(await as(alice).memos.list({})).toEqual([
+      expect((await as(alice).memos.list({})).items).toEqual([
         expect.objectContaining({ id: memoId, visibility }),
       ]);
       expect(await as(alice).memos.tags()).toEqual({ cooking: 1 });
@@ -400,7 +400,7 @@ describe('who may move a memo', () => {
     const result = await refusal(as(outsider).memos.space.move({ spaceId: club.id, id: memoId }));
 
     expect(result).toEqual({ code: 'NOT_FOUND', message: 'Space not found' });
-    expect(await as(outsider).memos.list({})).toEqual([expect.objectContaining({ id: memoId })]);
+    expect((await as(outsider).memos.list({})).items).toEqual([expect.objectContaining({ id: memoId })]);
   });
 
   it('is refused to a member who did not write it, admin included', async () => {
@@ -422,7 +422,7 @@ describe('who may move a memo', () => {
     expect(await refusal(as(outsider).memos.move({ id: spaceMemo, visibility: 'private' }))).toEqual(missingMemo);
     expect(await refusal(as(bob).memos.space.move({ spaceId: club.id, id: privateMemo }))).toEqual(missingMemo);
     expect(await refusal(as(bob).memos.space.move({ spaceId: club.id, id: 'no-such-memo' }))).toEqual(missingMemo);
-    expect(await as(alice).memos.list({})).toEqual([expect.objectContaining({ id: privateMemo })]);
+    expect((await as(alice).memos.list({})).items).toEqual([expect.objectContaining({ id: privateMemo })]);
   });
 });
 
@@ -532,6 +532,6 @@ describe('what a move does not do', () => {
     // Changing a personal memo between private and public is an edit, not a move.
     expect((await refusal(as(alice).memos.space.move({ spaceId: club.id, id: spaceMemo }))).code).toBe('BAD_REQUEST');
     expect((await refusal(as(alice).memos.move({ id: personalMemo, visibility: 'public' }))).code).toBe('BAD_REQUEST');
-    expect(await as(alice).memos.list({})).toEqual([expect.objectContaining({ id: personalMemo, visibility: 'private' })]);
+    expect((await as(alice).memos.list({})).items).toEqual([expect.objectContaining({ id: personalMemo, visibility: 'private' })]);
   });
 });

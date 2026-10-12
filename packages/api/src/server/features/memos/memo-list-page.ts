@@ -16,7 +16,7 @@ export const PAGE_SIZE = 20;
 export type LeadingColumn = typeof memo.pinnedAt | typeof memo.featuredAt;
 
 // Which list a cursor was issued for, so that it is refused by any other.
-export type ListName = 'explore';
+export type ListName = 'personal' | 'explore';
 
 // The sort key of a memo, as Postgres holds it. Timestamps travel as Postgres prints them, to
 // the microsecond: a `Date` keeps milliseconds, and a cursor rounded below its own memo would

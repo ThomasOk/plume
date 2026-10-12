@@ -154,7 +154,7 @@ describe('removing a member', () => {
 
     await as(alice).spaces.members.remove({ spaceId: club.id, userId: bob.id });
 
-    expect((await as(bob).memos.list({})).map((m) => m.id)).toEqual([personal.id]);
+    expect((await as(bob).memos.list({})).items.map((m) => m.id)).toEqual([personal.id]);
   });
 
   it('is refused to a member', async () => {
