@@ -54,7 +54,8 @@ const showcase = (): Showcase => ({
   ],
 });
 
-const explore = () => createTestCaller(db).memos.listPublic({});
+// Explore's first page, which holds the whole showcase.
+const explore = async () => (await createTestCaller(db).memos.listPublic({})).items;
 
 describe('seedShowcase', () => {
   it('features the showcase on Explore, in the declared order, for a reader not signed in', async () => {

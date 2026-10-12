@@ -23,11 +23,7 @@ function ExplorePage() {
   const selectedTag = search.tag;
   const query = search.query;
 
-  const {
-    data: memos,
-    isLoading,
-    error,
-  } = usePublicMemos({ date: selectedDate, tag: selectedTag, query });
+  const explore = usePublicMemos({ date: selectedDate, tag: selectedTag, query });
 
   return (
     <div className="container mx-auto px-4 pt-4 pb-8 max-w-3xl">
@@ -61,11 +57,12 @@ function ExplorePage() {
         <TagFilterBadge />
         <SearchFilterBadge />
       </div>
-      {isLoading && <MemoListSkeleton />}
-      {error && (
+      {explore.isLoading && <MemoListSkeleton />}
+      {/* A failed first page; a failed later one is the list's own to offer again. */}
+      {explore.isError && !explore.memos && (
         <p className="text-destructive">Something went wrong. Please try again.</p>
       )}
-      {memos && <MemoList memos={memos} ignorePins markFeatured />}
+      {explore.memos && <MemoList memos={explore.memos} pagination={explore} ignorePins markFeatured />}
     </div>
   );
 }

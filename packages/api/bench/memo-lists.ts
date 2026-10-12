@@ -98,8 +98,25 @@ const percentile = (sorted: number[], p: number) => sorted[Math.min(sorted.lengt
 interface ListUnderTest {
   name: string;
   reader: string;
-  call: () => Promise<unknown[]>;
+  // A whole list, or one page of a paginated one.
+  call: () => Promise<unknown[] | { items: unknown[] }>;
 }
+
+const memosOf = (result: unknown[] | { items: unknown[] }) => (Array.isArray(result) ? result : result.items);
+
+// The cursor of Explore's page `page` (1 for the first), followed from the first page: a
+// keyset seek should cost the same at any depth, which an offset would not.
+const exploreCursorAt = async (db: DatabaseInstance, page: number) => {
+  let cursor: string | undefined;
+  for (let i = 1; i < page; i++) {
+    const { nextCursor } = await callerFor(db, null).memos.listPublic({ cursor });
+    if (!nextCursor) throw new Error(`Explore has fewer than ${page} pages`);
+    cursor = nextCursor;
+  }
+  return cursor;
+};
+
+const DEEP_PAGE = 100;
 
 async function main() {
   console.error('Starting a disposable Postgres…');
@@ -111,11 +128,13 @@ async function main() {
     console.error('Seeding…');
     const counts = await seedLists(db);
     const queriesOf = recordQueries(db);
+    const deepCursor = await exploreCursorAt(db, DEEP_PAGE);
 
     const lists: ListUnderTest[] = [
       { name: 'Personal scope', reader: 'the writer', call: () => callerFor(db, WRITER_ID).memos.list({}) },
       { name: 'Space', reader: 'a member (the writer)', call: () => callerFor(db, WRITER_ID).memos.space.list({ spaceId: SPACE_ID }) },
       { name: 'Explore', reader: 'an anonymous visitor', call: () => callerFor(db, null).memos.listPublic({}) },
+      { name: `Explore, page ${DEEP_PAGE}`, reader: 'an anonymous visitor', call: () => callerFor(db, null).memos.listPublic({ cursor: deepCursor }) },
     ];
 
     const results = [];
@@ -124,16 +143,16 @@ async function main() {
       for (let i = 0; i < WARMUP_RUNS; i++) await list.call();
 
       const times: number[] = [];
-      let rows: unknown[] = [];
+      let result: unknown[] | { items: unknown[] } = [];
       for (let i = 0; i < MEASURED_RUNS; i++) {
         const start = performance.now();
-        rows = await list.call();
+        result = await list.call();
         times.push(performance.now() - start);
       }
       times.sort((a, b) => a - b);
 
       // What crosses the wire: the procedure's result, serialized as tRPC sends it.
-      const bytes = Buffer.byteLength(SuperJSON.stringify(rows));
+      const bytes = Buffer.byteLength(SuperJSON.stringify(result));
 
       // The list query is the one that counts comments; the others fetch the attachments
       // and reactions of its rows, by identifier.
@@ -144,7 +163,7 @@ async function main() {
 
       results.push({
         ...list,
-        rows: rows.length,
+        rows: memosOf(result).length,
         bytes,
         median: percentile(times, 50),
         p95: percentile(times, 95),

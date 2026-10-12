@@ -183,7 +183,7 @@ describe('reading reactions', () => {
 
     expect(emojisOf(await as(alice).memos.list({}), personal.id)).toEqual(['💡']);
     expect(emojisOf(await as(alice).memos.space.list({ spaceId: club.id }), shared.id)).toEqual(['🙏']);
-    expect(emojisOf(await as(alice).memos.listPublic({}), published.id)).toEqual(['😂']);
+    expect(emojisOf((await as(alice).memos.listPublic({})).items, published.id)).toEqual(['😂']);
     expect((await as(alice).memos.getById({ id: published.id })).reactions.map(({ emoji }) => emoji)).toEqual(['😂']);
   });
 
@@ -191,7 +191,7 @@ describe('reading reactions', () => {
     const { id } = await writePublic(alice);
     await as(bob).memos.react({ memoId: id, emoji: '👍' });
 
-    const [read] = await anonymous().memos.listPublic({});
+    const [read] = (await anonymous().memos.listPublic({})).items;
 
     expect(read!.reactions).toEqual([
       { emoji: '👍', count: 1, reactedByMe: false, reactors: [{ id: bob.id, name: 'Bob' }] },

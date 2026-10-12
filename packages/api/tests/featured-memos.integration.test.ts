@@ -85,7 +85,7 @@ describe('featuring a public memo', () => {
 
     await as(olivia).memos.feature({ id: older! });
 
-    const explored = await as(bob).memos.listPublic({});
+    const explored = (await as(bob).memos.listPublic({})).items;
     expect(ids(explored)).toEqual([older, newer]);
     expect(explored[0]!.featuredAt).toBeInstanceOf(Date);
     expect(explored[1]!.featuredAt).toBeNull();
@@ -155,7 +155,7 @@ describe('featuring and unfeaturing again', () => {
     await as(olivia).memos.unfeature({ id: older! });
     await as(olivia).memos.unfeature({ id: older! });
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([newer, older]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([newer, older]);
     expect((await datesOf(older!)).featuredAt).toBeNull();
   });
 
@@ -185,7 +185,7 @@ describe('the order of Explore', () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     await as(olivia).memos.feature({ id: first! });
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([first, third, fourth, second]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([first, third, fourth, second]);
   });
 
   it('is the same in a filtered Explore, which only narrows it', async () => {
@@ -194,10 +194,10 @@ describe('the order of Explore', () => {
     await as(olivia).memos.feature({ id: cooking! });
     await as(olivia).memos.feature({ id: other! });
 
-    expect(ids(await as(bob).memos.listPublic({ tag: 'cooking' }))).toEqual([cooking, alsoCooking]);
-    expect(ids(await as(bob).memos.listPublic({ query: 'o' }))).toEqual([cooking, alsoCooking]);
+    expect(ids((await as(bob).memos.listPublic({ tag: 'cooking' })).items)).toEqual([cooking, alsoCooking]);
+    expect(ids((await as(bob).memos.listPublic({ query: 'o' })).items)).toEqual([cooking, alsoCooking]);
     const today = new Date().toISOString().slice(0, 10);
-    expect(ids(await as(bob).memos.listPublic({ date: today }))).toEqual([other, cooking, alsoCooking]);
+    expect(ids((await as(bob).memos.listPublic({ date: today })).items)).toEqual([other, cooking, alsoCooking]);
   });
 
   it('still ignores pins, which belong to their author’s scope', async () => {
@@ -205,7 +205,7 @@ describe('the order of Explore', () => {
 
     await as(alice).memos.pin({ id: older! });
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([newer, older]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([newer, older]);
   });
 });
 
@@ -262,6 +262,6 @@ describe('a featured memo whose operator loses the role', () => {
 
     await revokeOperator(db, olivia.id);
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([older, newer]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([older, newer]);
   });
 });

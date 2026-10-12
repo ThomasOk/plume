@@ -66,6 +66,12 @@ export const listMemosSchema = z.object({
   query: z.string().optional(),
 });
 
+// Explore, a page at a time: the filters, and where the previous page ended. The cursor is
+// opaque, issued by the server; without one, the first page. The page size is the server's.
+export const listPublicMemosSchema = listMemosSchema.extend({
+  cursor: z.string().optional(),
+});
+
 // The emojis a reader may react with, in the order every summary shows them: 👍 first, the
 // most common. Each means something distinct — acknowledge, love, laugh, celebrate,
 // insightful, thanks, sympathise — and none is hostile: in a space shared between

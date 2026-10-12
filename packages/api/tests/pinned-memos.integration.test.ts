@@ -142,7 +142,7 @@ describe('the order of the pinned memos', () => {
 
     await as(alice).memos.pin({ id: older! });
 
-    expect(ids(await as(outsider).memos.listPublic({}))).toEqual([newer, older]);
+    expect(ids((await as(outsider).memos.listPublic({})).items)).toEqual([newer, older]);
   });
 });
 
