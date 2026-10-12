@@ -6,7 +6,6 @@ import {
   createSpaceMemoSchema,
   updateMemoSchema,
   deleteMemoSchema,
-  listMemosSchema,
   listMemoPageSchema,
   listCommentsSchema,
   getByIdSchema,
@@ -139,9 +138,11 @@ export const space = router({
     .mutation(({ ctx, input }) =>
       moveMemo(ctx.db, ctx.session.user.id, { kind: 'space', membership: ctx.membership }, input),
     ),
+  // The membership is resolved before the cursor is read: a non-member is refused whatever
+  // cursor they send (ADR 0004).
   list: spaceProcedure
-    .input(listMemosSchema)
-    .query(({ ctx, input }) => listSpaceMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), ctx.session.user.id, input)),
+    .input(listMemoPageSchema)
+    .query(({ ctx, input }) => listSpaceMemos(ctx.db, ctx.storage, ctx.membership, ctx.session.user.id, input)),
   stats: spaceProcedure
     .query(({ ctx }) => getMemoStats(ctx.db, spaceScope(ctx.membership))),
   tags: spaceProcedure

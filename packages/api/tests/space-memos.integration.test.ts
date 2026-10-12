@@ -66,7 +66,7 @@ describe('writing a memo into a space', () => {
   it('is read by every member, with its author', async () => {
     const written = await as(alice).memos.space.create({ spaceId: club.id, content: 'Pasta night' });
 
-    const listed = await as(bob).memos.space.list({ spaceId: club.id });
+    const listed = (await as(bob).memos.space.list({ spaceId: club.id })).items;
 
     expect(listed).toEqual([
       expect.objectContaining({
@@ -295,7 +295,7 @@ describe('editing a memo of a space', () => {
   it('changes its content and leaves it in the space', async () => {
     await as(alice).memos.update({ id: memoId, content: 'Pizza night', visibility: 'space' });
 
-    const listed = await as(bob).memos.space.list({ spaceId: club.id });
+    const listed = (await as(bob).memos.space.list({ spaceId: club.id })).items;
     expect(listed).toEqual([expect.objectContaining({ id: memoId, content: 'Pizza night' })]);
   });
 
@@ -305,7 +305,7 @@ describe('editing a memo of a space', () => {
       expect(result.code).toBe('BAD_REQUEST');
     }
 
-    const listed = await as(bob).memos.space.list({ spaceId: club.id });
+    const listed = (await as(bob).memos.space.list({ spaceId: club.id })).items;
     expect(listed).toEqual([expect.objectContaining({ id: memoId, content: 'Pasta night' })]);
   });
 });
@@ -349,7 +349,7 @@ describe('moving a personal memo into a space', () => {
     expect(await as(alice).memos.tags()).toEqual({});
     expect(await as(alice).memos.stats()).toEqual({});
 
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toEqual([
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toEqual([
       expect.objectContaining({ id: memoId, visibility: 'space' }),
     ]);
     expect(await as(bob).memos.space.tags({ spaceId: club.id })).toEqual({ cooking: 1 });
@@ -372,7 +372,7 @@ describe('moving a memo out of a space', () => {
         expect.objectContaining({ id: memoId, visibility }),
       ]);
       expect(await as(alice).memos.tags()).toEqual({ cooking: 1 });
-      expect(await as(bob).memos.space.list({ spaceId: club.id })).toEqual([]);
+      expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toEqual([]);
       expect(await as(bob).memos.space.tags({ spaceId: club.id })).toEqual({});
       expect(await as(bob).memos.space.stats({ spaceId: club.id })).toEqual({});
 
@@ -385,7 +385,7 @@ describe('moving a memo out of a space', () => {
     const result = await refusal(as(alice).memos.move({ id: memoId }));
 
     expect(result.code).toBe('BAD_REQUEST');
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toEqual([
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toEqual([
       expect.objectContaining({ id: memoId }),
     ]);
   });
@@ -411,7 +411,7 @@ describe('who may move a memo', () => {
     expect((await refusal(as(bob).memos.move({ id: alicesMemo, visibility: 'public' }))).code).toBe('FORBIDDEN');
     expect((await refusal(as(alice).memos.move({ id: bobsMemo, visibility: 'public' }))).code).toBe('FORBIDDEN');
 
-    const listed = await as(alice).memos.space.list({ spaceId: club.id });
+    const listed = (await as(alice).memos.space.list({ spaceId: club.id })).items;
     expect(listed.map((m) => m.id).sort()).toEqual([alicesMemo, bobsMemo].sort());
   });
 
@@ -468,7 +468,7 @@ describe('the comments of a moved memo', () => {
     await db.insert(spaceMember).values({ spaceId: kitchen.id, userId: alice.id, role: 'admin', joinedAt: new Date() });
     expect((await refusal(as(alice).memos.space.move({ spaceId: kitchen.id, id: memoId }))).code).toBe('CONFLICT');
 
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toEqual([
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toEqual([
       expect.objectContaining({ id: memoId }),
     ]);
     expect(await as(bob).memos.listComments({ memoId })).toEqual([

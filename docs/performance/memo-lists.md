@@ -70,11 +70,15 @@ Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, Postg
 
 | | Before | Comments indexed | Paginated |
 | --- | ---: | ---: | ---: |
-| Memos returned | 2,000 | 2,000 | |
-| Response size | 1,928 KB | 1,928 KB | |
-| Median | 2,468 ms | 80.4 ms | |
-| p95 | 2,620 ms | 138.9 ms | |
-| Queries | 4 | 4 | |
+| Memos returned | 2,000 | 2,000 | 20 |
+| Response size | 1,928 KB | 1,928 KB | 20 KB |
+| Median | 2,468 ms | 80.4 ms | 1.8 ms |
+| p95 | 2,620 ms | 138.9 ms | 2.2 ms |
+| Queries | 4 | 4 | 4 |
+
+"Paginated" is the first page. Page 100, the last, resumed from the cursor that follows
+1,980 memos, costs about the same: 20 memos, 20 KB, 2.3 ms median, 2.7 ms p95, 4 queries.
+The fourth query, as before, is the membership the space procedure resolves first.
 
 ### Explore (read by an anonymous visitor)
 
@@ -580,4 +584,236 @@ Limit  (cost=0.29..195.34 rows=15 width=499) (actual time=0.008..0.061 rows=20 l
                       Buffers: shared hit=55
 Planning Time: 0.037 ms
 Execution Time: 0.067 ms
+```
+
+## Reading the "paginated" plans: space
+
+- **The space reads its page through `memo_space_idx`.** An index scan on `space_id`, then
+  the scope's order, `pinned_at DESC NULLS LAST, created_at DESC, id DESC`, partial on root
+  memos, stopped by the `LIMIT` after 21 rows: 106 buffer hits and 0.1 ms. The partial
+  predicate, `parent_id IS NULL`, is the list's own; the space's condition, `space_id = ...`,
+  is the index's first column, so one index serves every space.
+- **Page 100 seeks on the whole key**,
+  `Index Cond: ((space_id = ...) AND (pinned_at IS NULL) AND (ROW(created_at, id) < ROW(...)))`:
+  22 buffer hits in the index, 0.12 ms for the query. The planner joins the authors by hash
+  and sorts the 20 rows it kept rather than walking the index order through the join; on
+  20 rows that sort is noise.
+- **A cursor inside the pinned block** resumes on the same `OR` condition as the personal
+  scope's: served in order, filtered rather than sought, at most the space's pins to skip.
+  Not measured: the 3 pins of this data set fit in the first page.
+- **What is left** of the 1.8 ms median, beside the 0.1 ms list query, is the membership
+  lookup, the attachments and reactions of 20 memos, and serializing a 20 KB response.
+
+### Why `memo_space_idx` complements `memo_space_id_created_at_idx`
+
+The ticket asked whether the new index replaces the space index migration 0008 made, or
+sits beside it. The plans below, on the same data set, decide it:
+
+- **The list never used the old index.** With the old index alone, the planner reads all
+  14,000 root memos through `memo_parent_id_idx`, keeps the space's 2,000, and sorts them
+  for the top 21: 707 buffer hits and 1.6 ms for the identifiers alone, against 21 hits
+  and 0.02 ms through `memo_space_idx`. `(space_id, created_at DESC)` ignores the pin, which
+  leads the order, so it cannot hand rows over in order.
+- **Deleting a space needs the old one.** The foreign key's `ON DELETE CASCADE` runs
+  `DELETE FROM ONLY memo WHERE space_id = $1`, and that takes the space's comments as well
+  as its root memos: 5,036 rows here, 3,036 of them comments, which a partial index on root
+  memos does not hold. Through `memo_space_id_created_at_idx` it reads 312 buffers; without
+  it, a sequential scan of every memo on the instance, 1,747 buffers here, growing with
+  every user and every space rather than with the space being deleted.
+- **One full index would not serve both.** Dropping the partial predicate from
+  `memo_space_idx` would let it find the comments for the cascade too, but then the
+  comments would sit in the list's index, in the list's order: 3,036 of the space's 5,036
+  rows here, which a page would read and filter out. The old index would also become
+  redundant, and dropping it is a change that isn't additive.
+- **So the old index stays**, and the migration stays additive (ADR 0005). It now serves
+  the cascade only; its `created_at` column is of no use there, but replacing it with a
+  plain `space_id` index would mean dropping one, for a gain this data set does not show.
+
+Two things the plans show that this ticket leaves alone:
+
+- **A space's stats and tags use neither space index.** Both read the root memos through
+  `memo_parent_id_idx` and filter on the space: 707 buffers, 1 to 2 ms, the same with or
+  without either index. They aggregate the whole space, so no order helps them; with 2,000
+  of 14,000 root memos in the space the planner judges the scan cheap enough.
+- **The cost of deleting a space is its attachments' foreign key**, not finding its
+  memos: 311 of 353 ms go to the trigger of `attachment_memo_id_memo_id_fk`, which looks
+  up each deleted memo's attachments without an index on `attachment.memo_id`.
+
+## "Paginated" query plans: space
+
+Run of 2026-10-12, data set and machine above, with `memo_space_idx` (migration
+`0020_memo_space_idx`).
+
+### Space, first page
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."pinned_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."space_id" = $1 and "memo"."parent_id" is null) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $2
+```
+
+```
+Limit  (cost=0.44..202.69 rows=21 width=499) (actual time=0.011..0.099 rows=21 loops=1)
+  Buffers: shared hit=106
+  ->  Nested Loop Left Join  (cost=0.44..19580.56 rows=2033 width=499) (actual time=0.011..0.099 rows=21 loops=1)
+        Buffers: shared hit=106
+        ->  Index Scan using memo_space_idx on memo  (cost=0.29..2433.42 rows=2033 width=389) (actual time=0.002..0.006 rows=21 loops=1)
+              Index Cond: (space_id = 'bench-space'::text)
+              Buffers: shared hit=21
+        ->  Memoize  (cost=0.15..0.18 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=21)
+              Cache Key: memo.user_id
+              Cache Mode: logical
+              Hits: 7  Misses: 14  Evictions: 0  Overflows: 0  Memory Usage: 2kB
+              Buffers: shared hit=28
+              ->  Index Scan using user_pkey on "user"  (cost=0.14..0.17 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=14)
+                    Index Cond: (id = memo.user_id)
+                    Buffers: shared hit=28
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.003..0.003 rows=1 loops=21)
+                Buffers: shared hit=57
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.003..0.003 rows=2 loops=21)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 33
+                      Buffers: shared hit=57
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.074 ms
+Execution Time: 0.107 ms
+```
+
+### Space, page 100
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."pinned_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."space_id" = $1 and "memo"."parent_id" is null and ("memo"."pinned_at" is null and ("memo"."created_at", "memo"."id") < ($2::timestamp, $3))) order by "memo"."pinned_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $4
+```
+
+```
+Limit  (cost=40.77..158.41 rows=14 width=499) (actual time=0.053..0.108 rows=20 loops=1)
+  Buffers: shared hit=83
+  ->  Result  (cost=40.77..158.41 rows=14 width=499) (actual time=0.052..0.106 rows=20 loops=1)
+        Buffers: shared hit=83
+        ->  Sort  (cost=40.77..40.80 rows=14 width=495) (actual time=0.045..0.046 rows=20 loops=1)
+              Sort Key: memo.pinned_at DESC NULLS LAST, memo.created_at DESC, memo.id DESC
+              Sort Method: quicksort  Memory: 36kB
+              Buffers: shared hit=26
+              ->  Hash Left Join  (cost=9.26..40.50 rows=14 width=495) (actual time=0.029..0.041 rows=20 loops=1)
+                    Hash Cond: (memo.user_id = "user".id)
+                    Buffers: shared hit=26
+                    ->  Index Scan using memo_space_idx on memo  (cost=0.29..31.35 rows=14 width=389) (actual time=0.004..0.011 rows=20 loops=1)
+                          Index Cond: ((space_id = 'bench-space'::text) AND (pinned_at IS NULL) AND (ROW(created_at, id) < ROW('2024-01-08 11:17:56.213'::timestamp without time zone, 'bench-memo-02335'::text)))
+                          Buffers: shared hit=22
+                    ->  Hash  (cost=6.21..6.21 rows=221 width=58) (actual time=0.023..0.024 rows=221 loops=1)
+                          Buckets: 1024  Batches: 1  Memory Usage: 21kB
+                          Buffers: shared hit=4
+                          ->  Seq Scan on "user"  (cost=0.00..6.21 rows=221 width=58) (actual time=0.001..0.011 rows=221 loops=1)
+                                Buffers: shared hit=4
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.003..0.003 rows=1 loops=20)
+                Buffers: shared hit=57
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.002..0.003 rows=2 loops=20)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 33
+                      Buffers: shared hit=57
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.104 ms
+Execution Time: 0.119 ms
+```
+
+### Space, first page, identifiers only, with the old index alone
+
+`memo_space_idx` dropped in a transaction rolled back afterwards. The list query reduced to
+the memos it selects, to compare the index choice alone:
+
+```sql
+SELECT id FROM memo WHERE space_id = $1 AND parent_id IS NULL ORDER BY pinned_at DESC NULLS LAST, created_at DESC, id DESC LIMIT 21
+```
+
+```
+Limit  (cost=1326.30..1326.35 rows=21 width=34) (actual time=1.609..1.610 rows=21 loops=1)
+  Buffers: shared hit=713
+  ->  Sort  (cost=1326.30..1331.37 rows=2028 width=34) (actual time=1.608..1.609 rows=21 loops=1)
+        Sort Key: pinned_at DESC NULLS LAST, created_at DESC, id DESC
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=713
+        ->  Index Scan using memo_parent_id_idx on memo  (cost=0.29..1271.62 rows=2028 width=34) (actual time=0.221..1.483 rows=2000 loops=1)
+              Index Cond: (parent_id IS NULL)
+              Filter: (space_id = 'bench-space'::text)
+              Rows Removed by Filter: 12000
+              Buffers: shared hit=707
+Planning:
+  Buffers: shared hit=5
+Planning Time: 0.062 ms
+Execution Time: 1.615 ms
+```
+
+### Deleting a space: the cascade on `memo`, with both indexes
+
+Run in a transaction rolled back afterwards.
+
+```sql
+DELETE FROM ONLY memo WHERE space_id = $1
+```
+
+```
+Delete on memo  (cost=147.43..1957.55 rows=0 width=0) (actual time=1.956..1.956 rows=0 loops=1)
+  Buffers: shared hit=10404
+  ->  Bitmap Heap Scan on memo  (cost=147.43..1957.55 rows=5050 width=6) (actual time=0.140..0.448 rows=5036 loops=1)
+        Recheck Cond: (space_id = 'bench-space'::text)
+        Heap Blocks: exact=276
+        Buffers: shared hit=312
+        ->  Bitmap Index Scan on memo_space_id_created_at_idx  (cost=0.00..146.16 rows=5050 width=0) (actual time=0.128..0.128 rows=5036 loops=1)
+              Index Cond: (space_id = 'bench-space'::text)
+              Buffers: shared hit=36
+Planning:
+  Buffers: shared hit=3
+Planning Time: 0.018 ms
+Trigger for constraint attachment_memo_id_memo_id_fk: time=312.480 calls=5036
+Trigger for constraint memo_parent_id_memo_id_fk: time=15.752 calls=5036
+Trigger for constraint notification_entity_id_memo_id_fk: time=6.595 calls=5036
+Trigger for constraint reaction_memo_id_memo_id_fk: time=15.132 calls=5036
+Execution Time: 352.678 ms
+```
+
+### Deleting a space: the cascade on `memo`, with `memo_space_idx` alone
+
+`memo_space_id_created_at_idx` dropped in a transaction rolled back afterwards.
+
+```sql
+DELETE FROM ONLY memo WHERE space_id = $1
+```
+
+```
+Delete on memo  (cost=0.00..2183.45 rows=0 width=0) (actual time=3.867..3.867 rows=0 loops=1)
+  Buffers: shared hit=11819
+  ->  Seq Scan on memo  (cost=0.00..2183.45 rows=5050 width=6) (actual time=0.023..2.564 rows=5036 loops=1)
+        Filter: (space_id = 'bench-space'::text)
+        Rows Removed by Filter: 29880
+        Buffers: shared hit=1747
+Planning Time: 0.011 ms
+Trigger for constraint attachment_memo_id_memo_id_fk: time=311.428 calls=5036
+Trigger for constraint memo_parent_id_memo_id_fk: time=15.753 calls=5036
+Trigger for constraint notification_entity_id_memo_id_fk: time=6.788 calls=5036
+Trigger for constraint reaction_memo_id_memo_id_fk: time=15.064 calls=5036
+Execution Time: 353.663 ms
+```
+
+### Space stats, with both indexes
+
+```sql
+SELECT DATE(created_at), COUNT(*) FROM memo WHERE space_id = $1 AND parent_id IS NULL GROUP BY DATE(created_at)
+```
+
+```
+HashAggregate  (cost=1286.83..1312.18 rows=2028 width=12) (actual time=1.925..1.978 rows=676 loops=1)
+  Group Key: date(created_at)
+  Batches: 1  Memory Usage: 177kB
+  Buffers: shared hit=707
+  ->  Index Scan using memo_parent_id_idx on memo  (cost=0.29..1276.69 rows=2028 width=4) (actual time=0.253..1.776 rows=2000 loops=1)
+        Index Cond: (parent_id IS NULL)
+        Filter: (space_id = 'bench-space'::text)
+        Rows Removed by Filter: 12000
+        Buffers: shared hit=707
+Planning:
+  Buffers: shared hit=11
+Planning Time: 0.025 ms
+Execution Time: 2.014 ms
 ```

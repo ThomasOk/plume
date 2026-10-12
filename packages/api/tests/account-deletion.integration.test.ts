@@ -184,7 +184,7 @@ describe('deleting an account', () => {
 
     expect(await authorOf('space-memo')).toBe(FORMER_USER_ID);
     expect(await authorOf('alices-comment-on-her-space-memo')).toBe(FORMER_USER_ID);
-    const listed = await as(bob).memos.space.list({ spaceId: 'club' });
+    const listed = (await as(bob).memos.space.list({ spaceId: 'club' })).items;
     expect(listed.map(({ id, author }) => ({ id, author: author.name }))).toEqual([
       { id: 'space-memo', author: 'Deleted user' },
     ]);
@@ -249,7 +249,7 @@ describe('deleting an account', () => {
 
     await deleteAlice({ storage });
 
-    const [spaceMemo] = await as(bob).memos.space.list({ spaceId: 'club' });
+    const [spaceMemo] = (await as(bob).memos.space.list({ spaceId: 'club' })).items;
     expect(spaceMemo?.attachments.map(({ storageKey }) => storageKey)).toEqual(['uploads/alice/space.png']);
     const [comment] = await as(bob).memos.listComments({ memoId: 'bobs-memo' });
     expect(comment?.attachments.map(({ storageKey }) => storageKey)).toEqual(['uploads/alice/comment.png']);

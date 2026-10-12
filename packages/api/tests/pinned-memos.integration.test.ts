@@ -187,7 +187,7 @@ describe('pinning a memo of a space', () => {
 
     await as(alice).memos.pin({ id: bobs! });
 
-    expect(ids(await as(bob).memos.space.list({ spaceId: club.id }))).toEqual([bobs, alices]);
+    expect(ids((await as(bob).memos.space.list({ spaceId: club.id })).items)).toEqual([bobs, alices]);
   });
 
   it('is refused to a member, on their own memo too', async () => {

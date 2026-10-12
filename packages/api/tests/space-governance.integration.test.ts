@@ -139,7 +139,7 @@ describe('removing a member', () => {
     await as(alice).spaces.members.remove({ spaceId: club.id, userId: bob.id });
 
     expect(await rolesOf(club.id)).toEqual({ alice: 'admin', carol: 'member' });
-    expect(await as(carol).memos.space.list({ spaceId: club.id })).toEqual([
+    expect((await as(carol).memos.space.list({ spaceId: club.id })).items).toEqual([
       expect.objectContaining({
         id: written.id,
         userId: bob.id,
@@ -265,7 +265,7 @@ describe('deleting a space', () => {
     const result = await refusal(as(bob).spaces.delete({ spaceId: club.id }));
 
     expect(result.code).toBe('FORBIDDEN');
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toHaveLength(1);
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toHaveLength(1);
   });
 });
 
@@ -279,7 +279,7 @@ describe('another member’s memo', () => {
   it('can be deleted by an admin', async () => {
     await as(alice).memos.delete({ id: memoId });
 
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toEqual([]);
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toEqual([]);
   });
 
   it('cannot be edited by an admin, whose words would appear under its author’s name', async () => {
@@ -295,7 +295,7 @@ describe('another member’s memo', () => {
     const result = await refusal(as(carol).memos.delete({ id: memoId }));
 
     expect(result.code).toBe('FORBIDDEN');
-    expect(await as(bob).memos.space.list({ spaceId: club.id })).toHaveLength(1);
+    expect((await as(bob).memos.space.list({ spaceId: club.id })).items).toHaveLength(1);
   });
 
   it('has comments an admin may delete, and a member may not', async () => {

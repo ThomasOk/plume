@@ -23,8 +23,8 @@ import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
 import { removeDeletedObjects, type StorageService } from '../../shared/storage';
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
-import { afterCursor, decodeCursor, encodeCursor, listOrder, PAGE_SIZE, sortKeyColumns, type LeadingColumn, type ListName } from './memo-list-page';
-import { memoScopeCondition, personalScope, readableMemoCondition, type MemoScope } from './memo-scope';
+import { afterCursor, decodeCursor, encodeCursor, listOrder, PAGE_SIZE, sortKeyColumns, spaceList, type LeadingColumn, type ListName } from './memo-list-page';
+import { memoScopeCondition, personalScope, readableMemoCondition, spaceScope, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 import { mayDeletePublicMemo, mayFeatureMemo, type OperatorActor } from './operator-policy';
 import { fetchReactionsForMemos } from './reactions-service';
@@ -121,9 +121,8 @@ async function fetchAttachmentsForMemos(
 // caller says both; the order stays defined beside the list it belongs to. `readerId` is
 // who reads the list, for the reactions: neither the condition nor the order tells it.
 //
-// Given a page, the list is read a page at a time (ADR 0008): the memos after its cursor,
-// and the cursor of the next page, null once the list is exhausted. Without one, the whole
-// list, which a space still reads until it is paginated.
+// The list is read a page at a time (ADR 0008): the memos after its cursor, and the cursor
+// of the next page, null once the list is exhausted.
 async function listRootMemos(
   db: DatabaseInstance,
   storage: StorageService,
@@ -131,12 +130,12 @@ async function listRootMemos(
   condition: SQL,
   leading: LeadingColumn,
   input: ListMemosInput,
-  page?: { list: ListName; cursor: string | undefined },
+  page: { list: ListName; cursor: string | undefined },
 ) {
   // Decoded first: a bad cursor is refused before anything is read.
-  const resumeAfter = page?.cursor === undefined ? undefined : decodeCursor(page.list, page.cursor);
+  const resumeAfter = page.cursor === undefined ? undefined : decodeCursor(page.list, page.cursor);
 
-  const query = db
+  const fetched = await db
     .select({
       memo: {
         id: memo.id,
@@ -171,13 +170,12 @@ async function listRootMemos(
       resumeAfter && afterCursor(leading, resumeAfter),
     ))
     .orderBy(...listOrder(leading))
-    .$dynamic();
+    // One memo past the page tells whether another page follows, without asking for it.
+    .limit(PAGE_SIZE + 1);
 
-  // One memo past the page tells whether another page follows, without asking for it.
-  const fetched = page ? await query.limit(PAGE_SIZE + 1) : await query;
-  const rows = page ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const rows = fetched.slice(0, PAGE_SIZE);
   const last = rows.at(-1);
-  const nextCursor = page && fetched.length > PAGE_SIZE && last
+  const nextCursor = fetched.length > PAGE_SIZE && last
     ? encodeCursor(page.list, [last.sortKey.leading, last.sortKey.createdAt, last.memo.id])
     : null;
 
@@ -201,12 +199,12 @@ export async function listPersonalMemos(db: DatabaseInstance, storage: StorageSe
   return listRootMemos(db, storage, userId, memoScopeCondition(personalScope(userId)), pinnedFirst, filters, { list: 'personal', cursor });
 }
 
-// A space's memos, the whole list until it is paginated. `readerId` is who reads the scope,
-// which a space scope does not tell: it says whose memos are listed, not who is looking at
-// them.
-export async function listSpaceMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
-  const { items } = await listRootMemos(db, storage, readerId, memoScopeCondition(scope), pinnedFirst, input);
-  return items;
+// A space's memos, a page at a time, for one of its members. `readerId` is who reads the
+// space, which the membership's space does not tell. The cursor names its space, so one
+// issued in another space is refused here, however many spaces the reader belongs to.
+export async function listSpaceMemos(db: DatabaseInstance, storage: StorageService, membership: SpaceMembership, readerId: string, input: ListMemoPageInput) {
+  const { cursor, ...filters } = input;
+  return listRootMemos(db, storage, readerId, memoScopeCondition(spaceScope(membership)), pinnedFirst, filters, { list: spaceList(membership.spaceId), cursor });
 }
 
 // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin there

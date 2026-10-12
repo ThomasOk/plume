@@ -84,6 +84,14 @@ export const memo = pgTable(
     index('memo_personal_idx')
       .on(table.userId, table.pinnedAt.desc().nullsLast(), table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst())
       .where(sql`${table.spaceId} IS NULL AND ${table.parentId} IS NULL`),
+    // A space, in its order: the memos an admin pinned first, latest pin on top, then newest
+    // first, the id breaking ties (ADR 0006, ADR 0008). Partial on what the space lists, its
+    // root memos. It complements `memo_space_id_created_at_idx` rather than replacing it:
+    // deleting a space deletes its comments too, through `space_id`, and only the full index
+    // finds them (docs/performance/memo-lists.md).
+    index('memo_space_idx')
+      .on(table.spaceId, table.pinnedAt.desc().nullsLast(), table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst())
+      .where(sql`${table.parentId} IS NULL`),
     // The equivalence `visibility = 'space' <=> space_id IS NOT NULL`, in both
     // directions, which is what makes `space + private` and `space + public`
     // unrepresentable (ADR 0003). The implication alone would not.
