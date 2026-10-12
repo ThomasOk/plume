@@ -57,8 +57,8 @@ test('scrolling to the end of the personal scope loads the next page, then says 
 test('the list scrolls in its own container, not the window as well', async ({ page }) => {
   await openPersonalScope(page);
 
-  const size = await page.evaluate(() => ({ page: document.documentElement.scrollHeight, viewport: window.innerHeight }));
-  expect(size.page).toBeLessThanOrEqual(size.viewport);
+  const pageHeight = await page.locator('html').evaluate((html) => html.scrollHeight);
+  expect(pageHeight).toBeLessThanOrEqual(page.viewportSize()!.height);
 });
 
 test('a memo written once two pages are loaded appears at the top', async ({ page }) => {
