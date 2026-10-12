@@ -1,4 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { unique } from './unique';
 
 async function createMemo(page: Page, content: string) {
   await page.getByPlaceholder('Write your memo here...').fill(content);
@@ -10,7 +12,7 @@ async function createMemo(page: Page, content: string) {
 test('creates a memo and it appears in the list', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const memoContent = `Test memo ${Date.now()}`;
+  const memoContent = `Test memo ${unique()}`;
   await createMemo(page, memoContent);
 
   await expect(page.getByTestId('memo-card').filter({ hasText: memoContent })).toBeVisible();
@@ -19,7 +21,7 @@ test('creates a memo and it appears in the list', async ({ page }) => {
 test('creates a memo then deletes it', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const memoContent = `Test memo ${Date.now()}`;
+  const memoContent = `Test memo ${unique()}`;
   await createMemo(page, memoContent);
 
   const memoCard = page.getByTestId('memo-card').filter({ hasText: memoContent });
@@ -35,7 +37,7 @@ test('creates a memo then deletes it', async ({ page }) => {
 test('creates a memo then updates it', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const memoContent = `Test memo ${Date.now()}`;
+  const memoContent = `Test memo ${unique()}`;
   await createMemo(page, memoContent);
 
   const memoCard = page.getByTestId('memo-card').filter({ hasText: memoContent });
@@ -48,7 +50,7 @@ test('creates a memo then updates it', async ({ page }) => {
     .getByTestId('memo-card')
     .filter({ has: page.getByRole('textbox') });
 
-  const updatedContent = `Test memo updated ${Date.now()}`;
+  const updatedContent = `Test memo updated ${unique()}`;
   await editingCard.getByRole('textbox').fill(updatedContent);
 
   const updateResponse = page.waitForResponse(

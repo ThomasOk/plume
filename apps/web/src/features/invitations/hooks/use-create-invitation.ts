@@ -7,8 +7,13 @@ export const useCreateInvitation = () => {
 
   return useMutation({
     ...trpc.invitations.create.mutationOptions(),
-    onSuccess: (_invitation, { spaceId }) => {
-      queryClient.invalidateQueries({ queryKey: trpc.invitations.list.queryKey({ spaceId }) });
+    onSuccess: async (_invitation, { spaceId }) => {
+      const queryKey = trpc.invitations.list.queryKey({ spaceId });
+      // Cancelled first: an invalidation joins a list fetch still in flight rather than
+      // restarting it when the list has no data yet, its first load, and that fetch, read
+      // before the invitation was sent, would land last and hide it.
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 };
