@@ -1,6 +1,8 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { deriveInvitationToken } from '@repo/api/server';
 import { config } from 'dotenv';
+import type { APIRequestContext, Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { unique } from './unique';
 
 // The link only ever exists in the email, and the dev server has no mailbox to read. The spec
 // rebuilds it the way the email subscriber does: the invitation id, which the admin can list,
@@ -24,7 +26,7 @@ const pendingInvitationId = async (request: APIRequestContext, spaceId: string, 
 // what the invitee needs to check they landed in it, and the link's token.
 const inviteIntoNewSpace = async (page: Page, email: string) => {
   await page.goto('/', { waitUntil: 'networkidle' });
-  const title = `Space ${Date.now()}`;
+  const title = `Space ${unique()}`;
   await page.getByRole('button', { name: 'Switch space' }).first().click();
   await page.getByRole('menuitem', { name: 'New space…' }).click();
   await page.getByLabel('Title').fill(title);
@@ -32,7 +34,7 @@ const inviteIntoNewSpace = async (page: Page, email: string) => {
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   const spaceId = new URL(page.url()).pathname.split('/').pop()!;
 
-  const content = `Team note ${Date.now()}`;
+  const content = `Team note ${unique()}`;
   await page.getByPlaceholder('Write your memo here...').fill(content);
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByTestId('memo-card').filter({ hasText: content })).toBeVisible();
@@ -53,8 +55,10 @@ const signedOut = { storageState: { cookies: [], origins: [] } };
 test('an admin invites an address with no account; the invitee signs up and reads the space', async ({
   page,
   browser,
+  accounts,
 }) => {
-  const email = `invitee-${Date.now()}@example.com`;
+  const email = `invitee-${unique()}@example.com`;
+  accounts.push({ email, password: 'a-long-password' });
   const { title, spaceId, content, token } = await inviteIntoNewSpace(page, email);
 
   // The invitee, signed out, follows the link and signs up from it.
@@ -95,9 +99,11 @@ test('an admin invites an address with no account; the invitee signs up and read
 test('an invitee with an account, signed out, signs in from the link and lands in the space', async ({
   page,
   browser,
+  accounts,
 }) => {
-  const email = `member-${Date.now()}@example.com`;
+  const email = `member-${unique()}@example.com`;
   const password = 'a-long-password';
+  accounts.push({ email, password });
   // The account exists before the invitation; the session it opens is thrown away.
   await browser.newContext(signedOut).then(async (context) => {
     await context.request.post(`${SERVER_URL}/api/auth/sign-up/email`, {

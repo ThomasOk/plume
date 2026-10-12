@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { unique } from './unique';
 
 test('creates a space, lands in it, and finds it again after a reload', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const title = `Created space ${Date.now()}`;
+  const title = `Created space ${unique()}`;
   const switcher = page.getByRole('button', { name: 'Switch space' }).first();
   await switcher.click();
   await page.getByRole('menuitem', { name: 'New space…' }).click();
@@ -35,7 +36,7 @@ test('answers an unknown space as not found', async ({ page }) => {
 test('writes a memo from inside a space into that space, and not into personal memos', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const title = `Writing space ${Date.now()}`;
+  const title = `Writing space ${unique()}`;
   const switcher = page.getByRole('button', { name: 'Switch space' }).first();
   await switcher.click();
   await page.getByRole('menuitem', { name: 'New space…' }).click();
@@ -48,7 +49,7 @@ test('writes a memo from inside a space into that space, and not into personal m
   const form = page.locator('form').filter({ has: editor });
   await expect(form.getByText(title)).toBeVisible();
   await expect(page.getByRole('button', { name: /^Audience/ })).toHaveCount(0);
-  const content = `Pasta night ${Date.now()}`;
+  const content = `Pasta night ${unique()}`;
   await editor.fill(content);
   await page.getByRole('button', { name: 'Save' }).click();
   const card = page.getByTestId('memo-card').filter({ hasText: content });
@@ -85,7 +86,7 @@ test('writes a memo from inside a space into that space, and not into personal m
 test('moves a personal memo into a space, and back out as private', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
 
-  const title = `Moving space ${Date.now()}`;
+  const title = `Moving space ${unique()}`;
   const switcher = page.getByRole('button', { name: 'Switch space' }).first();
   await switcher.click();
   await page.getByRole('menuitem', { name: 'New space…' }).click();
@@ -95,7 +96,7 @@ test('moves a personal memo into a space, and back out as private', async ({ pag
 
   await switcher.click();
   await page.getByRole('menuitem', { name: 'Personal' }).click();
-  const content = `Team business ${Date.now()}`;
+  const content = `Team business ${unique()}`;
   await page.getByPlaceholder('Write your memo here...').fill(content);
   await page.getByRole('button', { name: 'Save' }).click();
   const card = page.getByTestId('memo-card').filter({ hasText: content });
