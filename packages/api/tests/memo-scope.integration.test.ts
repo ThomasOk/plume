@@ -103,7 +103,7 @@ describe('the personal scope', () => {
   it('leaves the author space memos out of their memo list', async () => {
     const caller = createAuthenticatedCaller(db, testUser.id);
 
-    const result = await caller.memos.list({});
+    const result = (await caller.memos.list({})).items;
 
     expect(result.map((m) => m.id)).toEqual(['personal-memo']);
   });
@@ -111,7 +111,7 @@ describe('the personal scope', () => {
   it('leaves the author space memos out of their search results', async () => {
     const caller = createAuthenticatedCaller(db, testUser.id);
 
-    const result = await caller.memos.list({ query: 'memo' });
+    const result = (await caller.memos.list({ query: 'memo' })).items;
 
     expect(result.map((m) => m.id)).toEqual(['personal-memo']);
   });

@@ -77,6 +77,13 @@ export const memo = pgTable(
     index('memo_explore_idx')
       .on(table.featuredAt.desc().nullsLast(), table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst())
       .where(sql`${table.visibility} = 'public' AND ${table.parentId} IS NULL`),
+    // A user's personal scope, in the scope's order: by author, then the pinned first,
+    // latest pin on top, then newest first, the id breaking ties (ADR 0006, ADR 0008). Partial
+    // on what the scope lists, its author's root memos outside any space, with the same
+    // care for the null order as Explore's.
+    index('memo_personal_idx')
+      .on(table.userId, table.pinnedAt.desc().nullsLast(), table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst())
+      .where(sql`${table.spaceId} IS NULL AND ${table.parentId} IS NULL`),
     // The equivalence `visibility = 'space' <=> space_id IS NOT NULL`, in both
     // directions, which is what makes `space + private` and `space + public`
     // unrepresentable (ADR 0003). The implication alone would not.

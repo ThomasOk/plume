@@ -7,7 +7,7 @@ import {
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
-  listPublicMemosSchema,
+  listMemoPageSchema,
   listCommentsSchema,
   getByIdSchema,
   moveSpaceMemoSchema,
@@ -19,7 +19,8 @@ import {
 } from './memos-schemas';
 import {
   getMemoById,
-  listMemos,
+  listPersonalMemos,
+  listSpaceMemos,
   listPublicMemos,
   createMemo,
   listMemoComments,
@@ -48,11 +49,11 @@ export const getById = publicProcedure
   );
 
 export const list = protectedProcedure
-  .input(listMemosSchema)
-  .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, personalScope(ctx.session.user.id), ctx.session.user.id, input));
+  .input(listMemoPageSchema)
+  .query(({ ctx, input }) => listPersonalMemos(ctx.db, ctx.storage, ctx.session.user.id, input));
 
 export const listPublic = publicProcedure
-  .input(listPublicMemosSchema)
+  .input(listMemoPageSchema)
   .query(({ ctx, input }) => listPublicMemos(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
 
 export const create = protectedProcedure
@@ -140,7 +141,7 @@ export const space = router({
     ),
   list: spaceProcedure
     .input(listMemosSchema)
-    .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), ctx.session.user.id, input)),
+    .query(({ ctx, input }) => listSpaceMemos(ctx.db, ctx.storage, spaceScope(ctx.membership), ctx.session.user.id, input)),
   stats: spaceProcedure
     .query(({ ctx }) => getMemoStats(ctx.db, spaceScope(ctx.membership))),
   tags: spaceProcedure

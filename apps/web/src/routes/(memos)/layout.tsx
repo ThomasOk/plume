@@ -19,8 +19,10 @@ function MemosLayout() {
         <TagList tagCounts={data ?? {}} isLoading={isLoading} />
       </aside>
       {/* The lists scroll here, not the window: named, the router restores this scroll when
-          the reader comes back to a list, as it does the window's. */}
-      <div data-scroll-restoration-id="memos" className="flex-1 overflow-y-auto">
+          the reader comes back to a list, as it does the window's. Positioned, so what a
+          list places absolutely (its screen reader announcement) stays inside it rather than
+          stretching the page below the list and scrolling the window too. */}
+      <div data-scroll-restoration-id="memos" className="relative flex-1 overflow-y-auto">
         <Outlet />
       </div>
     </div>

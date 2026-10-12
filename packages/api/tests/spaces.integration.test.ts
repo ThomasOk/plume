@@ -223,7 +223,7 @@ describe('the memos of a space', () => {
     );
     const caller = createAuthenticatedCaller(db, creator.id);
 
-    expect((await caller.memos.list({})).map((m) => m.id)).toEqual(['personal-memo']);
+    expect((await caller.memos.list({})).items.map((m) => m.id)).toEqual(['personal-memo']);
     expect(await caller.memos.tags()).toEqual({ cooking: 1 });
   });
 

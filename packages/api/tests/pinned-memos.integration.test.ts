@@ -83,7 +83,7 @@ describe('pinning a personal memo', () => {
 
     await as(alice).memos.pin({ id: older! });
 
-    const listed = await as(alice).memos.list({});
+    const listed = (await as(alice).memos.list({})).items;
     expect(ids(listed)).toEqual([older, newer]);
     expect(listed[0]!.pinnedAt).toBeInstanceOf(Date);
     expect(listed[1]!.pinnedAt).toBeNull();
@@ -116,7 +116,7 @@ describe('the order of the pinned memos', () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     await as(alice).memos.pin({ id: first! });
 
-    expect(ids(await as(alice).memos.list({}))).toEqual([first, third, fourth, second]);
+    expect(ids((await as(alice).memos.list({})).items)).toEqual([first, third, fourth, second]);
   });
 
   it('is the same in a filtered list, which only narrows it', async () => {
@@ -130,7 +130,7 @@ describe('the order of the pinned memos', () => {
     await as(alice).memos.pin({ id: cooking! });
     await as(alice).memos.pin({ id: other! });
 
-    expect(ids(await as(alice).memos.list({ tag: 'cooking' }))).toEqual([cooking, alsoCooking]);
+    expect(ids((await as(alice).memos.list({ tag: 'cooking' })).items)).toEqual([cooking, alsoCooking]);
   });
 
   it('is ignored by Explore, which is no one’s scope', async () => {

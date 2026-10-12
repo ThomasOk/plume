@@ -134,6 +134,13 @@
       "when": 1791795430020,
       "tag": "0018_memo_explore_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791812216072,
+      "tag": "0019_memo_personal_idx",
+      "breakpoints": true
     }
   ]
 }

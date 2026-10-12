@@ -72,7 +72,7 @@ describe('an operator deleting a public memo', () => {
     await as(olivia).memos.delete({ id: memoId });
 
     expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([]);
-    expect(ids(await as(alice).memos.list({}))).toEqual([]);
+    expect(ids((await as(alice).memos.list({})).items)).toEqual([]);
     expect(await refusal(as(alice).memos.listComments({ memoId }))).toEqual({
       code: 'NOT_FOUND',
       message: 'Memo not found',
@@ -129,7 +129,7 @@ describe('what is out of an operator’s reach', () => {
     const { id: memoId } = await as(alice).memos.create({ content: 'Diary', visibility: 'private' });
 
     expect(await refusal(as(olivia).memos.delete({ id: memoId }))).toEqual(missing);
-    expect(ids(await as(alice).memos.list({}))).toEqual([memoId]);
+    expect(ids((await as(alice).memos.list({})).items)).toEqual([memoId]);
   });
 
   it('is a memo of a space they are not a member of, which answers as a missing one', async () => {

@@ -19,10 +19,10 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 /**
  * Memo type
  *
- * Inferred from `memos.list` return type
- * Array of memos � extract single element type with [number]
+ * Inferred from the items of a `memos.list` page
+ * Extract a single element type with [number]
  */
-export type Memo = RouterOutputs['memos']['list'][number];
+export type Memo = RouterOutputs['memos']['list']['items'][number];
 export type MemoWithAuthor = RouterOutputs['memos']['listPublic']['items'][number];
 export type Author = MemoWithAuthor['author'];
 export type Attachment = RouterOutputs['attachments']['list'][number];
