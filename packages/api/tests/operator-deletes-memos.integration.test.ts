@@ -71,7 +71,7 @@ describe('an operator deleting a public memo', () => {
 
     await as(olivia).memos.delete({ id: memoId });
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([]);
     expect(ids(await as(alice).memos.list({}))).toEqual([]);
     expect(await refusal(as(alice).memos.listComments({ memoId }))).toEqual({
       code: 'NOT_FOUND',
@@ -88,7 +88,7 @@ describe('an operator deleting a comment', () => {
     await as(olivia).memos.delete({ id: commentId });
 
     expect(await as(alice).memos.listComments({ memoId })).toEqual([]);
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([memoId]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([memoId]);
   });
 
   it('removes a comment written before its memo was made public', async () => {
@@ -118,7 +118,7 @@ describe('a featured memo', () => {
 
     await as(olivia).memos.delete({ id: memoId });
 
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([]);
   });
 });
 
@@ -177,6 +177,6 @@ describe('a user who is not an operator', () => {
 
     expect((await refusal(as(bob).memos.delete({ id: memoId }))).code).toBe('FORBIDDEN');
     expect((await refusal(as(bob).memos.delete({ id: commentId }))).code).toBe('FORBIDDEN');
-    expect(ids(await as(bob).memos.listPublic({}))).toEqual([memoId]);
+    expect(ids((await as(bob).memos.listPublic({})).items)).toEqual([memoId]);
   });
 });

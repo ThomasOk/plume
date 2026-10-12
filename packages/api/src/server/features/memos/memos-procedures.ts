@@ -7,6 +7,7 @@ import {
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
+  listPublicMemosSchema,
   listCommentsSchema,
   getByIdSchema,
   moveSpaceMemoSchema,
@@ -51,7 +52,7 @@ export const list = protectedProcedure
   .query(({ ctx, input }) => listMemos(ctx.db, ctx.storage, personalScope(ctx.session.user.id), ctx.session.user.id, input));
 
 export const listPublic = publicProcedure
-  .input(listMemosSchema)
+  .input(listPublicMemosSchema)
   .query(({ ctx, input }) => listPublicMemos(ctx.db, ctx.storage, ctx.session?.user.id ?? null, input));
 
 export const create = protectedProcedure

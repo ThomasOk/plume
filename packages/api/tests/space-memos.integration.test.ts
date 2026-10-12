@@ -280,7 +280,7 @@ describe('the memos of a space outside the space', () => {
   });
 
   it('are absent from Explore', async () => {
-    expect(await createTestCaller(db).memos.listPublic({})).toEqual([]);
+    expect((await createTestCaller(db).memos.listPublic({})).items).toEqual([]);
     expect(await createTestCaller(db).memos.publicTags()).toEqual({});
   });
 });

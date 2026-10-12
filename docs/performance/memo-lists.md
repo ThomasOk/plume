@@ -17,6 +17,8 @@ list paginated with its index), so every change is judged against the same numbe
    rows. It ends with `ANALYZE`, so the planner sees the data it reads.
 3. calls each list procedure through the tRPC router, as its reader would: the personal
    scope as its writer, the space as a member, Explore as an anonymous visitor. No filter.
+   Once a list is paginated, the call reads its first page, and Explore is measured a
+   second time at page 100, to show what a page costs deep in the list.
    It runs with `NODE_ENV=production`, and refuses to run otherwise: in development every
    procedure waits a random 100 to 500 ms to mimic latency.
 4. per list, makes 3 warm-up calls, then 30 measured calls, and reports their median and
@@ -75,11 +77,14 @@ Apple M4 Pro, 14 cores, 48 GB, macOS (Darwin 24.6.0, arm64). Node 22.19.0, Postg
 
 | | Before | Comments indexed | Paginated |
 | --- | ---: | ---: | ---: |
-| Memos returned | 10,411 | 10,411 | |
-| Response size | 9,957 KB | 9,957 KB | |
-| Median | 12,965 ms | 387.9 ms | |
-| p95 | 13,083 ms | 512.2 ms | |
-| Queries | 3 | 3 | |
+| Memos returned | 10,411 | 10,411 | 20 |
+| Response size | 9,957 KB | 9,957 KB | 19 KB |
+| Median | 12,965 ms | 387.9 ms | 1.7 ms |
+| p95 | 13,083 ms | 512.2 ms | 2.0 ms |
+| Queries | 3 | 3 | 3 |
+
+"Paginated" is the first page. Page 100, resumed from the cursor that follows 1,980 memos,
+costs the same: 20 memos, 19 KB, 1.7 ms median, 1.8 ms p95, 3 queries.
 
 ## Reading the "before" plans
 
@@ -389,4 +394,102 @@ Planning:
   Buffers: shared hit=4
 Planning Time: 0.148 ms
 Execution Time: 34.643 ms
+```
+
+## Reading the "paginated" plans: Explore
+
+- **Explore reads its page through `memo_explore_idx`.** An index scan in Explore's
+  order, `featured_at DESC NULLS LAST, created_at DESC, id DESC`, partial on public root
+  memos, stopped by the `LIMIT` after 21 rows (the page, and one more to know whether
+  another follows). 117 buffer hits and 0.1 ms, against a scan and a sort of all 10,411
+  public memos before. The comment count, the author and the hydration now run 21 times
+  instead of 10,411.
+- **A page deep in the list costs what the first does.** Page 100 seeks straight to its
+  cursor, `Index Cond: ((featured_at IS NULL) AND (ROW(created_at, id) < ROW(...)))`:
+  126 buffer hits and 0.1 ms. An offset would have read and dropped the 1,980 memos
+  before it.
+- **The index matches the query to the null order.** Drizzle writes a descending index
+  column `NULLS LAST` unless told otherwise, and a plain `DESC` in the query puts nulls
+  first: on `created_at` and `id` the index says `NULLS FIRST`, or the planner would not
+  read the order from it, `NOT NULL` columns notwithstanding.
+- **A cursor inside the featured block** resumes on a condition with an `OR` (the rest of
+  the block, then every memo outside it), which the index serves in order but not as a
+  seek: the scan should read from the top of Explore and filter out the featured memos
+  already read. That is at most the featured memos, a handful an operator chose. Not
+  measured: the 6 featured memos of this data set all fit in the first page.
+- **What is left** of the 1.7 ms median, beside the 0.1 ms list query, is fetching the
+  attachments and reactions of 20 memos and serializing a 19 KB response.
+
+## "Paginated" query plans: Explore
+
+Run of 2026-10-12, data set and machine above, with `memo_explore_idx` (migration
+`0018_memo_explore_idx`).
+
+### Explore, first page
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."featured_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."visibility" = $1 and "memo"."parent_id" is null) order by "memo"."featured_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $2
+```
+
+```
+Limit  (cost=0.44..185.05 rows=21 width=499) (actual time=0.009..0.093 rows=21 loops=1)
+  Buffers: shared hit=117
+  ->  Nested Loop Left Join  (cost=0.44..91679.97 rows=10429 width=499) (actual time=0.009..0.092 rows=21 loops=1)
+        Buffers: shared hit=117
+        ->  Index Scan using memo_explore_idx on memo  (cost=0.29..3885.28 rows=10429 width=389) (actual time=0.002..0.005 rows=21 loops=1)
+              Buffers: shared hit=18
+        ->  Memoize  (cost=0.15..0.17 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=21)
+              Cache Key: memo.user_id
+              Cache Mode: logical
+              Hits: 0  Misses: 21  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+              Buffers: shared hit=42
+              ->  Index Scan using user_pkey on "user"  (cost=0.14..0.16 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=21)
+                    Index Cond: (id = memo.user_id)
+                    Buffers: shared hit=42
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.002..0.002 rows=1 loops=21)
+                Buffers: shared hit=57
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.002..0.002 rows=2 loops=21)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 34
+                      Buffers: shared hit=57
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.080 ms
+Execution Time: 0.101 ms
+```
+
+### Explore, page 100
+
+```sql
+select "memo"."id", "memo"."user_id", "memo"."parent_id", "memo"."content", "memo"."tags", "memo"."visibility", "memo"."space_id", "memo"."pinned_at", "memo"."featured_at", "memo"."created_at", "memo"."updated_at", (SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id) as "comment_count", "user"."name", "user"."image", "memo"."featured_at"::text as "leading_key", "memo"."created_at"::text as "created_at_key" from "memo" left join "user" on "memo"."user_id" = "user"."id" where ("memo"."visibility" = $1 and "memo"."parent_id" is null and ("memo"."featured_at" is null and ("memo"."created_at", "memo"."id") < ($2::timestamp, $3))) order by "memo"."featured_at" DESC NULLS LAST, "memo"."created_at" desc, "memo"."id" desc limit $4
+```
+
+```
+Limit  (cost=0.44..186.62 rows=21 width=499) (actual time=0.009..0.097 rows=21 loops=1)
+  Buffers: shared hit=126
+  ->  Nested Loop Left Join  (cost=0.44..74950.31 rows=8454 width=499) (actual time=0.009..0.096 rows=21 loops=1)
+        Buffers: shared hit=126
+        ->  Index Scan using memo_explore_idx on memo  (cost=0.29..3774.80 rows=8454 width=389) (actual time=0.002..0.006 rows=21 loops=1)
+              Index Cond: ((featured_at IS NULL) AND (ROW(created_at, id) < ROW('2025-08-13 02:21:25.415'::timestamp without time zone, 'bench-memo-07409'::text)))
+              Buffers: shared hit=23
+        ->  Memoize  (cost=0.15..0.18 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=21)
+              Cache Key: memo.user_id
+              Cache Mode: logical
+              Hits: 0  Misses: 21  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+              Buffers: shared hit=42
+              ->  Index Scan using user_pkey on "user"  (cost=0.14..0.17 rows=1 width=58) (actual time=0.001..0.001 rows=1 loops=21)
+                    Index Cond: (id = memo.user_id)
+                    Buffers: shared hit=42
+        SubPlan 1
+          ->  Aggregate  (cost=8.37..8.38 rows=1 width=4) (actual time=0.003..0.003 rows=1 loops=21)
+                Buffers: shared hit=61
+                ->  Index Only Scan using memo_parent_id_idx on memo comments  (cost=0.29..8.36 rows=2 width=0) (actual time=0.002..0.002 rows=2 loops=21)
+                      Index Cond: (parent_id = memo.id)
+                      Heap Fetches: 35
+                      Buffers: shared hit=61
+Planning:
+  Buffers: shared hit=4
+Planning Time: 0.085 ms
+Execution Time: 0.105 ms
 ```

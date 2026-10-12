@@ -23,7 +23,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
  * Array of memos � extract single element type with [number]
  */
 export type Memo = RouterOutputs['memos']['list'][number];
-export type MemoWithAuthor = RouterOutputs['memos']['listPublic'][number];
+export type MemoWithAuthor = RouterOutputs['memos']['listPublic']['items'][number];
 export type Author = MemoWithAuthor['author'];
 export type Attachment = RouterOutputs['attachments']['list'][number];
 export type Comment = RouterOutputs['memos']['listComments'][number];

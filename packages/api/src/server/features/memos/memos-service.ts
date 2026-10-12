@@ -7,6 +7,7 @@ import type {
   updateMemoSchema,
   deleteMemoSchema,
   listMemosSchema,
+  listPublicMemosSchema,
   listCommentsSchema,
   getByIdSchema,
   moveSpaceMemoSchema,
@@ -22,6 +23,7 @@ import { recordEvent } from '../../events/outbox';
 import { MemoNotFoundError, InsufficientPermissionsError } from '../../shared/errors';
 import { removeDeletedObjects, type StorageService } from '../../shared/storage';
 import { assertMay, mayDeleteMemo, mayEditMemo, mayPinMemo, type SpaceMembership } from '../spaces';
+import { afterCursor, decodeCursor, encodeCursor, listOrder, PAGE_SIZE, sortKeyColumns, type LeadingColumn, type ListName } from './memo-list-page';
 import { memoScopeCondition, readableMemoCondition, type MemoScope } from './memo-scope';
 import { extractTagsFromContent, buildFilterConditions, formatAuthor } from './memos-utils';
 import { mayDeletePublicMemo, mayFeatureMemo, type OperatorActor } from './operator-policy';
@@ -31,6 +33,7 @@ type CreateMemoInput = z.infer<typeof createMemoSchema>;
 type UpdateMemoInput = z.infer<typeof updateMemoSchema>;
 type DeleteMemoInput = z.infer<typeof deleteMemoSchema>;
 type ListMemosInput = z.infer<typeof listMemosSchema>;
+type ListPublicMemosInput = z.infer<typeof listPublicMemosSchema>;
 type ListCommentsInput = z.infer<typeof listCommentsSchema>;
 type GetByIdInput = z.infer<typeof getByIdSchema>;
 // Into a space names only the memo; out of one names the new visibility as well.
@@ -38,15 +41,14 @@ type MoveMemoInput = z.infer<typeof moveSpaceMemoSchema> | z.infer<typeof moveMe
 type PinMemoInput = z.infer<typeof pinMemoSchema>;
 type FeatureMemoInput = z.infer<typeof featureMemoSchema>;
 
-// The order of every list of a scope, filtered or not: the pinned first, the latest pin on
-// top, then the rest newest first (ADR 0006). Postgres puts nulls first in a descending
-// order, hence the explicit `NULLS LAST`.
-const pinnedFirst = [sql`${memo.pinnedAt} DESC NULLS LAST`, desc(memo.createdAt)];
+// What leads the order of every list of a scope, filtered or not: the pinned first, the
+// latest pin on top, then the rest newest first (ADR 0006).
+const pinnedFirst = memo.pinnedAt;
 
-// The order of Explore, filtered or not: the featured first, the latest featured on top,
-// then the rest newest first. The same mechanics as a pin, decided by an operator instead
+// What leads the order of Explore, filtered or not: the featured first, the latest
+// featured on top, then the rest newest first. The same mechanics as a pin, decided by an operator instead
 // of whoever governs a scope.
-const featuredFirst = [sql`${memo.featuredAt} DESC NULLS LAST`, desc(memo.createdAt)];
+const featuredFirst = memo.featuredAt;
 
 // A user about to act on what belongs to no scope: who they are, and whether they run the
 // instance. Most are not, and are refused.
@@ -115,66 +117,96 @@ async function fetchAttachmentsForMemos(
 }
 
 // Every list of root memos, a scope's or Explore's: the same row, hydrated the same way.
-// Lists differ only by which memos qualify and in what order, and each caller says both;
-// the order stays defined beside the list it belongs to. `readerId` is who reads the list,
-// for the reactions: neither the condition nor the order tells it.
+// Lists differ only by which memos qualify and which column leads their order, and each
+// caller says both; the order stays defined beside the list it belongs to. `readerId` is
+// who reads the list, for the reactions: neither the condition nor the order tells it.
+//
+// Given a page, the list is read a page at a time (ADR 0008): the memos after its cursor,
+// and the cursor of the next page, null once the list is exhausted. Without one, the whole
+// list, which the scopes still read until they are paginated.
 async function listRootMemos(
   db: DatabaseInstance,
   storage: StorageService,
   readerId: string | null,
   condition: SQL,
-  order: SQL[],
+  leading: LeadingColumn,
   input: ListMemosInput,
+  page?: { list: ListName; cursor: string | undefined },
 ) {
-  const rows = await db
+  // Decoded first: a bad cursor is refused before anything is read.
+  const resumeAfter = page?.cursor === undefined ? undefined : decodeCursor(page.list, page.cursor);
+
+  const query = db
     .select({
-      id: memo.id,
-      userId: memo.userId,
-      parentId: memo.parentId,
-      content: memo.content,
-      tags: memo.tags,
-      visibility: memo.visibility,
-      spaceId: memo.spaceId,
-      pinnedAt: memo.pinnedAt,
-      featuredAt: memo.featuredAt,
-      createdAt: memo.createdAt,
-      updatedAt: memo.updatedAt,
-      // Scope-free by construction: it counts the comments of a memo the list has
-      // already admitted, and a comment's audience is its parent's.
-      commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
+      memo: {
+        id: memo.id,
+        userId: memo.userId,
+        parentId: memo.parentId,
+        content: memo.content,
+        tags: memo.tags,
+        visibility: memo.visibility,
+        spaceId: memo.spaceId,
+        pinnedAt: memo.pinnedAt,
+        featuredAt: memo.featuredAt,
+        createdAt: memo.createdAt,
+        updatedAt: memo.updatedAt,
+        // Scope-free by construction: it counts the comments of a memo the list has
+        // already admitted, and a comment's audience is its parent's.
+        commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
+      },
       authorName: user.name,
       authorImage: user.image,
+      sortKey: sortKeyColumns(leading),
     })
     .from(memo)
     // The author is part of every list, not only a space's: in a space it is who wrote
     // what, and one row shape for every list keeps the views interchangeable.
     .leftJoin(user, eq(memo.userId, user.id))
-    .where(and(condition, isNull(memo.parentId), ...buildFilterConditions(input)))
-    .orderBy(...order);
+    // The list's condition always applies, cursor or not: a cursor says where to resume,
+    // never which memos may be read.
+    .where(and(
+      condition,
+      isNull(memo.parentId),
+      ...buildFilterConditions(input),
+      resumeAfter && afterCursor(leading, resumeAfter),
+    ))
+    .orderBy(...listOrder(leading))
+    .$dynamic();
 
-  const memoIds = rows.map((r) => r.id);
+  // One memo past the page tells whether another page follows, without asking for it.
+  const fetched = page ? await query.limit(PAGE_SIZE + 1) : await query;
+  const rows = page ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const last = rows.at(-1);
+  const nextCursor = page && fetched.length > PAGE_SIZE && last
+    ? encodeCursor(page.list, [last.sortKey.leading, last.sortKey.createdAt, last.memo.id])
+    : null;
+
+  const memoIds = rows.map((r) => r.memo.id);
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memoIds);
   const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, memoIds);
 
-  return rows.map(({ authorName, authorImage, ...memoData }) => ({
+  const items = rows.map(({ memo: memoData, authorName, authorImage }) => ({
     ...memoData,
     author: formatAuthor(authorName, authorImage),
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
     reactions: reactionsByMemoId.get(memoData.id) ?? [],
   }));
+  return { items, nextCursor };
 }
 
 // `readerId` is who reads the scope, which a space scope does not tell: it says whose memos
 // are listed, not who is looking at them.
 export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
-  return listRootMemos(db, storage, readerId, memoScopeCondition(scope), pinnedFirst, input);
+  const { items } = await listRootMemos(db, storage, readerId, memoScopeCondition(scope), pinnedFirst, input);
+  return items;
 }
 
 // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin there
 // would let any author take the top of the public page (ADR 0006). What comes first there is
 // the operator's decision.
-export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListMemosInput) {
-  return listRootMemos(db, storage, readerId, eq(memo.visibility, 'public'), featuredFirst, input);
+export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListPublicMemosInput) {
+  const { cursor, ...filters } = input;
+  return listRootMemos(db, storage, readerId, eq(memo.visibility, 'public'), featuredFirst, filters, { list: 'explore', cursor });
 }
 
 // The one place a root memo's visibility is reconciled with where it sits (ADR 0003): in a

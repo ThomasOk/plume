@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Memo } from '@/lib/types';
 import type { InputHTMLAttributes } from 'react';
+import { restoreCachedReads, rewriteCachedMemo } from '@/features/memos/cached-memo';
 import { useMemoContext } from '@/features/memos/contexts/memo-context';
 import { useTRPC } from '@/lib/api';
 import { authClient } from '@/lib/authClient';
@@ -51,76 +51,22 @@ export const TaskListItem = (props: InputHTMLAttributes<HTMLInputElement>) => {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
 
-  // Create a local mutation with optimistic update callbacks
+  // The ticked task shows at once wherever the memo is read (a list, whole or in pages, or
+  // its own page), is put back if the server refuses, and is refetched either way.
   const updateMemo = useMutation({
     mutationFn: trpc.memos.update.mutationOptions().mutationFn,
-
-    // Optimistic update: update UI immediately before API call
-    onMutate: async (variables: { id: string; content: string }) => {
-      // Get specific queryKeys with undefined input to match cached queries
-      const listKey = trpc.memos.list.queryKey({ date: undefined });
-      const listPublicKey = trpc.memos.listPublic.queryKey({ date: undefined });
-
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: listKey });
-      await queryClient.cancelQueries({ queryKey: listPublicKey });
-
-      // Snapshot the previous values for rollback
-      const previousList = queryClient.getQueryData<Memo[]>(listKey);
-      const previousListPublic = queryClient.getQueryData<Memo[]>(listPublicKey);
-
-      // Optimistically update list query
-      if (previousList) {
-        queryClient.setQueryData<Memo[]>(
-          listKey,
-          previousList.map((m) =>
-            m.id === variables.id
-              ? { ...m, content: variables.content }
-              : m
-          )
-        );
-      }
-
-      // Optimistically update listPublic query
-      if (previousListPublic) {
-        queryClient.setQueryData<Memo[]>(
-          listPublicKey,
-          previousListPublic.map((m) =>
-            m.id === variables.id
-              ? { ...m, content: variables.content }
-              : m
-          )
-        );
-      }
-
-      // Return context with snapshots for rollback
-      return { previousList, previousListPublic };
-    },
-
-    // Rollback on error
-    onError: (
-      err: Error,
-      _variables: { id: string; content: string },
-      context?: { previousList?: Memo[]; previousListPublic?: Memo[] }
-    ) => {
-      if (context) {
-        const listKey = trpc.memos.list.queryKey({ date: undefined });
-        const listPublicKey = trpc.memos.listPublic.queryKey({ date: undefined });
-
-        // Restore previous state
-        if (context.previousList) {
-          queryClient.setQueryData<Memo[]>(listKey, context.previousList);
-        }
-        if (context.previousListPublic) {
-          queryClient.setQueryData<Memo[]>(listPublicKey, context.previousListPublic);
-        }
-      }
+    onMutate: async (variables: { id: string; content: string }) => ({
+      touched: await rewriteCachedMemo(queryClient, trpc.memos.pathKey(), variables.id, (cached) => ({
+        ...cached,
+        content: variables.content,
+      })),
+    }),
+    onError: (err: Error, _variables, context) => {
+      restoreCachedReads(queryClient, context?.touched ?? []);
       toast.error(err.message || 'Failed to update task. Please try again.');
     },
-
-    // Always refetch after error or success to ensure consistency
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [['memos']] });
+      queryClient.invalidateQueries({ queryKey: trpc.memos.pathKey() });
     },
   });
 

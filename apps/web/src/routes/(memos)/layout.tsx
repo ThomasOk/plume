@@ -18,7 +18,9 @@ function MemosLayout() {
         <StatisticsView />
         <TagList tagCounts={data ?? {}} isLoading={isLoading} />
       </aside>
-      <div className="flex-1 overflow-y-auto">
+      {/* The lists scroll here, not the window: named, the router restores this scroll when
+          the reader comes back to a list, as it does the window's. */}
+      <div data-scroll-restoration-id="memos" className="flex-1 overflow-y-auto">
         <Outlet />
       </div>
     </div>

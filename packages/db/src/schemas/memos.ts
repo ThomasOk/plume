@@ -69,6 +69,14 @@ export const memo = pgTable(
     // memo's visibility over to them on edit, deleting a memo with them, and the
     // `ON DELETE CASCADE` of `parent_id`, which Postgres does not index on its own.
     index('memo_parent_id_idx').on(table.parentId),
+    // Explore, in its order: the featured first, latest on top, then newest first, the id
+    // breaking ties (ADR 0008). A page is a seek here, at any depth, instead of a sort of
+    // every public memo. Partial on what Explore lists, its public root memos; the
+    // predicate is written as the list query writes it, and each column sorts its nulls
+    // where the query does (a plain `DESC` puts them first), or the planner cannot use it.
+    index('memo_explore_idx')
+      .on(table.featuredAt.desc().nullsLast(), table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst())
+      .where(sql`${table.visibility} = 'public' AND ${table.parentId} IS NULL`),
     // The equivalence `visibility = 'space' <=> space_id IS NOT NULL`, in both
     // directions, which is what makes `space + private` and `space + public`
     // unrepresentable (ADR 0003). The implication alone would not.

@@ -1,0 +1,1 @@
+CREATE INDEX "memo_explore_idx" ON "memo" USING btree ("featured_at" DESC NULLS LAST,"created_at" DESC NULLS FIRST,"id" DESC NULLS FIRST) WHERE "memo"."visibility" = 'public' AND "memo"."parent_id" IS NULL;
