@@ -1,4 +1,4 @@
-import { asc, desc, eq, and, isNull, sql, inArray, ne, or } from '@repo/db';
+import { asc, desc, eq, and, isNull, sql, inArray, ne, or, type SQL } from '@repo/db';
 import { memo, user, attachment, spaceMember, reaction } from '@repo/db/schema';
 import { TRPCError } from '@trpc/server';
 import { nanoid } from 'nanoid';
@@ -114,48 +114,18 @@ async function fetchAttachmentsForMemos(
   return byMemoId;
 }
 
-// `readerId` is who reads the scope, which a space scope does not tell: it says whose memos
-// are listed, not who is looking at them.
-export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
-  const memos = await db
-    .select({
-      id: memo.id,
-      userId: memo.userId,
-      parentId: memo.parentId,
-      content: memo.content,
-      tags: memo.tags,
-      visibility: memo.visibility,
-      spaceId: memo.spaceId,
-      pinnedAt: memo.pinnedAt,
-      featuredAt: memo.featuredAt,
-      createdAt: memo.createdAt,
-      updatedAt: memo.updatedAt,
-      // Scope-free by construction: it counts the comments of a memo the scope has
-      // already admitted, and a comment's audience is its parent's.
-      commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
-      authorName: user.name,
-      authorImage: user.image,
-    })
-    .from(memo)
-    // The author is part of every list, not only a space's: in a space it is who wrote
-    // what, and one row shape for every scope keeps the views interchangeable.
-    .leftJoin(user, eq(memo.userId, user.id))
-    .where(and(memoScopeCondition(scope), isNull(memo.parentId), ...buildFilterConditions(input)))
-    .orderBy(...pinnedFirst);
-
-  const memoIds = memos.map((m) => m.id);
-  const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memoIds);
-  const reactionsByMemoId = await fetchReactionsForMemos(db, readerId, memoIds);
-
-  return memos.map(({ authorName, authorImage, ...memoData }) => ({
-    ...memoData,
-    author: formatAuthor(authorName, authorImage),
-    attachments: attachmentsByMemoId.get(memoData.id) ?? [],
-    reactions: reactionsByMemoId.get(memoData.id) ?? [],
-  }));
-}
-
-export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListMemosInput) {
+// Every list of root memos, a scope's or Explore's: the same row, hydrated the same way.
+// Lists differ only by which memos qualify and in what order, and each caller says both;
+// the order stays defined beside the list it belongs to. `readerId` is who reads the list,
+// for the reactions: neither the condition nor the order tells it.
+async function listRootMemos(
+  db: DatabaseInstance,
+  storage: StorageService,
+  readerId: string | null,
+  condition: SQL,
+  order: SQL[],
+  input: ListMemosInput,
+) {
   const rows = await db
     .select({
       id: memo.id,
@@ -169,19 +139,18 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
       featuredAt: memo.featuredAt,
       createdAt: memo.createdAt,
       updatedAt: memo.updatedAt,
-      // Scope-free by construction: it counts the comments of a memo the scope has
+      // Scope-free by construction: it counts the comments of a memo the list has
       // already admitted, and a comment's audience is its parent's.
       commentCount: sql<number>`(SELECT COUNT(*)::int FROM memo AS comments WHERE comments.parent_id = memo.id)`.as('comment_count'),
       authorName: user.name,
       authorImage: user.image,
     })
     .from(memo)
+    // The author is part of every list, not only a space's: in a space it is who wrote
+    // what, and one row shape for every list keeps the views interchangeable.
     .leftJoin(user, eq(memo.userId, user.id))
-    // Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin
-    // there would let any author take the top of the public page (ADR 0006). What comes
-    // first there is the operator's decision.
-    .where(and(eq(memo.visibility, 'public'), isNull(memo.parentId), ...buildFilterConditions(input)))
-    .orderBy(...featuredFirst);
+    .where(and(condition, isNull(memo.parentId), ...buildFilterConditions(input)))
+    .orderBy(...order);
 
   const memoIds = rows.map((r) => r.id);
   const attachmentsByMemoId = await fetchAttachmentsForMemos(db, storage, memoIds);
@@ -193,6 +162,19 @@ export async function listPublicMemos(db: DatabaseInstance, storage: StorageServ
     attachments: attachmentsByMemoId.get(memoData.id) ?? [],
     reactions: reactionsByMemoId.get(memoData.id) ?? [],
   }));
+}
+
+// `readerId` is who reads the scope, which a space scope does not tell: it says whose memos
+// are listed, not who is looking at them.
+export async function listMemos(db: DatabaseInstance, storage: StorageService, scope: MemoScope, readerId: string, input: ListMemosInput) {
+  return listRootMemos(db, storage, readerId, memoScopeCondition(scope), pinnedFirst, input);
+}
+
+// Explore ignores pins: it mixes every author's memos and is no one's scope, so a pin there
+// would let any author take the top of the public page (ADR 0006). What comes first there is
+// the operator's decision.
+export async function listPublicMemos(db: DatabaseInstance, storage: StorageService, readerId: string | null, input: ListMemosInput) {
+  return listRootMemos(db, storage, readerId, eq(memo.visibility, 'public'), featuredFirst, input);
 }
 
 // The one place a root memo's visibility is reconciled with where it sits (ADR 0003): in a
