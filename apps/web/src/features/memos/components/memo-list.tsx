@@ -89,19 +89,18 @@ export const MemoList = ({
     pagination?.fetchNextPage();
   };
 
-  if (memos.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-muted-foreground">{emptyMessage}</p>
-      </div>
-    );
-  }
-
   const trigger = Math.max(0, memos.length - MEMOS_LEFT_WHEN_LOADING);
   const setSize = hasNextPage ? -1 : memos.length;
 
+  // The feed stays mounted beside the empty message: remounted with `initial={false}`, it
+  // would show the first memo written into an empty list without the entrance of the others.
   return (
     <>
+      {memos.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-muted-foreground">{emptyMessage}</p>
+        </div>
+      )}
       <div ref={feedRef} role="feed" aria-busy={pagination?.isFetchingNextPage ?? false} aria-label="Memos" className="space-y-2">
         <AnimatePresence initial={false} mode="popLayout">
           {memos.map((memo, index) => (
@@ -120,14 +119,15 @@ export const MemoList = ({
               // popLayout takes the leaving card out of the flow, and the cards below slide up
               // through `layout`: fading it is enough, without animating its height.
               exit={{ opacity: 0 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.215, 0.61, 0.355, 1] }}
+              // Under reduced motion, the card still fades in, without moving.
+              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
             >
               <MemoCard memo={memo} author={hideAuthors ? undefined : memo.author} ignorePins={ignorePins} markFeatured={markFeatured} />
             </motion.article>
           ))}
         </AnimatePresence>
       </div>
-      {pagination && (
+      {pagination && memos.length > 0 && (
         <>
           <p role="status" className="sr-only">
             {pagination.isFetchingNextPage ? 'Loading more memos…' : `${memos.length} memos loaded`}

@@ -182,7 +182,11 @@ export const MemoEditForm = ({ memo, editing }: MemoEditFormProps) => {
   return (
     <>
       {isEditing && (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        // Fades in from its first style as it takes the memo's place.
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-3 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] starting:opacity-0"
+        >
           <input
             ref={fileInputRef}
             type="file"
