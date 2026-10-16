@@ -67,7 +67,7 @@ const ReactionPicker = ({ memoId, reactions, children }: ReactionPickerProps) =>
             aria-pressed={emoji === current}
             onClick={() => pick(emoji)}
             className={cn(
-              'size-9 pointer-coarse:size-11 rounded-full text-xl leading-none transition-[background-color,transform] duration-150 ease-out hover:bg-accent active:scale-90 outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              'size-9 pointer-coarse:size-11 rounded-full text-xl leading-none transition-[background-color,scale] duration-150 ease-out hover:bg-accent active:scale-90 outline-none focus-visible:ring-1 focus-visible:ring-ring',
               emoji === current && 'bg-primary/15 hover:bg-primary/25',
             )}
           >
@@ -183,7 +183,7 @@ interface ReactionPillProps {
 }
 
 const pillClassName =
-  'hit-area relative inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none outline-none focus-visible:ring-1 focus-visible:ring-ring [-webkit-touch-callout:none] transition-[background-color,border-color,transform] duration-150 ease-out';
+  'hit-area relative inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none outline-none focus-visible:ring-1 focus-visible:ring-ring [-webkit-touch-callout:none] transition-[background-color,border-color,scale] duration-150 ease-out';
 
 /**
  * One emoji and how many chose it. Hovering or focusing it names who did; on touch, a long
@@ -282,7 +282,7 @@ export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) =
             <button
               type="button"
               aria-label="Add a reaction"
-              className="hit-area relative inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring transition-[background-color,color,transform] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
+              className="hit-area relative inline-flex items-center justify-center size-7 rounded-full border text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring transition-[background-color,color,scale] duration-150 ease-out hover:bg-accent hover:text-foreground active:scale-95"
             >
               <MdOutlineAddReaction className="size-4" />
             </button>
