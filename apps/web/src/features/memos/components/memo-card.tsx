@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@repo/ui/components/card';
 import { cn } from '@repo/ui/lib/utils';
+import { useState } from 'react';
 import type { Author, Comment, Memo } from '@/lib/types';
 import { MemoContext } from '../contexts/memo-context';
 import { CommentStrip } from './comment-strip';
@@ -38,6 +39,9 @@ export const MemoCard = ({
 }: MemoCardProps) => {
   const editing = useMemoEditing();
   const { isEditing } = editing;
+  // Back from editing, the memo fades in as the form did; on its first render it is simply there.
+  const [hasEdited, setHasEdited] = useState(false);
+  if (isEditing && !hasEdited) setHasEdited(true);
   const { user } = useAuth();
   const savedAttachments = memo.attachments;
   const hasCommentStrip =
@@ -85,13 +89,19 @@ export const MemoCard = ({
             {/* Memo content or edit form */}
             <MemoEditForm memo={memo} editing={editing} />
             {!isEditing && (
-              <MemoContext.Provider value={{ memo }}>
-                <ExpandableMarkdown content={memo.content} maxHeight={500} />
-                {savedAttachments.length > 0 && (
-                  <AttachmentList savedAttachments={savedAttachments} />
+              <div
+                className={cn(
+                  hasEdited && 'transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] starting:opacity-0',
                 )}
-                <ReactionRow memoId={memo.id} reactions={memo.reactions} readerId={user?.id ?? null} />
-              </MemoContext.Provider>
+              >
+                <MemoContext.Provider value={{ memo }}>
+                  <ExpandableMarkdown content={memo.content} maxHeight={500} />
+                  {savedAttachments.length > 0 && (
+                    <AttachmentList savedAttachments={savedAttachments} />
+                  )}
+                  <ReactionRow memoId={memo.id} reactions={memo.reactions} readerId={user?.id ?? null} />
+                </MemoContext.Provider>
+              </div>
             )}
           </div>
         </CardContent>

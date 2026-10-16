@@ -180,17 +180,23 @@ interface ReactionPillProps {
   memoId: string;
   reaction: ReactionSummary;
   readerId: string | null;
+  /** The pill arrived while the memo was on screen, rather than with it. */
+  enters: boolean;
 }
 
 const pillClassName =
-  'hit-area relative inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none outline-none focus-visible:ring-1 focus-visible:ring-ring [-webkit-touch-callout:none] transition-[background-color,border-color,scale] duration-150 ease-out';
+  'hit-area relative inline-flex items-center gap-1 h-7 px-2 rounded-full border text-sm tabular-nums select-none outline-none focus-visible:ring-1 focus-visible:ring-ring [-webkit-touch-callout:none] transition-[opacity,background-color,border-color,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]';
+
+// A pill that arrives fades and grows in from its first style; under reduced motion, it only fades.
+const pillEntranceClassName = 'starting:opacity-0 starting:scale-90 motion-reduce:starting:scale-100';
 
 /**
  * One emoji and how many chose it. Hovering or focusing it names who did; on touch, a long
  * press lists them all while a tap keeps reacting. For an anonymous reader it only tells.
  */
-const ReactionPill = ({ memoId, reaction, readerId }: ReactionPillProps) => {
+const ReactionPill = ({ memoId, reaction, readerId, enters }: ReactionPillProps) => {
   const { emoji, count, reactedByMe } = reaction;
+  const className = cn(pillClassName, enters && pillEntranceClassName);
   const setReaction = useSetReaction(memoId);
   const [listOpen, setListOpen] = useState(false);
   const longPress = useLongPress(() => setListOpen(true));
@@ -224,7 +230,7 @@ const ReactionPill = ({ memoId, reaction, readerId }: ReactionPillProps) => {
                   setReaction(reactedByMe ? null : emoji);
                 }}
                 className={cn(
-                  pillClassName,
+                  className,
                   'hover:bg-accent active:scale-95',
                   reactedByMe && 'border-primary/50 bg-primary/10 hover:bg-primary/20',
                 )}
@@ -232,7 +238,7 @@ const ReactionPill = ({ memoId, reaction, readerId }: ReactionPillProps) => {
                 {content}
               </button>
             ) : (
-              <span ref={pill} role="img" aria-label={label} tabIndex={0} {...longPress.handlers} className={pillClassName}>
+              <span ref={pill} role="img" aria-label={label} tabIndex={0} {...longPress.handlers} className={className}>
                 {content}
               </span>
             )}
@@ -265,9 +271,11 @@ const ReactionPill = ({ memoId, reaction, readerId }: ReactionPillProps) => {
 
 /**
  * The reactions a memo received, one pill per emoji with how many chose it, under its body.
- * Nothing at all when it has none, so a memo nobody reacted to stays quiet.
+ * Nothing at all when it has none, so a memo nobody reacted to stays quiet. A pill added while
+ * the memo is on screen enters; the ones the memo came with are simply there.
  */
 export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) => {
+  const [atMount] = useState(() => new Set(reactions.map(({ emoji }) => emoji)));
   if (reactions.length === 0) return null;
 
   return (
@@ -275,7 +283,13 @@ export const ReactionRow = ({ memoId, reactions, readerId }: ReactionRowProps) =
       {/* On touch, the wider gap keeps each pill's target apart from its neighbours'. */}
       <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5 pointer-coarse:gap-4 mt-3">
         {reactions.map((reaction) => (
-          <ReactionPill key={reaction.emoji} memoId={memoId} reaction={reaction} readerId={readerId} />
+          <ReactionPill
+            key={reaction.emoji}
+            memoId={memoId}
+            reaction={reaction}
+            readerId={readerId}
+            enters={!atMount.has(reaction.emoji)}
+          />
         ))}
         {readerId !== null && (
           <ReactionPicker memoId={memoId} reactions={reactions}>
